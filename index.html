@@ -660,9 +660,14 @@ input.photo-file-inp { display:none; }
   pointer-events:none;
   opacity:0;
   visibility:hidden;
-  background:#030303 url("assets/podium1-login-loading.png") center / cover no-repeat;
+  background-color:#030303;
+  background-image:url("assets/podium1-login-loading.png");
+  background-position:50% 50%;
+  background-size:cover;
+  background-repeat:no-repeat;
   transform:scale(1.035);
-  transition:opacity .42s ease, transform 1.25s cubic-bezier(.2,.8,.2,1), visibility 0s linear .42s;
+  overflow:hidden;
+  transition:visibility 0s linear .42s;
 }
 .login-loading-overlay::before {
   content:"";
@@ -672,15 +677,35 @@ input.photo-file-inp { display:none; }
     radial-gradient(circle at 50% 44%, rgba(224,32,32,.05), transparent 30%),
     linear-gradient(180deg, rgba(0,0,0,.08), rgba(0,0,0,.18) 72%, rgba(0,0,0,.56));
 }
+.login-loading-overlay::after {
+  content:"";
+  position:absolute;
+  inset:-12% -22%;
+  opacity:0;
+  transform:translateX(-112%) skewX(-11deg);
+  background-color:rgba(5,5,5,.9);
+  background-image:
+    linear-gradient(45deg, rgba(224,32,32,.72) 0 8%, transparent 8% 92%, rgba(224,32,32,.72) 92% 100%),
+    linear-gradient(45deg, rgba(255,255,255,.72) 25%, transparent 25% 75%, rgba(255,255,255,.72) 75%),
+    linear-gradient(45deg, rgba(255,255,255,.72) 25%, transparent 25% 75%, rgba(255,255,255,.72) 75%);
+  background-position:0 0, 0 0, 18px 18px;
+  background-size:100% 100%, 36px 36px, 36px 36px;
+  box-shadow:0 0 50px rgba(224,32,32,.28);
+}
 .login-loading-overlay.show {
   opacity:1;
   visibility:visible;
-  transform:scale(1);
-  transition:opacity .42s ease, transform 1.25s cubic-bezier(.2,.8,.2,1), visibility 0s;
+  animation:podiumSplashLive 1.35s cubic-bezier(.2,.8,.2,1) both;
 }
 .login-loading-overlay.hide {
-  opacity:0;
-  transform:scale(1.018);
+  visibility:visible;
+  animation:podiumSplashFade .74s cubic-bezier(.76,0,.24,1) both;
+}
+.login-loading-overlay.hide::after {
+  animation:loginCheckeredFade .74s cubic-bezier(.76,0,.24,1) both;
+}
+.login-loading-overlay.hide .login-loading-status {
+  animation:fadeOut .22s ease both;
 }
 .login-loading-status {
   position:absolute;
@@ -696,6 +721,7 @@ input.photo-file-inp { display:none; }
   font-weight:800;
   letter-spacing:.16em;
   text-transform:uppercase;
+  z-index:1;
 }
 .login-loading-bar {
   width:118px;
@@ -719,6 +745,23 @@ input.photo-file-inp { display:none; }
   50%  { opacity:1; }
   100% { transform:translateX(260%); opacity:.2; }
 }
+@keyframes podiumSplashLive {
+  0%   { opacity:0; background-position:49% 50%; background-size:108% auto; transform:scale(1.035); }
+  22%  { opacity:1; }
+  100% { opacity:1; background-position:52% 50%; background-size:102% auto; transform:scale(1); }
+}
+@keyframes podiumSplashFade {
+  0%   { opacity:1; background-position:52% 50%; background-size:102% auto; transform:scale(1); }
+  54%  { opacity:1; background-position:54% 50%; background-size:101% auto; transform:scale(1.006); }
+  100% { opacity:0; background-position:57% 50%; background-size:100% auto; transform:scale(1.02); }
+}
+@keyframes loginCheckeredFade {
+  0%   { opacity:0;   transform:translateX(-112%) skewX(-11deg); }
+  18%  { opacity:.92; transform:translateX(-28%) skewX(-11deg); }
+  55%  { opacity:.9;  transform:translateX(2%) skewX(-11deg); }
+  100% { opacity:0;   transform:translateX(112%) skewX(-11deg); }
+}
+@keyframes fadeOut { to { opacity:0; } }
 
 /* Professional motion polish */
 .screen.active .app-header,
@@ -2552,7 +2595,7 @@ function showLoginLoading(nextAction) {
     setTimeout(() => {
       overlay.classList.add("hide");
       overlay.classList.remove("show");
-      setTimeout(() => overlay.classList.remove("hide"), 480);
+      setTimeout(() => overlay.classList.remove("hide"), 780);
     }, 520);
   }, 720);
 }
