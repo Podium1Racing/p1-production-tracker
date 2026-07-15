@@ -1257,7 +1257,7 @@ const COL_DISCOVER = {
   work_order_num : ["work order #", "work order#", "work order number", "wo#", "wo number"],
 };
 
-const MS_ROLE = "ms", CHASSIS_ROLE = "chassis", KIT_ROLE = "kit";
+const MS_ROLE = "ms", CHASSIS_ROLE = "chassis", KIT_ROLE = "kit", FLOAT_ROLE = "float";
 const TEAM = [
   { name:"Alex Inthavone",    initials:"AI", color:"#6366f1", role:MS_ROLE      },
   { name:"Mason McKnight",    initials:"MM", color:"#ec4899", role:MS_ROLE      },
@@ -2003,19 +2003,19 @@ function buildNameList() {
   const list = document.getElementById("name-list"); list.innerHTML = "";
   [{label:"Monitor Stand Builders",role:MS_ROLE},{label:"Chassis Builders",role:CHASSIS_ROLE},{label:"Kitting",role:KIT_ROLE}].forEach(({label,role})=>{
     const lbl = document.createElement("div"); lbl.className = "divider-label"; lbl.textContent = label; list.appendChild(lbl);
-    TEAM.filter(m=>m.role===role).forEach(m=>{
+    TEAM.filter(m=>memberWorksAs(m, role)).forEach(m=>{
       const btn = document.createElement("button"); btn.className = "name-btn";
-      btn.innerHTML = `<div class="av" style="background:${m.color}25;color:${m.color}">${m.initials}</div>${m.name}<span class="role-tag ${role===MS_ROLE?'tag-ms':role===CHASSIS_ROLE?'tag-chassis':'tag-kit'}">${role===MS_ROLE?'MS Build':role===CHASSIS_ROLE?'Chassis':'Kitting'}</span>`;
-      btn.onclick = () => selectUser(m);
+      btn.innerHTML = `<div class="av" style="background:${m.color}25;color:${m.color}">${m.initials}</div>${m.name}<span class="role-tag ${roleTagClass(role)}">${roleLoginLabel(role)}</span>`;
+      btn.onclick = () => selectUser(m, role);
       list.appendChild(btn);
     });
   });
 }
 
-function selectUser(m) {
+function selectUser(m, roleOverride) {
   document.querySelectorAll(".name-btn").forEach(b=>b.classList.remove("selected"));
   document.querySelectorAll(".name-btn").forEach(b=>{ if(b.textContent.includes(m.name)) b.classList.add("selected"); });
-  pendingUser = m;
+  pendingUser = roleOverride && m.role === FLOAT_ROLE ? { ...m, role: roleOverride, baseRole: FLOAT_ROLE } : m;
   /* Show PIN entry, hide name list + admin button */
   document.getElementById("name-list-wrap").style.display  = "none";
   document.getElementById("admin-login-btn").style.display = "none";
@@ -3855,6 +3855,10 @@ async function processCp() {
 const ACCENT_COLORS = ["#6366f1","#ec4899","#14b8a6","#f59e0b","#10b981","#ef4444","#8b5cf6","#f97316","#0ea5e9","#84cc16"];
 function loadExtraMembers() { try { return JSON.parse(localStorage.getItem("pt_extra_members")||"[]"); } catch { return []; } }
 function saveExtraMembers(arr) { localStorage.setItem("pt_extra_members", JSON.stringify(arr)); }
+function loadRoleOverrides() { try { return JSON.parse(localStorage.getItem("pt_role_overrides")||"{}"); } catch { return {}; } }
+function saveRoleOverrides(obj) { localStorage.setItem("pt_role_overrides", JSON.stringify(obj)); }
+function loadHiddenMembers() { try { return JSON.parse(localStorage.getItem("pt_hidden_members")||"[]"); } catch { return []; } }
+function saveHiddenMembers(arr) { localStorage.setItem("pt_hidden_members", JSON.stringify(arr)); }
 
 function getUsedColors() { return TEAM.map(m=>m.color); }
 function autoColor() {
@@ -3865,6 +3869,37 @@ function nameToInitials(name) {
   const parts = name.trim().split(/\s+/);
   if (parts.length >= 2) return (parts[0][0]+parts[parts.length-1][0]).toUpperCase();
   return parts[0].slice(0,2).toUpperCase();
+}
+function roleLabel(role) {
+  return role === MS_ROLE ? "MS Builder" :
+    role === CHASSIS_ROLE ? "Chassis Builder" :
+    role === KIT_ROLE ? "Kitter" :
+    role === FLOAT_ROLE ? "Floater" : role;
+}
+function roleLoginLabel(role) {
+  return role === MS_ROLE ? "MS Build" :
+    role === CHASSIS_ROLE ? "Chassis" :
+    role === KIT_ROLE ? "Kitting" :
+    roleLabel(role);
+}
+function roleTagClass(role) {
+  return role === MS_ROLE ? "tag-ms" : role === CHASSIS_ROLE ? "tag-chassis" : "tag-kit";
+}
+function memberWorksAs(member, role) {
+  return member?.role === role || member?.role === FLOAT_ROLE;
+}
+function persistMemberRole(name, role) {
+  const member = TEAM.find(m => m.name === name);
+  if (!member) return;
+  member.role = role;
+  if (member._custom) {
+    const extras = loadExtraMembers().map(m => m.name === name ? { ...m, role } : m);
+    saveExtraMembers(extras);
+  } else {
+    const overrides = loadRoleOverrides();
+    overrides[name] = role;
+    saveRoleOverrides(overrides);
+  }
 }
 
 function openAddMember() {
@@ -3930,24 +3965,49 @@ function openManageMembers() {
   TEAM.forEach(m=>{
     const row = document.createElement("div");
     row.style.cssText = "display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--card);border-radius:10px;border:1px solid var(--border)";
-    const canRemove = !!m._custom;
     row.innerHTML = `<div class="av" style="background:${m.color}25;color:${m.color};width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">${m.initials}</div>
-      <div style="flex:1"><div style="font-size:14px;font-weight:600">${m.name}</div><div style="font-size:11px;color:var(--muted)">${m.role==="ms"?"MS Builder":m.role==="chassis"?"Chassis Builder":"Kitter"}</div></div>
-      ${canRemove ? `<button class="member-remove-btn" onclick="removeMember('${m.name}')">Remove</button>` : ""}`;
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:600">${escHtml(m.name)}</div>
+        <select onchange="updateMemberRole('${m.name.replace(/'/g,"\\'")}',this.value)" style="margin-top:6px;width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-xs);padding:8px 9px;color:var(--text);font-size:12px">
+          <option value="${MS_ROLE}" ${m.role===MS_ROLE?"selected":""}>MS Builder</option>
+          <option value="${CHASSIS_ROLE}" ${m.role===CHASSIS_ROLE?"selected":""}>Chassis Builder</option>
+          <option value="${KIT_ROLE}" ${m.role===KIT_ROLE?"selected":""}>Kitter</option>
+          <option value="${FLOAT_ROLE}" ${m.role===FLOAT_ROLE?"selected":""}>Floater</option>
+        </select>
+      </div>
+      <button class="member-remove-btn" onclick="removeMember('${m.name.replace(/'/g,"\\'")}')">Remove</button>`;
     list.appendChild(row);
   });
   closeSettings();
   document.getElementById("modal-manage-members").style.display = "flex";
 }
 
+function updateMemberRole(name, role) {
+  persistMemberRole(name, role);
+  buildNameList();
+  openManageMembers();
+  showToast(`${name.split(" ")[0]} is now ${roleLabel(role)}.`, "ok");
+}
+
 function removeMember(name) {
   if (!confirm(`Remove ${name} from the team?`)) return;
   const idx = TEAM.findIndex(m=>m.name===name);
+  const member = TEAM[idx];
   if (idx > -1) TEAM.splice(idx,1);
   const extras = loadExtraMembers().filter(m=>m.name!==name);
   saveExtraMembers(extras);
+  if (member && !member._custom) {
+    const hidden = loadHiddenMembers();
+    if (!hidden.includes(name)) hidden.push(name);
+    saveHiddenMembers(hidden);
+    const overrides = loadRoleOverrides();
+    delete overrides[name];
+    saveRoleOverrides(overrides);
+  }
   /* Also clear their PIN */
   deletePinFromSupabase(name).catch(()=>{});
+  const pkeys = loadPasskeys(); delete pkeys[name]; savePasskeys(pkeys);
+  buildNameList();
   openManageMembers();
 }
 
@@ -3959,7 +4019,7 @@ function openResetMemberPin() {
     const btn = document.createElement("button");
     btn.className = "settings-row settings-btn";
     btn.style.width = "100%";
-    btn.innerHTML = `<span class="settings-row-label">${m.name}</span><span style="font-size:11px;color:var(--muted)">${m.role==="ms"?"MS":m.role==="chassis"?"Chassis":"Kit"}</span>`;
+    btn.innerHTML = `<span class="settings-row-label">${m.name}</span><span style="font-size:11px;color:var(--muted)">${roleLabel(m.role)}</span>`;
     btn.onclick = ()=>resetMemberPin(m.name);
     list.appendChild(btn);
   });
@@ -3978,8 +4038,16 @@ function resetMemberPin(name) {
 
 /* ── Load extra members on startup ─────────────────────────── */
 (function loadCustomMembers() {
+  const hidden = new Set(loadHiddenMembers());
+  for (let i = TEAM.length - 1; i >= 0; i--) {
+    if (hidden.has(TEAM[i].name)) TEAM.splice(i, 1);
+  }
+  const overrides = loadRoleOverrides();
+  TEAM.forEach(m => {
+    if (overrides[m.name]) m.role = overrides[m.name];
+  });
   const extras = loadExtraMembers();
-  extras.forEach(m=>{ if (!TEAM.find(t=>t.name===m.name)) TEAM.push(m); });
+  extras.forEach(m=>{ if (!hidden.has(m.name) && !TEAM.find(t=>t.name===m.name)) TEAM.push(m); });
 })();
 
 /* ═══════════════════════════════════════
@@ -8008,7 +8076,11 @@ syncPinsFromSupabase().catch(()=>{});
 try {
   const saved=localStorage.getItem("pt_user");
   if(saved && localStorage.getItem("pt_gate_passed")==="1"){
-    const u=JSON.parse(saved); currentUser=TEAM.find(m=>m.name===u.name)||u;
+    const u=JSON.parse(saved);
+    const storedMember = TEAM.find(m=>m.name===u.name);
+    currentUser = storedMember && storedMember.role === FLOAT_ROLE && [MS_ROLE, CHASSIS_ROLE, KIT_ROLE].includes(u.role)
+      ? { ...storedMember, role: u.role, baseRole: FLOAT_ROLE }
+      : storedMember || u;
     if(currentUser.role==="admin"){showScreen("screen-admin");document.getElementById("admin-date").textContent=new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});loadAdminData();}
     else { showDash(); }
   } else if (saved) {
@@ -8259,6 +8331,7 @@ try {
         <option value="ms">MS Builder</option>
         <option value="chassis">Chassis Builder</option>
         <option value="kit">Kitter</option>
+        <option value="float">Floater</option>
       </select>
     </div>
     <div class="pin-error" id="add-member-error"></div>
