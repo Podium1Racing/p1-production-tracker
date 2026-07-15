@@ -1688,6 +1688,28 @@ function getUnitWeight(item, colType) {
   return 1.0;
 }
 
+function roundUnits(n) {
+  return Math.round((Number(n) || 0) * 10) / 10;
+}
+
+function formatUnits(n) {
+  const v = roundUnits(n);
+  return Number.isInteger(v) ? String(v) : v.toFixed(1);
+}
+
+function creditedPctFromProgress(prevPct, newPct) {
+  return Math.max(0, Math.min(100, Number(newPct) || 0) - Math.min(100, Number(prevPct) || 0));
+}
+
+function progressUnitsFromPct(item, colType, prevPct, newPct) {
+  return (creditedPctFromProgress(prevPct, newPct) / 100) * getUnitWeight(item, colType);
+}
+
+function progressUnitsFromUpdate(update, items) {
+  const item = (items || []).find(i => String(i.id) === String(update.item_id));
+  return progressUnitsFromPct(item, update.col_type, update.prev_pct, update.new_pct);
+}
+
 /* Returns weighted unit total for the current week.
    Completed items are looked up in boardItems to get their Turnkey Product. */
 function countWeeklyCompletions(user) {
@@ -4356,7 +4378,7 @@ async function submitGate() {
 
 buildNameList();
 
-function renderAdminStreamlineWidgets(items, sbTimers = [], sbKits = []) {
+function renderAdminStreamlineWidgets(items, sbTimers = [], sbKits = [], sbUpdates = []) {
   const today = todayStr();
   const isOpenWorkflowItem = (item) => {
     const g = (item.group?.title || "").toLowerCase();
@@ -4372,6 +4394,11 @@ function renderAdminStreamlineWidgets(items, sbTimers = [], sbKits = []) {
     (getCompletionTs(i, "ms") || "").slice(0,10) === today ||
     (getCompletionTs(i, "chassis") || "").slice(0,10) === today
   ).length;
+  const progressUnitsToday = roundUnits((sbUpdates || [])
+    .filter(u => u.date_str === today)
+    .reduce((sum, u) => sum + progressUnitsFromUpdate(u, items), 0));
+  const buildTodayValue = progressUnitsToday > 0 ? formatUnits(progressUnitsToday) : String(completedToday);
+  const buildTodaySub = progressUnitsToday > 0 ? "Progress credit" : "Completed MS or Chassis";
   const kitsToday = (sbKits || []).filter(k => k.date_str === today).length;
   const running = (sbTimers || []).filter(t => t.state === "running").length;
   const partsPulled = items.filter(i => (i.group?.title || "") === PARTS_PULLED);
@@ -4419,7 +4446,7 @@ function renderAdminStreamlineWidgets(items, sbTimers = [], sbKits = []) {
     ${actionButton}
   </div>
   <div class="stream-grid">
-    <div class="health-card"><div class="health-val" style="color:var(--green)">${completedToday}</div><div class="health-lbl">Builds Done Today</div><div class="health-sub">MS or Chassis</div></div>
+    <div class="health-card"><div class="health-val" style="color:var(--green)">${buildTodayValue}</div><div class="health-lbl">Build Units Today</div><div class="health-sub">${buildTodaySub}</div></div>
     <div class="health-card"><div class="health-val" style="color:var(--yellow)">${kitsToday}</div><div class="health-lbl">Kits Today</div><div class="health-sub">From Pete/Kitting</div></div>
     <div class="health-card"><div class="health-val" style="color:var(--accent2)">${running}</div><div class="health-lbl">Running Timers</div><div class="health-sub">Live production</div></div>
     <div class="health-card"><div class="health-val" style="color:${alerts.length ? "var(--red)" : "var(--green)"}">${alerts.length}</div><div class="health-lbl">Watch Items</div><div class="health-sub">Need attention</div></div>
@@ -4578,7 +4605,7 @@ async function loadAdminData() {
       }`),
       sbGetAllTimers(),
       sbGetKitCompletions(kitSince),
-      isDesktop() ? sbFetch("build_updates?order=created_at.desc&limit=500",{method:"GET",headers:{"Prefer":"return=representation"}}) : Promise.resolve([]),
+      sbFetch("build_updates?order=created_at.desc&limit=500",{method:"GET",headers:{"Prefer":"return=representation"}}),
     ]);
     const board = boardRes.data.boards[0];
     discoverColumns(board.columns);
@@ -4587,7 +4614,7 @@ async function loadAdminData() {
     if (isDesktop()) {
       renderAdminDesktop(items, sbTimers, sbKits, sbUpdates || []);
     } else {
-      renderAdminDash(items, sbTimers, sbKits);
+      renderAdminDash(items, sbTimers, sbKits, sbUpdates || []);
     }
     /* Subscribe to real-time timer updates */
     sbSubscribeAdminRealtime((record) => {
@@ -4628,7 +4655,7 @@ function renderAdminDesktop(items, sbTimers, sbKits, sbUpdates) {
   const builderStats = {};
   builders.forEach(m => {
     builderStats[m.name] = {
-      updates: [], totalMs: 0, units: 0, sessions: [], recordMs: null, recordProject: ""
+      updates: [], totalMs: 0, units: 0, unitsToday: 0, sessions: [], recordMs: null, recordProject: ""
     };
   });
 
@@ -4640,13 +4667,17 @@ function renderAdminDesktop(items, sbTimers, sbKits, sbUpdates) {
   /* Build per-builder time from build_updates */
   (sbUpdates||[]).forEach(u => {
     if (!builderStats[u.user_name]) return;
-    builderStats[u.user_name].updates.push(u);
+    const st = builderStats[u.user_name];
+    st.updates.push(u);
+    const unitCredit = progressUnitsFromUpdate(u, items);
+    if ((u.date_str || "") >= rangeStart) st.units += unitCredit;
+    if ((u.date_str || "") === today) st.unitsToday += unitCredit;
     /* Track max time per item as a "session" */
     const ms = u.col_type === "ms" ? (u.ms_total_ms||0) : (u.chassis_total_ms||0);
     if (ms > 0) {
-      const existing = builderStats[u.user_name].sessions.find(s => s.itemId === u.item_id);
+      const existing = st.sessions.find(s => s.itemId === u.item_id);
       if (!existing) {
-        builderStats[u.user_name].sessions.push({ itemId: u.item_id, itemName: u.item_name, ms, date: u.date_str });
+        st.sessions.push({ itemId: u.item_id, itemName: u.item_name, ms, date: u.date_str });
       } else if (ms > existing.ms) {
         existing.ms = ms;
       }
@@ -4676,9 +4707,10 @@ function renderAdminDesktop(items, sbTimers, sbKits, sbUpdates) {
   builders.forEach(m => {
     const st = builderStats[m.name];
     const inRangeSessions = st.sessions.filter(s => s.date >= rangeStart);
-    st.units = inRangeSessions.length;
+    st.units = roundUnits(st.units);
+    st.unitsToday = roundUnits(st.unitsToday);
     st.totalMs = inRangeSessions.reduce((s, se) => s + se.ms, 0);
-    st.avgMs = st.units > 0 ? Math.round(st.totalMs / st.units) : 0;
+    st.avgMs = inRangeSessions.length > 0 ? Math.round(st.totalMs / inRangeSessions.length) : 0;
     /* Record: fastest non-zero session */
     const validSessions = st.sessions.filter(s => s.ms > 60000); /* > 1 min */
     if (validSessions.length) {
@@ -4686,13 +4718,11 @@ function renderAdminDesktop(items, sbTimers, sbKits, sbUpdates) {
       st.recordMs = rec.ms;
       st.recordProject = rec.itemName;
     }
-    /* Units today */
-    st.unitsToday = st.sessions.filter(s => s.date === today).length;
     /* Efficiency: units / working days in range */
     const daysInRange = range === "week"
       ? Math.min(new Date().getDay() || 7, 5)
       : Math.min(new Date().getDate(), 20);
-    st.efficiency = daysInRange > 0 ? (st.units / daysInRange).toFixed(1) : "0.0";
+    st.efficiency = daysInRange > 0 ? roundUnits(st.units / daysInRange).toFixed(1) : "0.0";
   });
 
   /* ── Kitting stats ── */
@@ -4730,7 +4760,7 @@ function renderAdminDesktop(items, sbTimers, sbKits, sbUpdates) {
       <button class="seg-btn ${range==="month"?"active":""}" onclick="setAdminRange('month')">This Month</button>
     </div>
   </div>
-  ${renderAdminStreamlineWidgets(items, sbTimers, sbKits)}
+  ${renderAdminStreamlineWidgets(items, sbTimers, sbKits, sbUpdates)}
 
   <!-- Board Health KPIs -->
   <div class="dt-grid">
@@ -4800,13 +4830,13 @@ function renderAdminDesktop(items, sbTimers, sbKits, sbUpdates) {
             <td><span style="color:${roleColor};font-size:11px;font-weight:700">${roleLabel}</span></td>
             <td>
               <div style="display:flex;align-items:center;gap:8px">
-                <span style="font-weight:700;font-size:15px">${st.units}</span>
+                <span style="font-weight:700;font-size:15px">${formatUnits(st.units)}</span>
                 <div class="dt-bar-bg" style="flex:1">
                   <div class="dt-bar-fill" style="width:${barPct}%;background:${m.color}"></div>
                 </div>
               </div>
             </td>
-            <td style="font-weight:600">${st.unitsToday}</td>
+            <td style="font-weight:600">${formatUnits(st.unitsToday)}</td>
             <td style="color:var(--muted)">${st.avgMs > 0 ? fmtMs(st.avgMs) : "—"}</td>
             <td>
               ${st.recordMs ? `<span style="color:var(--yellow);font-weight:700">${fmtMs(st.recordMs)}</span>
@@ -4917,7 +4947,7 @@ function setAdminRange(r) {
   loadAdminData();
 }
 
-function renderAdminDash(items, sbTimers = [], sbKits = []) {
+function renderAdminDash(items, sbTimers = [], sbKits = [], sbUpdates = []) {
   window._adminItems = items; /* store for time log item name lookup */
   window._sbTimers   = sbTimers;
   window._sbKits     = sbKits;
@@ -4962,18 +4992,33 @@ function renderAdminDash(items, sbTimers = [], sbKits = []) {
     weekStats[t.user_name].totalTimeMs = Math.max(weekStats[t.user_name].totalTimeMs, ms);
   });
 
-  /* Weekly & today completions from delta log */
+  /* Weekly & today unit credit from progress updates.
+     Partial progress counts as fractional units: 35% + 40% = 0.8 units after rounding. */
   const countedItems = {}; /* "userName|itemId|colType" → prevent double-counting */
-  deltas.forEach(d =>{
+  const progressUpdates = (sbUpdates || []).length
+    ? (sbUpdates || []).map(u => ({
+        user: u.user_name,
+        itemId: u.item_id,
+        colType: u.col_type,
+        prevPct: u.prev_pct,
+        newPct: u.new_pct,
+        date: u.date_str,
+      }))
+    : deltas;
+  progressUpdates.forEach(d =>{
     if (!weekStats[d.user] || d.colType==="grab") return;
     const key = `${d.user}|${d.itemId}|${d.colType}`;
-    if (getWeekKey(d.date) === thisWeek && d.newPct >= 100 && !countedItems[key]) {
-      const item = boardItems.find(i => i.id === d.itemId);
-      weekStats[d.user].weekDone += getUnitWeight(item, d.colType);
-      weekStats[d.user].weekDone = Math.round(weekStats[d.user].weekDone * 10) / 10;
-      countedItems[key] = true;
+    const item = items.find(i => String(i.id) === String(d.itemId)) || boardItems.find(i => String(i.id) === String(d.itemId));
+    const unitCredit = progressUnitsFromPct(item, d.colType, d.prevPct, d.newPct);
+    if (getWeekKey(d.date) === thisWeek) {
+      weekStats[d.user].weekDone += unitCredit;
+      weekStats[d.user].weekDone = roundUnits(weekStats[d.user].weekDone);
+      if (Number(d.newPct) >= 100) countedItems[key] = true;
     }
-    if (d.date === todayStr() && d.newPct >= 100) weekStats[d.user].todayDone++;
+    if (d.date === todayStr()) {
+      weekStats[d.user].todayDone += unitCredit;
+      weekStats[d.user].todayDone = roundUnits(weekStats[d.user].todayDone);
+    }
   });
 
   /* Also count completions from Monday's updated_at (catches builds marked Complete directly in Monday) */
@@ -5015,11 +5060,14 @@ function renderAdminDash(items, sbTimers = [], sbKits = []) {
       }
       if (completedDate === todayStr()) {
         /* Only add todayDone if not already counted via delta */
-        const alreadyCounted = deltas.some(d =>
-          d.user === m.name && d.itemId === item.id &&
-          d.colType === colType && d.newPct >= 100 && d.date === todayStr()
+        const alreadyCounted = progressUpdates.some(d =>
+          d.user === m.name && String(d.itemId) === String(item.id) &&
+          d.colType === colType && Number(d.newPct) >= 100 && d.date === todayStr()
         );
-        if (!alreadyCounted) weekStats[m.name].todayDone++;
+        if (!alreadyCounted) {
+          weekStats[m.name].todayDone += getUnitWeight(item, colType);
+          weekStats[m.name].todayDone = roundUnits(weekStats[m.name].todayDone);
+        }
       }
     });
   });
@@ -5090,7 +5138,7 @@ function renderAdminDash(items, sbTimers = [], sbKits = []) {
   const maxWeekDone = Math.max(1, ...ranked.map(m => weekStats[m.name].weekDone));
 
   /* ── BUILD HTML ── */
-  let html = renderAdminStreamlineWidgets(items, sbTimers, sbKits);
+  let html = renderAdminStreamlineWidgets(items, sbTimers, sbKits, sbUpdates);
 
   /* Board Health */
   html += `
@@ -5152,13 +5200,13 @@ function renderAdminDash(items, sbTimers = [], sbKits = []) {
       <div class="lb-av" style="background:${m.color}25;color:${m.color}">${m.initials}</div>
       <div class="lb-info">
         <div class="lb-name">${m.name}</div>
-        <div class="lb-role">${m.role===MS_ROLE?"Monitor Stand":"Chassis Builder"} · Today: ${st.todayDone}</div>
+        <div class="lb-role">${m.role===MS_ROLE?"Monitor Stand":"Chassis Builder"} · Today: ${formatUnits(st.todayDone)} units</div>
         <div class="lb-bar-wrap">
           <div class="lb-bar-track"><div class="lb-bar-fill" style="width:${Math.min(100,barW)}%;background:${m.color}"></div></div>
         </div>
       </div>
       <div class="lb-stats">
-        <div class="lb-done" style="color:${doneColor}">${Number.isInteger(st.weekDone)?st.weekDone:st.weekDone.toFixed(1)}<span style="font-size:10px;font-weight:500;color:var(--muted2)">/${WEEKLY_GOAL}</span></div>
+        <div class="lb-done" style="color:${doneColor}">${formatUnits(st.weekDone)}<span style="font-size:10px;font-weight:500;color:var(--muted2)">/${WEEKLY_GOAL}</span></div>
         <div class="lb-time">⏱ ${timeLabel}</div>
       </div>
     </div>`;
@@ -5241,11 +5289,11 @@ function renderAdminDash(items, sbTimers = [], sbKits = []) {
       </div>
       <div class="tc-stats">
         <div class="tc-stat">
-          <div class="tc-stat-val" style="color:${doneColor}">${st.weekDone}</div>
+          <div class="tc-stat-val" style="color:${doneColor}">${formatUnits(st.weekDone)}</div>
           <div class="tc-stat-lbl">This Week</div>
         </div>
         <div class="tc-stat">
-          <div class="tc-stat-val" style="color:${st.todayDone>0?'var(--green)':'var(--muted2)'}">${st.todayDone}</div>
+          <div class="tc-stat-val" style="color:${st.todayDone>0?'var(--green)':'var(--muted2)'}">${formatUnits(st.todayDone)}</div>
           <div class="tc-stat-lbl">Today</div>
         </div>
         <div class="tc-stat">
