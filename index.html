@@ -5767,6 +5767,39 @@ function renderKitScreen(items) {
           </button>` : ""}
         </div>
       </div>
+      <div class="kit-checklist-toggle" id="kct-${item.id}" onclick="toggleKitChecklist('${item.id}')">
+        <div class="kit-checklist-toggle-label" id="kcc-${item.id}">Kitting Checklist — Loading…</div>
+        <div class="kit-checklist-toggle-right">
+          <span class="kit-checklist-arrow">⌄</span>
+        </div>
+      </div>
+      <div class="kit-checklist" id="kcl-${item.id}">
+        <div class="kit-progress"><div class="kit-progress-fill" id="kpf-${item.id}" style="width:0%"></div></div>
+        <div class="kit-pdf-drop" id="kpd-${item.id}">
+          <span>Loading pick list…</span>
+        </div>
+        <button class="kit-done-btn" id="kdone-${item.id}" disabled onclick="kitDone('${item.id}',event)">
+          Loading Checklist…
+        </button>
+        <div class="kit-missing-confirm" id="kmc-${item.id}">
+          <div class="kit-missing-title">Submit with missing items?</div>
+          <div class="kit-missing-list" id="kml-${item.id}"></div>
+          <textarea class="kit-note-inp" id="kit-note-${item.id}" rows="2" placeholder="Add a note for missing items (optional)…"></textarea>
+          <div class="kit-missing-actions" style="margin-top:10px">
+            <button class="kit-missing-cancel" onclick="event.stopPropagation();document.getElementById('kmc-${item.id}')?.classList.remove('show')">Review Again</button>
+            <button class="kit-missing-submit" onclick="kitDoneConfirmed('${item.id}',event)">Submit Kit</button>
+          </div>
+        </div>
+        <div class="kit-missing-confirm" id="kac-${item.id}" style="background:rgba(16,185,129,0.08);border-color:rgba(16,185,129,0.28)">
+          <div class="kit-missing-title" style="color:var(--green)">Full kit confirmed?</div>
+          <div class="kit-missing-list">Everything is checked. Double-check before moving this to Parts Pulled.</div>
+          <textarea class="kit-note-inp" id="kit-note-${item.id}-all" rows="2" placeholder="Add a note (optional)…"></textarea>
+          <div class="kit-missing-actions" style="margin-top:10px">
+            <button class="kit-missing-cancel" onclick="event.stopPropagation();document.getElementById('kac-${item.id}')?.classList.remove('show')">Review Again</button>
+            <button class="kit-missing-submit" style="background:var(--green)" onclick="kitDoneConfirmed('${item.id}',event)">Move to Parts Pulled</button>
+          </div>
+        </div>
+      </div>
 `;
     content.appendChild(card);
 
