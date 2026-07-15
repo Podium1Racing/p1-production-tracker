@@ -31,11 +31,12 @@
 
 /* Universal button feedback — layers on top of each button's own styles */
 button:not(:disabled), .name-btn, .srow, .seg-btn {
-  transition: transform .12s ease, filter .12s ease, opacity .12s ease, background .12s ease, border-color .12s ease;
+  transition: transform .16s cubic-bezier(.2,.8,.2,1), filter .16s ease, opacity .16s ease, background .16s ease, border-color .16s ease, box-shadow .16s ease, color .16s ease;
 }
 @media (hover: hover) {
   button:not(:disabled):hover, .name-btn:hover, .srow:hover, .seg-btn:hover {
     filter: brightness(1.12);
+    transform: translateY(-1px);
   }
 }
 button:not(:disabled):active, .name-btn:active, .srow:active, .seg-btn:active {
@@ -62,8 +63,13 @@ button:not(:disabled):active, .name-btn:active, .srow:active, .seg-btn:active {
   --chassis-color:#d97706; --ms-color:#444444;
 }
 body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif; min-height:100dvh; overflow-x:hidden; }
+button, input, select, textarea { font-family:inherit; }
 .screen { display:none; flex-direction:column; min-height:100dvh; }
-.screen.active { display:flex; }
+.screen.active { display:flex; animation:screenFade .18s ease both; }
+@keyframes screenFade { from { opacity:.88; } to { opacity:1; } }
+@keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+@keyframes cardIn { from { opacity:0; transform:translateY(8px) scale(.985); } to { opacity:1; transform:translateY(0) scale(1); } }
+@keyframes softPop { 0% { transform:scale(.92); } 70% { transform:scale(1.06); } 100% { transform:scale(1); } }
 
 /* LOGIN */
 #screen-login { align-items:center; justify-content:center; padding:2rem 1.25rem; position:relative; }
@@ -94,8 +100,8 @@ body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkM
 .hrole-tag { font-size:10px; font-weight:600; padding:2px 7px; border-radius:20px; display:inline-block; margin-top:2px; }
 .hdate { font-size:11px; color:var(--muted); margin-top:1px; }
 .header-right { display:flex; align-items:center; gap:8px; }
-.switch-btn { background:none; border:1px solid var(--border2); border-radius:5px; padding:5px 10px; color:var(--muted); font-size:11px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; cursor:pointer; }
-.history-btn { background:none; border:1px solid var(--border2); border-radius:5px; padding:5px 10px; color:var(--muted); font-size:11px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; cursor:pointer; display:flex; align-items:center; gap:4px; }
+.switch-btn { background:none; border:1px solid var(--border2); border-radius:5px; padding:5px 10px; color:var(--muted); font-size:11px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; cursor:pointer; white-space:nowrap; }
+.history-btn { background:none; border:1px solid var(--border2); border-radius:5px; padding:5px 10px; color:var(--muted); font-size:11px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; cursor:pointer; display:flex; align-items:center; gap:4px; white-space:nowrap; }
 
 /* CONTENT */
 .main-content { flex:1; padding:14px; overflow-y:auto; padding-bottom:36px; }
@@ -123,7 +129,7 @@ body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkM
 /* SECTION HEADER */
 .sec-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:11px; }
 .sec-title { font-size:15px; font-weight:700; }
-.refresh-btn { background:none; border:1px solid var(--border); border-radius:7px; padding:5px 10px; color:var(--muted); font-size:11px; cursor:pointer; display:flex; align-items:center; gap:4px; }
+.refresh-btn { background:none; border:1px solid var(--border); border-radius:7px; padding:5px 10px; color:var(--muted); font-size:11px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; cursor:pointer; display:flex; align-items:center; gap:4px; white-space:nowrap; }
 .refresh-btn:active { background:var(--surface); }
 .refresh-btn:disabled, .admin-refresh:disabled { opacity:.6; cursor:not-allowed; }
 .admin-timer-running { color:var(--green) !important; animation: pulse-green 2s ease-in-out infinite; }
@@ -153,7 +159,7 @@ body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkM
 .pl-status-tab-bar { display:flex; gap:4px; padding:10px 14px 0; background:var(--surface); border-bottom:1px solid var(--border); }
 .pl-status-tab { flex:1; padding:8px 4px; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; text-align:center; border:none; background:none; color:var(--muted); cursor:pointer; border-bottom:2px solid transparent; transition:color .15s,border-color .15s; }
 .pl-status-tab.active { color:var(--accent); border-bottom-color:var(--accent); }
-.pl-card { background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--border); border-radius:var(--radius-sm); margin-bottom:10px; overflow:hidden; transition:border-left-color .2s; }
+.pl-card { background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--border); border-radius:var(--radius-sm); margin-bottom:10px; overflow:hidden; transition:border-left-color .2s, transform .18s ease, box-shadow .18s ease; }
 .pl-card.status-in_queue      { border-left-color:#f59e0b; }
 .pl-card.status-missing_items { border-left-color:var(--accent); }
 .pl-card.status-fully_kitted  { border-left-color:#10b981; }
@@ -223,7 +229,7 @@ body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkM
 .rank-2 { background:rgba(245,158,11,0.2); color:#fbbf24; }
 .rank-3 { background:rgba(99,102,241,0.2); color:#818cf8; }
 .rank-n { background:rgba(255,255,255,0.06); color:var(--muted2); }
-.avail-card { background:var(--surface); border:1.5px solid rgba(245,158,11,0.25); border-radius:var(--radius); margin-bottom:10px; overflow:hidden; transition:border-color .15s; }
+.avail-card { background:var(--surface); border:1.5px solid rgba(245,158,11,0.25); border-radius:var(--radius); margin-bottom:10px; overflow:hidden; transition:border-color .15s, transform .18s ease, box-shadow .18s ease; }
 .avail-card.priority-high { border-color:rgba(239,68,68,0.45); }
 .avail-card.priority-firm { border-color:rgba(245,158,11,0.45); }
 .avail-top { padding:13px 14px 12px; display:flex; gap:11px; align-items:flex-start; }
@@ -251,7 +257,7 @@ body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkM
 .grab-btn.priority-grab { background:rgba(239,68,68,0.12); border-color:rgba(239,68,68,0.4); color:#f87171; }
 
 /* PROJECT CARD */
-.proj-card { background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:var(--radius); margin-bottom:10px; overflow:hidden; transition:border-color .15s; }
+.proj-card { background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:var(--radius); margin-bottom:10px; overflow:hidden; transition:border-color .15s, transform .18s ease, box-shadow .18s ease; }
 .proj-card.open { border-color:rgba(99,102,241,0.45); }
 .proj-top { padding:14px 14px 13px; cursor:pointer; user-select:none; }
 .proj-customer { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--muted2); margin-bottom:3px; }
@@ -304,7 +310,7 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:22px; h
 .kit-header { background:var(--surface); border-bottom:1px solid var(--border); padding:12px 16px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:20; }
 .kit-header-left { display:flex; align-items:center; gap:10px; }
 .kit-content { flex:1; padding:14px; overflow-y:auto; padding-bottom:36px; }
-.kit-card { background:var(--surface); border:1px solid var(--border); border-left:3px solid rgba(249,115,22,0.4); border-radius:var(--radius); margin-bottom:11px; overflow:hidden; }
+.kit-card { background:var(--surface); border:1px solid var(--border); border-left:3px solid rgba(249,115,22,0.4); border-radius:var(--radius); margin-bottom:11px; overflow:hidden; transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
 .kit-card-partial { border-left-color:rgba(139,92,246,0.6); }
 .kit-card-top { padding:13px 14px 12px; display:flex; gap:11px; align-items:flex-start; }
 .kit-rank-col { flex-shrink:0; padding-top:2px; }
@@ -537,8 +543,6 @@ input.photo-file-inp { display:none; }
 .auth-pw-row { display:flex; flex-direction:column; gap:8px; width:100%; }
 .auth-back-btn { background:none; border:none; color:var(--muted); font-size:13px; cursor:pointer; margin-top:10px; padding:4px; }
 .auth-back-btn:hover { color:var(--text); }
-.auth-passkey-btn { display:flex; align-items:center; justify-content:center; gap:8px; background:none; border:1.5px solid var(--border2); border-radius:10px; color:var(--muted); font-size:13px; font-weight:600; padding:10px; cursor:pointer; margin-top:8px; transition:border-color .15s,color .15s; }
-.auth-passkey-btn:hover { border-color:var(--accent); color:var(--text); }
 #screen-admin-login { align-items:center; justify-content:center; padding:2rem 1.25rem; }
 #screen-admin-login::before { content:''; position:fixed; top:0; left:0; right:0; height:3px; background:var(--accent); z-index:100; }
 #screen-admin-login .auth-input, #screen-admin-login .btn-primary { max-width:400px; width:100%; }
@@ -622,9 +626,244 @@ input.photo-file-inp { display:none; }
 .toast-undo:hover { background:rgba(255,255,255,0.2); }
 .pwa-hint { background:rgba(99,102,241,0.09); border:1px solid rgba(99,102,241,0.22); border-radius:9px; padding:9px 13px; margin-bottom:13px; font-size:11px; color:var(--accent2); line-height:1.6; }
 .no-proj { background:var(--surface); border:1px dashed var(--border2); border-radius:var(--radius); padding:24px; text-align:center; color:var(--muted); font-size:13px; line-height:1.8; }
+.page-race-transition {
+  position:fixed;
+  inset:0;
+  z-index:9999;
+  pointer-events:none;
+  opacity:0;
+  transform:translateX(-105%);
+  background-color:#050505;
+  background-image:
+    linear-gradient(45deg, rgba(224,32,32,.88) 0 10%, transparent 10% 90%, rgba(224,32,32,.88) 90% 100%),
+    linear-gradient(45deg, #fff 25%, transparent 25% 75%, #fff 75%),
+    linear-gradient(45deg, #fff 25%, transparent 25% 75%, #fff 75%);
+  background-position:0 0, 0 0, 18px 18px;
+  background-size:100% 100%, 36px 36px, 36px 36px;
+  box-shadow:0 0 50px rgba(224,32,32,.28);
+}
+.page-race-transition.run {
+  animation:checkeredFlagWipe .48s cubic-bezier(.76,0,.24,1) both;
+}
+@keyframes checkeredFlagWipe {
+  0%   { opacity:0;   transform:translateX(-105%) skewX(-10deg); }
+  18%  { opacity:.96; transform:translateX(-32%) skewX(-10deg); }
+  52%  { opacity:.96; transform:translateX(0) skewX(-10deg); }
+  100% { opacity:0;   transform:translateX(105%) skewX(-10deg); }
+}
+.login-loading-overlay {
+  position:fixed;
+  inset:0;
+  z-index:10050;
+  pointer-events:none;
+  opacity:0;
+  visibility:hidden;
+  background-color:#030303;
+  overflow:hidden;
+  transform:translateZ(0);
+  will-change:opacity;
+  transition:visibility 0s linear .42s;
+}
+.login-loading-img {
+  position:absolute;
+  inset:-2%;
+  width:104%;
+  height:104%;
+  object-fit:cover;
+  object-position:center;
+  transform:translate3d(-1.6%,0,0) scale(1.045);
+  transform-origin:center;
+  will-change:transform, opacity;
+  backface-visibility:hidden;
+}
+.login-loading-overlay::before {
+  content:"";
+  position:absolute;
+  inset:0;
+  background:
+    radial-gradient(circle at 50% 44%, rgba(224,32,32,.05), transparent 30%),
+    linear-gradient(180deg, rgba(0,0,0,.08), rgba(0,0,0,.18) 72%, rgba(0,0,0,.56));
+}
+.login-loading-overlay::after {
+  content:"";
+  position:absolute;
+  inset:-12% -22%;
+  opacity:0;
+  transform:translateX(-112%) skewX(-11deg);
+  background-color:rgba(5,5,5,.9);
+  background-image:
+    linear-gradient(45deg, rgba(224,32,32,.72) 0 8%, transparent 8% 92%, rgba(224,32,32,.72) 92% 100%),
+    linear-gradient(45deg, rgba(255,255,255,.52) 25%, transparent 25% 75%, rgba(255,255,255,.52) 75%),
+    linear-gradient(45deg, rgba(255,255,255,.52) 25%, transparent 25% 75%, rgba(255,255,255,.52) 75%);
+  background-position:0 0, 0 0, 20px 20px;
+  background-size:100% 100%, 40px 40px, 40px 40px;
+  box-shadow:0 0 50px rgba(224,32,32,.28);
+  will-change:transform, opacity;
+  backface-visibility:hidden;
+}
+.login-loading-overlay.show {
+  opacity:1;
+  visibility:visible;
+  transition:opacity .32s ease, visibility 0s;
+}
+.login-loading-overlay.show .login-loading-img {
+  animation:podiumSplashLive 1.9s cubic-bezier(.16,1,.3,1) both;
+}
+.login-loading-overlay.hide {
+  visibility:visible;
+  animation:podiumSplashFade .86s cubic-bezier(.76,0,.24,1) both;
+}
+.login-loading-overlay.hide .login-loading-img {
+  animation:podiumSplashImageOut .86s cubic-bezier(.76,0,.24,1) both;
+}
+.login-loading-overlay.hide::after {
+  animation:loginCheckeredFade .86s cubic-bezier(.76,0,.24,1) both;
+}
+.login-loading-overlay.hide .login-loading-status {
+  animation:fadeOut .22s ease both;
+}
+.login-loading-status {
+  position:absolute;
+  left:50%;
+  bottom:calc(42px + env(safe-area-inset-bottom));
+  transform:translateX(-50%);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:12px;
+  color:rgba(255,255,255,.78);
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  z-index:1;
+}
+.login-loading-bar {
+  width:118px;
+  height:2px;
+  border-radius:999px;
+  overflow:hidden;
+  background:rgba(255,255,255,.12);
+  box-shadow:0 0 22px rgba(224,32,32,.25);
+}
+.login-loading-bar::after {
+  content:"";
+  display:block;
+  width:42%;
+  height:100%;
+  border-radius:999px;
+  background:linear-gradient(90deg, transparent, var(--accent), #fff, var(--accent), transparent);
+  animation:loginLoadSweep 1.05s ease-in-out infinite;
+}
+@keyframes loginLoadSweep {
+  0%   { transform:translateX(-120%); opacity:.2; }
+  50%  { opacity:1; }
+  100% { transform:translateX(260%); opacity:.2; }
+}
+@keyframes podiumSplashLive {
+  0%   { opacity:0; transform:translate3d(-1.6%,0,0) scale(1.045); }
+  18%  { opacity:1; }
+  100% { opacity:1; transform:translate3d(1.15%,0,0) scale(1.012); }
+}
+@keyframes podiumSplashFade {
+  0%   { opacity:1; }
+  64%  { opacity:1; }
+  100% { opacity:0; }
+}
+@keyframes podiumSplashImageOut {
+  0%   { transform:translate3d(1.15%,0,0) scale(1.012); }
+  100% { transform:translate3d(2.25%,0,0) scale(1.022); }
+}
+@keyframes loginCheckeredFade {
+  0%   { opacity:0;   transform:translate3d(-112%,0,0) skewX(-11deg); }
+  18%  { opacity:.88; transform:translate3d(-28%,0,0) skewX(-11deg); }
+  55%  { opacity:.86; transform:translate3d(2%,0,0) skewX(-11deg); }
+  100% { opacity:0;   transform:translate3d(112%,0,0) skewX(-11deg); }
+}
+@keyframes fadeOut { to { opacity:0; } }
+
+/* Professional motion polish */
+.screen.active .app-header,
+.screen.active .kit-header,
+.screen.active .admin-header,
+.screen.active .hist-header {
+  animation:fadeUp .22s ease both;
+}
+.screen.active .main-content,
+.screen.active .kit-content,
+.screen.active .admin-content,
+.screen.active .hist-content,
+#screen-login.active .login-logo,
+#screen-login.active .login-title,
+#screen-login.active .login-sub,
+#screen-login.active #name-list-wrap,
+#screen-login.active #admin-login-btn {
+  animation:fadeUp .28s ease both;
+}
+.perf-card,
+.proj-card,
+.avail-card,
+.kit-card,
+.pl-card,
+.update-card,
+.comp-card,
+.hist-entry,
+.team-card,
+.dt-card,
+.health-card,
+.lb-row,
+.tc-proj-row,
+.settings-row,
+.srow {
+  animation:cardIn .24s ease both;
+}
+@media (hover:hover) {
+  .proj-card:hover,
+  .avail-card:hover,
+  .kit-card:hover,
+  .pl-card:hover,
+  .update-card:hover,
+  .comp-card:hover,
+  .team-card:hover,
+  .dt-card:hover,
+  .health-card:hover {
+    transform:translateY(-2px);
+    box-shadow:0 10px 30px rgba(0,0,0,.18);
+  }
+}
+.pin-dot.filled,
+.pl-checkbox.checked,
+.kit-checkbox.checked {
+  animation:softPop .18s ease both;
+}
+.modal-overlay.open,
+.settings-modal {
+  animation:screenFade .16s ease both;
+}
+.settings-modal-box {
+  animation:cardIn .2s ease both;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration:.01ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:.01ms !important;
+    scroll-behavior:auto !important;
+  }
+}
 </style>
 </head>
 <body>
+<div id="page-race-transition" class="page-race-transition" aria-hidden="true"></div>
+<div id="login-loading-overlay" class="login-loading-overlay" aria-hidden="true">
+  <img class="login-loading-img" src="assets/podium1-login-loading.png" alt="">
+  <div class="login-loading-status">
+    <div class="login-loading-bar"></div>
+    <div>Loading Workspace</div>
+  </div>
+</div>
 
 <!-- LOGIN -->
 <!-- FIRST LAUNCH GATE -->
@@ -668,6 +907,17 @@ input.photo-file-inp { display:none; }
     <div class="name-list" id="name-list"></div>
   </div>
 
+  <!-- Floater role choice -->
+  <div id="floater-role-wrap" style="display:none;width:100%;max-width:400px;">
+    <div class="pin-sub" id="floater-role-label" style="margin-bottom:14px">What are you working on?</div>
+    <div class="name-list">
+      <button class="name-btn" onclick="chooseFloaterRole('ms')"><span class="role-tag tag-ms" style="margin-left:0">MS Build</span>Monitor Stand</button>
+      <button class="name-btn" onclick="chooseFloaterRole('chassis')"><span class="role-tag tag-chassis" style="margin-left:0">Chassis</span>Chassis</button>
+      <button class="name-btn" onclick="chooseFloaterRole('kit')"><span class="role-tag tag-kit" style="margin-left:0">Kitting</span>Kitter</button>
+    </div>
+    <button class="auth-back-btn" onclick="authBack()" style="margin-top:14px">Back</button>
+  </div>
+
   <!-- Step 2: PIN entry (shown after name tap) -->
   <div id="pin-entry-wrap" style="display:none;width:100%;max-width:320px;align-items:center;flex-direction:column;">
     <div class="pin-sub" id="pin-entry-label" style="margin-bottom:16px">Enter your PIN</div>
@@ -692,10 +942,6 @@ input.photo-file-inp { display:none; }
       <button class="pin-key del" onclick="loginPinDel()">&#x232B;</button>
     </div>
     <div class="pin-error" id="login-pin-error"></div>
-    <button class="auth-passkey-btn" id="passkey-btn" style="display:none;margin-top:14px" onclick="loginWithPasskey()">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M12 14c-5 0-8 2-8 3v1h16v-1c0-1-3-3-8-3z"/></svg>
-      Use Face ID / Touch ID
-    </button>
     <button class="auth-back-btn" onclick="authBack()" style="margin-top:14px">&#8592; Back</button>
   </div>
 
@@ -1257,7 +1503,7 @@ const COL_DISCOVER = {
   work_order_num : ["work order #", "work order#", "work order number", "wo#", "wo number"],
 };
 
-const MS_ROLE = "ms", CHASSIS_ROLE = "chassis", KIT_ROLE = "kit";
+const MS_ROLE = "ms", CHASSIS_ROLE = "chassis", KIT_ROLE = "kit", FLOAT_ROLE = "float";
 const TEAM = [
   { name:"Alex Inthavone",    initials:"AI", color:"#6366f1", role:MS_ROLE      },
   { name:"Mason McKnight",    initials:"MM", color:"#ec4899", role:MS_ROLE      },
@@ -1990,49 +2236,64 @@ async function syncPinsFromSupabase() {
     console.warn("PIN sync from Supabase failed:", e.message);
   }
 }
-function loadPasskeys()  { try { return JSON.parse(localStorage.getItem("pt_passkeys") || "{}"); } catch { return {}; } }
-function savePasskeys(o) { localStorage.setItem("pt_passkeys", JSON.stringify(o)); }
-
 const SETUP_CODE   = "5248";
 const ADMIN_NAME   = "Elijah Moosekian";
 let setupCodeUsed  = localStorage.getItem("pt_setup_used") === "1";
 let pendingUser    = null;
+let pendingFloater = null;
 
 /* ── Name list ─────────────────────────────────────────────── */
 function buildNameList() {
   const list = document.getElementById("name-list"); list.innerHTML = "";
   [{label:"Monitor Stand Builders",role:MS_ROLE},{label:"Chassis Builders",role:CHASSIS_ROLE},{label:"Kitting",role:KIT_ROLE}].forEach(({label,role})=>{
     const lbl = document.createElement("div"); lbl.className = "divider-label"; lbl.textContent = label; list.appendChild(lbl);
-    TEAM.filter(m=>m.role===role).forEach(m=>{
+    TEAM.filter(m=>role === KIT_ROLE ? (m.role === KIT_ROLE || m.role === FLOAT_ROLE) : m.role === role).forEach(m=>{
+      const isFloater = m.role === FLOAT_ROLE;
       const btn = document.createElement("button"); btn.className = "name-btn";
-      btn.innerHTML = `<div class="av" style="background:${m.color}25;color:${m.color}">${m.initials}</div>${m.name}<span class="role-tag ${role===MS_ROLE?'tag-ms':role===CHASSIS_ROLE?'tag-chassis':'tag-kit'}">${role===MS_ROLE?'MS Build':role===CHASSIS_ROLE?'Chassis':'Kitting'}</span>`;
-      btn.onclick = () => selectUser(m);
+      btn.innerHTML = `<div class="av" style="background:${m.color}25;color:${m.color}">${m.initials}</div>${m.name}<span class="role-tag ${roleTagClass(isFloater ? FLOAT_ROLE : role)}">${isFloater ? "Choose Role" : roleLoginLabel(role)}</span>`;
+      btn.onclick = () => isFloater ? openFloaterRoleChoice(m) : selectUser(m);
       list.appendChild(btn);
     });
   });
 }
 
-function selectUser(m) {
+function openFloaterRoleChoice(m) {
+  pendingFloater = m;
+  pendingUser = null;
+  document.querySelectorAll(".name-btn").forEach(b=>b.classList.remove("selected"));
+  document.querySelectorAll("#name-list .name-btn").forEach(b=>{ if(b.textContent.includes(m.name)) b.classList.add("selected"); });
+  document.getElementById("name-list-wrap").style.display = "none";
+  document.getElementById("pin-entry-wrap").style.display = "none";
+  document.getElementById("admin-login-btn").style.display = "none";
+  const wrap = document.getElementById("floater-role-wrap");
+  document.getElementById("floater-role-label").textContent = `What is ${m.name.split(" ")[0]} working on?`;
+  wrap.style.display = "block";
+}
+
+function chooseFloaterRole(role) {
+  if (!pendingFloater) return;
+  selectUser(pendingFloater, role);
+}
+
+function selectUser(m, roleOverride) {
   document.querySelectorAll(".name-btn").forEach(b=>b.classList.remove("selected"));
   document.querySelectorAll(".name-btn").forEach(b=>{ if(b.textContent.includes(m.name)) b.classList.add("selected"); });
-  pendingUser = m;
+  pendingUser = roleOverride && m.role === FLOAT_ROLE ? { ...m, role: roleOverride, baseRole: FLOAT_ROLE } : m;
   /* Show PIN entry, hide name list + admin button */
   document.getElementById("name-list-wrap").style.display  = "none";
+  document.getElementById("floater-role-wrap").style.display = "none";
   document.getElementById("admin-login-btn").style.display = "none";
   const wrap = document.getElementById("pin-entry-wrap");
   wrap.style.display = "flex";
   resetLoginPin();
   const hasPin     = !!loadPins()[m.name];
-  const hasPasskey = hasPin && !!loadPasskeys()[m.name];
   document.getElementById("pin-entry-label").textContent = hasPin ? `Welcome back, ${m.name.split(" ")[0]}` : `Set a 4-digit PIN, ${m.name.split(" ")[0]}`;
-  const pkBtn = document.getElementById("passkey-btn");
-  pkBtn.style.display = hasPasskey ? "flex" : "none";
-  if (hasPasskey) setTimeout(() => autoLoginWithPasskey(m), 300);
 }
 
 function authBack() {
-  pendingUser = null;
+  pendingUser = null; pendingFloater = null;
   document.getElementById("pin-entry-wrap").style.display  = "none";
+  document.getElementById("floater-role-wrap").style.display = "none";
   document.getElementById("name-list-wrap").style.display  = "block";
   document.getElementById("admin-login-btn").style.display = "flex";
   document.querySelectorAll(".name-btn").forEach(b=>b.classList.remove("selected"));
@@ -2101,61 +2362,7 @@ async function processLoginPin() {
 async function loginSuccess() {
   currentUser = pendingUser;
   localStorage.setItem("pt_user", JSON.stringify(currentUser));
-  /* Offer passkey if not yet registered */
-  if (!loadPasskeys()[currentUser.name] && window.PublicKeyCredential) {
-    try {
-      const supported = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-      if (supported && confirm("Save Face ID / Touch ID for quick login next time?")) {
-        await registerPasskey();
-      }
-    } catch(e) {}
-  }
-  showDash();
-}
-
-/* ── Passkey (Face ID / Touch ID) ──────────────────────────── */
-async function registerPasskey() {
-  try {
-    const userId = new TextEncoder().encode(currentUser.name);
-    const challenge = crypto.getRandomValues(new Uint8Array(32));
-    const cred = await navigator.credentials.create({ publicKey: {
-      challenge,
-      rp: { name: "P1 Production Tracker", id: location.hostname },
-      user: { id: userId, name: currentUser.name, displayName: currentUser.name },
-      pubKeyCredParams: [{ alg: -7, type: "public-key" }],
-      authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
-      timeout: 60000,
-    }});
-    const pkeys = loadPasskeys();
-    pkeys[currentUser.name] = btoa(String.fromCharCode(...new Uint8Array(cred.rawId)));
-    savePasskeys(pkeys);
-  } catch(e) {}
-}
-
-async function loginWithPasskey() {
-  await autoLoginWithPasskey(pendingUser);
-}
-
-async function autoLoginWithPasskey(user) {
-  if (!user) return;
-  const credIdB64 = loadPasskeys()[user.name];
-  if (!credIdB64) return;
-  try {
-    const credId = Uint8Array.from(atob(credIdB64), c=>c.charCodeAt(0));
-    const challenge = crypto.getRandomValues(new Uint8Array(32));
-    await navigator.credentials.get({ publicKey: {
-      challenge,
-      allowCredentials: [{ id: credId, type: "public-key" }],
-      userVerification: "required",
-      timeout: 60000,
-    }, mediation: "optional" });
-    currentUser = user;
-    localStorage.setItem("pt_user", JSON.stringify(currentUser));
-    showDash();
-  } catch(e) {
-    /* Biometric failed or cancelled — fall back to PIN silently */
-    document.getElementById("login-pin-error").textContent = "";
-  }
+  showLoginLoading(showDash);
 }
 
 /* ── Admin PIN keypad ──────────────────────────────────────── */
@@ -2208,9 +2415,11 @@ async function processAdminPin() {
   }
   currentUser = { name:ADMIN_NAME, initials:"EM", color:"#6366f1", role:"admin" };
   localStorage.setItem("pt_user", JSON.stringify(currentUser));
-  showScreen("screen-admin");
-  document.getElementById("admin-date").textContent = new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
-  loadAdminData();
+  showLoginLoading(() => {
+    showScreen("screen-admin");
+    document.getElementById("admin-date").textContent = new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
+    loadAdminData();
+  });
 }
 
 /* ── First-time PIN setup ───────────────────────────────────── */
@@ -2261,13 +2470,15 @@ async function processSetupPin() {
     if (setupUser._isAdmin) {
       currentUser = { name:ADMIN_NAME, initials:"EM", color:"#6366f1", role:"admin" };
       localStorage.setItem("pt_user", JSON.stringify(currentUser));
-      showScreen("screen-admin");
-      document.getElementById("admin-date").textContent = new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
-      loadAdminData();
+      showLoginLoading(() => {
+        showScreen("screen-admin");
+        document.getElementById("admin-date").textContent = new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
+        loadAdminData();
+      });
     } else {
       currentUser = setupUser;
       localStorage.setItem("pt_user", JSON.stringify(currentUser));
-      showDash();
+      showLoginLoading(showDash);
     }
   }
 }
@@ -2276,8 +2487,9 @@ function signOutCompletely() {
   stopRealTimeSync();
   localStorage.removeItem("pt_user");
   localStorage.removeItem("pt_gate_passed");
-  currentUser = null; pendingUser = null;
+  currentUser = null; pendingUser = null; pendingFloater = null;
   document.getElementById("pin-entry-wrap").style.display  = "none";
+  document.getElementById("floater-role-wrap").style.display = "none";
   document.getElementById("name-list-wrap").style.display  = "block";
   document.getElementById("admin-login-btn").style.display = "flex";
   const soBtn = document.getElementById("login-signout-btn");
@@ -2295,8 +2507,9 @@ function signOutCompletely() {
 
 function doLogout() {
   stopRealTimeSync();
-  localStorage.removeItem("pt_user"); currentUser = null; pendingUser = null;
+  localStorage.removeItem("pt_user"); currentUser = null; pendingUser = null; pendingFloater = null;
   document.getElementById("pin-entry-wrap").style.display  = "none";
+  document.getElementById("floater-role-wrap").style.display = "none";
   document.getElementById("name-list-wrap").style.display  = "block";
   document.getElementById("admin-login-btn").style.display = "flex";
   const soBtn = document.getElementById("login-signout-btn");
@@ -2308,7 +2521,50 @@ function doLogout() {
 /* ═══════════════════════════════════════
    SCREENS
 ═══════════════════════════════════════ */
-function showScreen(id) { document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active")); document.getElementById(id).classList.add("active"); }
+function runRacePageTransition() {
+  if (window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) return;
+  const overlay = document.getElementById("page-race-transition");
+  if (!overlay) return;
+  overlay.classList.remove("run");
+  void overlay.offsetWidth;
+  overlay.classList.add("run");
+}
+let suppressNextRaceTransition = false;
+function showLoginLoading(nextAction) {
+  const overlay = document.getElementById("login-loading-overlay");
+  const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+
+  if (!overlay || reduced) {
+    suppressNextRaceTransition = true;
+    nextAction();
+    return;
+  }
+
+  overlay.classList.remove("hide");
+  overlay.classList.add("show");
+
+  setTimeout(() => {
+    suppressNextRaceTransition = true;
+    nextAction();
+
+    setTimeout(() => {
+      overlay.classList.add("hide");
+      overlay.classList.remove("show");
+      setTimeout(() => overlay.classList.remove("hide"), 780);
+    }, 520);
+  }, 720);
+}
+function showScreen(id) {
+  const next = document.getElementById(id);
+  if (!next) return;
+  const current = document.querySelector(".screen.active");
+  if (current && current.id !== id) {
+    if (suppressNextRaceTransition) suppressNextRaceTransition = false;
+    else runRacePageTransition();
+  }
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  next.classList.add("active");
+}
 function showDash() {
   /* Pete goes to the kitting screen instead */
   if (currentUser.role === KIT_ROLE) { showKitScreen(); startRealTimeSync(); return; }
@@ -2495,6 +2751,8 @@ async function mondayQuery(query, apiVersion) {
 }
 
 const BOARD_CACHE_KEY = "pt_board_cache";
+const KIT_BOARD_CACHE_KEY = "pt_kit_board_cache";
+const PETE_KITTED_CACHE_KEY = "pt_pete_kitted_cache";
 
 function saveBoardCache(data) {
   try { localStorage.setItem(BOARD_CACHE_KEY, JSON.stringify({ ts: Date.now(), data })); } catch(e) {}
@@ -2505,6 +2763,17 @@ function loadBoardCache() {
     if (!raw) return null;
     /* Cache valid for 10 minutes */
     if (Date.now() - raw.ts > 10 * 60 * 1000) return null;
+    return raw.data;
+  } catch(e) { return null; }
+}
+function saveTimedCache(key, data) {
+  try { localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data })); } catch(e) {}
+}
+function loadTimedCache(key, maxAgeMs) {
+  try {
+    const raw = JSON.parse(localStorage.getItem(key) || "null");
+    if (!raw) return null;
+    if (Date.now() - raw.ts > maxAgeMs) return null;
     return raw.data;
   } catch(e) { return null; }
 }
@@ -2564,7 +2833,7 @@ async function loadBoard() {
     renderDash(boardItems);
   } catch(e) {
     if (!cached) {
-      listEl.innerHTML = `<div class="empty-state"> Could not load board.<br><small style="opacity:.55;font-size:11px">${e.message}</small></div>`;
+      listEl.innerHTML = `<div class="empty-state">Could not load board.<br><small style="opacity:.55;font-size:11px">${e.message}</small></div>`;
     } else {
       showToast("Could not sync — showing cached data", "");
     }
@@ -2630,7 +2899,7 @@ function renderDash(items) {
 
   /* Role-specific status label */
   const statusEl = document.getElementById("kpi-status");
-  if      (weeklyDone >= WEEKLY_GOAL) { statusEl.textContent = "Goal Met!";    statusEl.className = "kpi-v g"; }
+  if      (weeklyDone >= WEEKLY_GOAL) { statusEl.textContent = "Goal Met";     statusEl.className = "kpi-v g"; }
   else if (doneToday  >= 1)           { statusEl.textContent = "On Track";     statusEl.className = "kpi-v g"; }
   else if (avgPct     >= 70)          { statusEl.textContent = "Almost There"; statusEl.className = "kpi-v y"; }
   else if (avgPct     >= 35)          { statusEl.textContent = "Keep Going";   statusEl.className = "kpi-v y"; }
@@ -3088,7 +3357,7 @@ async function savePauseComment(itemId, colType, e) {
     await mondayQuery(`mutation { create_update(item_id:${itemId}, body:"${body}") { id } }`);
     savePauseReason(itemId, colType, reason);
     const prevReason = getPauseReason(itemId, colType);
-    btn.textContent = " Saved!";
+    btn.textContent = "Saved!";
     const undoPause = () =>{
       /* Remove the saved reason locally */
       const data = loadPauseReasons();
@@ -3212,7 +3481,7 @@ function renderPartsPulled(items,isMS) {
       const dateLabel=fmtShipDate(shipDate);
       let cls="ok", suffix="";
       if(days<0){cls="overdue";suffix=` · ${Math.abs(days)}d OVERDUE`;}
-      else if(days===0){cls="soon";suffix=" · Ships today!";}
+      else if(days===0){cls="soon";suffix=" · Ships today";}
       else if(days<=7){cls="soon";suffix=` · ${days}d away`;}
       else{suffix=` · ${days}d away`;}
       shipHtml=`<div class="ship-date-row">
@@ -3356,7 +3625,7 @@ async function grabBuild(itemId, e) {
     }
 
     addDelta({ user:currentUser.name, itemId, itemName:item?.name||itemId, colType:"grab", date:todayStr(), ts:new Date().toISOString() });
-    btn.innerHTML = " Assigned to You!";
+    btn.innerHTML = "Assigned to You";
     btn.classList.remove("priority-grab");
     btn.classList.add("grabbed");
 
@@ -3393,7 +3662,7 @@ async function grabBuild(itemId, e) {
       renderDash(boardItems);
     };
 
-    showToast(`Assigned to ${currentUser.name.split(" ")[0]}! Tap Undo to cancel.`, "ok", undoGrab);
+    showToast(`Assigned to ${currentUser.name.split(" ")[0]}. Tap Undo to cancel.`, "ok", undoGrab);
     renderDash(boardItems);
 
   } catch(err) {
@@ -3438,7 +3707,7 @@ function onPhotoSelected(itemId) {
     const btn     = document.getElementById("photo-btn-" + itemId);
     const retake  = document.getElementById("photo-retake-" + itemId);
     if (preview) { preview.src = base64; preview.classList.add("show"); }
-    if (btn)     { btn.classList.add("has-photo"); btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Photo ready`; }
+    if (btn)     { btn.classList.add("has-photo"); btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Photo Ready`; }
     if (retake)  retake.classList.add("show");
   };
   reader.readAsDataURL(file);
@@ -3452,7 +3721,7 @@ function retakePhoto(itemId) {
   const retake  = document.getElementById("photo-retake-" + itemId);
   if (inp)     inp.value = "";
   if (preview) { preview.src = ""; preview.classList.remove("show"); }
-  if (btn)     { btn.classList.remove("has-photo"); btn.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Tap to take a photo`; }
+  if (btn)     { btn.classList.remove("has-photo"); btn.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Take Photo`; }
   if (retake)  retake.classList.remove("show");
 }
 
@@ -3527,7 +3796,7 @@ function openUpdateSheet(itemId, colType, e) {
       <input type="file" accept="image/*" capture="environment" class="photo-file-inp" id="photo-inp-${itemId}" onchange="onPhotoSelected('${itemId}')">
       <div class="photo-capture-btn" id="photo-btn-${itemId}" onclick="document.getElementById('photo-inp-${itemId}').click()">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-        Tap to take a photo
+        Take Photo
       </div>
       <img class="photo-preview" id="photo-preview-${itemId}" alt="Progress photo">
       <button class="photo-retake" id="photo-retake-${itemId}" onclick="retakePhoto('${itemId}')">Retake photo</button>
@@ -3676,7 +3945,7 @@ async function saveUpdate(itemId,e) {
     }).catch(()=>{});
 
     addDelta({user:currentUser.name,itemId,itemName:local?.name||itemId,colType,date:todayStr(),prevPct,newPct,delta,creditedPct:Math.min(100,newPct)-Math.min(100,prevPct),overCredit,note,ts:now.toISOString()});
-    btn.textContent=" Saved!"; btn.classList.add("saved");
+    btn.textContent="Saved!"; btn.classList.add("saved");
     const undoSave = async () =>{
       try {
         await mondayQuery(`mutation { change_column_value(board_id:${BOARD_ID}, item_id:${itemId}, column_id:"${colId}", value:"${prevPct}") { id } }`);
@@ -3730,7 +3999,7 @@ applyTheme(loadTheme());
 function openLoginSettings() {
   /* Login screen — show only appearance */
   ["settings-team-section","settings-add-member","settings-manage-members","settings-reset-pin",
-   "biometric-row","change-pin-section","settings-account-section"].forEach(id=>{
+   "change-pin-section","settings-account-section"].forEach(id=>{
     const el = document.getElementById(id); if(el) el.style.display = "none";
   });
   const t = loadTheme();
@@ -3744,7 +4013,7 @@ function openLoginSettings() {
 
 function openSettings() {
   /* Restore all rows first */
-  ["biometric-row","change-pin-section","settings-account-section"].forEach(id=>{
+  ["change-pin-section","settings-account-section"].forEach(id=>{
     const el = document.getElementById(id); if(el) el.style.display = "";
   });
   /* Show/hide admin-only rows */
@@ -3759,10 +4028,6 @@ function openSettings() {
     const b = document.getElementById("theme-"+v);
     if(b) b.classList.toggle("active", v===t);
   });
-  /* Biometric label */
-  const hasPk = currentUser && !!loadPasskeys()[currentUser.name];
-  const bioEl = document.getElementById("biometric-label");
-  if (bioEl) bioEl.textContent = hasPk ? "Remove Face ID / Touch ID" : "Set Up Face ID / Touch ID";
   document.getElementById("settings-overlay").style.display = "block";
   const drawer = document.getElementById("settings-drawer");
   drawer.style.display = "flex";
@@ -3773,29 +4038,6 @@ function closeSettings() {
   document.getElementById("settings-drawer").style.display  = "none";
 }
 function closeModal(id) { document.getElementById(id).style.display = "none"; }
-
-/* ── Biometric ──────────────────────────────────────────────── */
-async function manageBiometric() {
-  const hasPk = currentUser && !!loadPasskeys()[currentUser.name];
-  if (hasPk) {
-    if (confirm("Remove Face ID / Touch ID for your account?")) {
-      const pkeys = loadPasskeys(); delete pkeys[currentUser.name]; savePasskeys(pkeys);
-      const bioEl = document.getElementById("biometric-label");
-      if (bioEl) bioEl.textContent = "Set Up Face ID / Touch ID";
-      alert("Biometric login removed.");
-    }
-  } else {
-    try {
-      const supported = window.PublicKeyCredential &&
-        await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-      if (!supported) { alert("Your device doesn't support biometric login."); return; }
-      await registerPasskey();
-      const bioEl = document.getElementById("biometric-label");
-      if (bioEl) bioEl.textContent = "Remove Face ID / Touch ID";
-      alert("Face ID / Touch ID saved!");
-    } catch(e) { alert("Biometric setup failed. Try again."); }
-  }
-}
 
 /* ── Change PIN ─────────────────────────────────────────────── */
 let cpBuf = "", cpStage = "current", cpFirst = "";
@@ -3855,6 +4097,75 @@ async function processCp() {
 const ACCENT_COLORS = ["#6366f1","#ec4899","#14b8a6","#f59e0b","#10b981","#ef4444","#8b5cf6","#f97316","#0ea5e9","#84cc16"];
 function loadExtraMembers() { try { return JSON.parse(localStorage.getItem("pt_extra_members")||"[]"); } catch { return []; } }
 function saveExtraMembers(arr) { localStorage.setItem("pt_extra_members", JSON.stringify(arr)); }
+function loadRoleOverrides() { try { return JSON.parse(localStorage.getItem("pt_role_overrides")||"{}"); } catch { return {}; } }
+function saveRoleOverrides(obj) { localStorage.setItem("pt_role_overrides", JSON.stringify(obj)); }
+function loadHiddenMembers() { try { return JSON.parse(localStorage.getItem("pt_hidden_members")||"[]"); } catch { return []; } }
+function saveHiddenMembers(arr) { localStorage.setItem("pt_hidden_members", JSON.stringify(arr)); }
+function activeTeamSnapshot() {
+  return TEAM.map(m => ({
+    name: m.name,
+    initials: m.initials || nameToInitials(m.name),
+    color: m.color || "#6366f1",
+    role: [MS_ROLE, CHASSIS_ROLE, KIT_ROLE, FLOAT_ROLE].includes(m.role) ? m.role : MS_ROLE,
+    active: true,
+    is_custom: !!m._custom,
+    updated_at: new Date().toISOString(),
+  }));
+}
+function hydrateTeamFromRows(rows) {
+  const next = rows
+    .filter(r => r && r.name && r.active !== false)
+    .map((r, idx) => ({
+      name: r.name,
+      initials: r.initials || nameToInitials(r.name),
+      color: r.color || ACCENT_COLORS[idx % ACCENT_COLORS.length],
+      role: [MS_ROLE, CHASSIS_ROLE, KIT_ROLE, FLOAT_ROLE].includes(r.role) ? r.role : MS_ROLE,
+      _custom: r.is_custom !== false,
+    }));
+  if (!next.length) return false;
+  TEAM.splice(0, TEAM.length, ...next);
+  saveExtraMembers(next.filter(m => m._custom));
+  saveHiddenMembers([]);
+  saveRoleOverrides({});
+  return true;
+}
+async function saveTeamMembersToSupabase(members) {
+  return await sbFetch("team_members?on_conflict=name", {
+    method: "POST",
+    prefer: "resolution=merge-duplicates,return=minimal",
+    body: JSON.stringify(members.map(m => ({
+      name: m.name,
+      initials: m.initials || nameToInitials(m.name),
+      color: m.color || "#6366f1",
+      role: [MS_ROLE, CHASSIS_ROLE, KIT_ROLE, FLOAT_ROLE].includes(m.role) ? m.role : MS_ROLE,
+      active: m.active !== false,
+      is_custom: !!m._custom || !!m.is_custom,
+      updated_at: new Date().toISOString(),
+    }))),
+  });
+}
+async function saveTeamMemberToSupabase(member) {
+  return await saveTeamMembersToSupabase([member]);
+}
+async function setTeamMemberActiveInSupabase(name, active) {
+  return await sbFetch(`team_members?name=eq.${encodeURIComponent(name)}`, {
+    method: "PATCH",
+    prefer: "return=minimal",
+    body: JSON.stringify({ active: !!active, updated_at: new Date().toISOString() }),
+  });
+}
+async function syncTeamFromSupabase() {
+  const rows = await sbFetch("team_members?select=name,initials,color,role,active,is_custom&order=name.asc", {
+    method: "GET",
+    headers: { "Prefer": "return=representation" },
+  });
+  if (!Array.isArray(rows)) return false;
+  if (!rows.length) {
+    await saveTeamMembersToSupabase(activeTeamSnapshot()).catch(()=>{});
+    return false;
+  }
+  return hydrateTeamFromRows(rows);
+}
 
 function getUsedColors() { return TEAM.map(m=>m.color); }
 function autoColor() {
@@ -3866,6 +4177,38 @@ function nameToInitials(name) {
   if (parts.length >= 2) return (parts[0][0]+parts[parts.length-1][0]).toUpperCase();
   return parts[0].slice(0,2).toUpperCase();
 }
+function roleLabel(role) {
+  return role === MS_ROLE ? "MS Builder" :
+    role === CHASSIS_ROLE ? "Chassis Builder" :
+    role === KIT_ROLE ? "Kitter" :
+    role === FLOAT_ROLE ? "Floater" : role;
+}
+function roleLoginLabel(role) {
+  return role === MS_ROLE ? "MS Build" :
+    role === CHASSIS_ROLE ? "Chassis" :
+    role === KIT_ROLE ? "Kitting" :
+    roleLabel(role);
+}
+function roleTagClass(role) {
+  return role === MS_ROLE ? "tag-ms" : role === CHASSIS_ROLE ? "tag-chassis" : "tag-kit";
+}
+function memberWorksAs(member, role) {
+  return member?.role === role || member?.role === FLOAT_ROLE;
+}
+function persistMemberRole(name, role) {
+  const member = TEAM.find(m => m.name === name);
+  if (!member) return;
+  member.role = role;
+  saveTeamMemberToSupabase(member).catch(()=>{});
+  if (member._custom) {
+    const extras = loadExtraMembers().map(m => m.name === name ? { ...m, role } : m);
+    saveExtraMembers(extras);
+  } else {
+    const overrides = loadRoleOverrides();
+    overrides[name] = role;
+    saveRoleOverrides(overrides);
+  }
+}
 
 function openAddMember() {
   document.getElementById("add-member-name").value  = "";
@@ -3875,7 +4218,7 @@ function openAddMember() {
   document.getElementById("modal-add-member").style.display = "flex";
 }
 
-function doAddMember() {
+async function doAddMember() {
   const name = document.getElementById("add-member-name").value.trim();
   const role = document.getElementById("add-member-role").value;
   const err  = document.getElementById("add-member-error");
@@ -3886,6 +4229,7 @@ function doAddMember() {
   const member = { name, initials: nameToInitials(name), color: autoColor(), role, _custom: true };
   TEAM.push(member);
   const extras = loadExtraMembers(); extras.push(member); saveExtraMembers(extras);
+  await saveTeamMemberToSupabase(member).catch(()=>{});
   buildNameList();
   closeModal("modal-add-member");
   alert(`${name} added! They can set their PIN on first login.`);
@@ -3930,24 +4274,49 @@ function openManageMembers() {
   TEAM.forEach(m=>{
     const row = document.createElement("div");
     row.style.cssText = "display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--card);border-radius:10px;border:1px solid var(--border)";
-    const canRemove = !!m._custom;
     row.innerHTML = `<div class="av" style="background:${m.color}25;color:${m.color};width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">${m.initials}</div>
-      <div style="flex:1"><div style="font-size:14px;font-weight:600">${m.name}</div><div style="font-size:11px;color:var(--muted)">${m.role==="ms"?"MS Builder":m.role==="chassis"?"Chassis Builder":"Kitter"}</div></div>
-      ${canRemove ? `<button class="member-remove-btn" onclick="removeMember('${m.name}')">Remove</button>` : ""}`;
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:600">${escHtml(m.name)}</div>
+        <select onchange="updateMemberRole('${m.name.replace(/'/g,"\\'")}',this.value)" style="margin-top:6px;width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-xs);padding:8px 9px;color:var(--text);font-size:12px">
+          <option value="${MS_ROLE}" ${m.role===MS_ROLE?"selected":""}>MS Builder</option>
+          <option value="${CHASSIS_ROLE}" ${m.role===CHASSIS_ROLE?"selected":""}>Chassis Builder</option>
+          <option value="${KIT_ROLE}" ${m.role===KIT_ROLE?"selected":""}>Kitter</option>
+          <option value="${FLOAT_ROLE}" ${m.role===FLOAT_ROLE?"selected":""}>Floater</option>
+        </select>
+      </div>
+      <button class="member-remove-btn" onclick="removeMember('${m.name.replace(/'/g,"\\'")}')">Remove</button>`;
     list.appendChild(row);
   });
   closeSettings();
   document.getElementById("modal-manage-members").style.display = "flex";
 }
 
+function updateMemberRole(name, role) {
+  persistMemberRole(name, role);
+  buildNameList();
+  openManageMembers();
+  showToast(`${name.split(" ")[0]} is now ${roleLabel(role)}.`, "ok");
+}
+
 function removeMember(name) {
   if (!confirm(`Remove ${name} from the team?`)) return;
   const idx = TEAM.findIndex(m=>m.name===name);
+  const member = TEAM[idx];
   if (idx > -1) TEAM.splice(idx,1);
+  setTeamMemberActiveInSupabase(name, false).catch(()=>{});
   const extras = loadExtraMembers().filter(m=>m.name!==name);
   saveExtraMembers(extras);
+  if (member && !member._custom) {
+    const hidden = loadHiddenMembers();
+    if (!hidden.includes(name)) hidden.push(name);
+    saveHiddenMembers(hidden);
+    const overrides = loadRoleOverrides();
+    delete overrides[name];
+    saveRoleOverrides(overrides);
+  }
   /* Also clear their PIN */
   deletePinFromSupabase(name).catch(()=>{});
+  buildNameList();
   openManageMembers();
 }
 
@@ -3959,7 +4328,7 @@ function openResetMemberPin() {
     const btn = document.createElement("button");
     btn.className = "settings-row settings-btn";
     btn.style.width = "100%";
-    btn.innerHTML = `<span class="settings-row-label">${m.name}</span><span style="font-size:11px;color:var(--muted)">${m.role==="ms"?"MS":m.role==="chassis"?"Chassis":"Kit"}</span>`;
+    btn.innerHTML = `<span class="settings-row-label">${m.name}</span><span style="font-size:11px;color:var(--muted)">${roleLabel(m.role)}</span>`;
     btn.onclick = ()=>resetMemberPin(m.name);
     list.appendChild(btn);
   });
@@ -3970,16 +4339,22 @@ function openResetMemberPin() {
 function resetMemberPin(name) {
   if (!confirm(`Reset PIN for ${name}? They will set a new one on next login.`)) return;
   deletePinFromSupabase(name).catch(()=>{});
-  /* Also clear biometric */
-  const pkeys = loadPasskeys(); delete pkeys[name]; savePasskeys(pkeys);
   closeModal("modal-reset-pin");
   alert(`${name}'s PIN has been reset.`);
 }
 
 /* ── Load extra members on startup ─────────────────────────── */
 (function loadCustomMembers() {
+  const hidden = new Set(loadHiddenMembers());
+  for (let i = TEAM.length - 1; i >= 0; i--) {
+    if (hidden.has(TEAM[i].name)) TEAM.splice(i, 1);
+  }
+  const overrides = loadRoleOverrides();
+  TEAM.forEach(m => {
+    if (overrides[m.name]) m.role = overrides[m.name];
+  });
   const extras = loadExtraMembers();
-  extras.forEach(m=>{ if (!TEAM.find(t=>t.name===m.name)) TEAM.push(m); });
+  extras.forEach(m=>{ if (!hidden.has(m.name) && !TEAM.find(t=>t.name===m.name)) TEAM.push(m); });
 })();
 
 /* ═══════════════════════════════════════
@@ -4037,7 +4412,7 @@ async function loadAdminData() {
       if (record) updateAdminTimerDisplay(record);
     });
   } catch(e) {
-    content.innerHTML = `<div class="empty-state"> Could not load board.<br><small>${e.message}</small></div>`;
+    content.innerHTML = `<div class="empty-state">Could not load board.<br><small>${e.message}</small></div>`;
   }
 }
 
@@ -5251,10 +5626,23 @@ let kitBoardItems = [];  /* cached kit board items — survives re-renders */
 
 async function loadKitBoard() {
   const content = document.getElementById("kit-content");
-  content.innerHTML = `<div class="loading-state"><div class="spinner"></div>Loading kitting queue…</div>`;
+  const cached = loadTimedCache(KIT_BOARD_CACHE_KEY, 10 * 60 * 1000);
+  if (cached?.items?.length) {
+    discoverColumns(cached.columns || []);
+    const gMap = {}; (cached.groups || []).forEach(g => { gMap[g.title] = g.id; });
+    window._kitGroupMap = gMap;
+    resolveInventoryContacts(cached.subscribers || []);
+    kitBoardItems = cached.items;
+    renderKitScreen(kitBoardItems);
+  } else {
+    content.innerHTML = `<div class="loading-state"><div class="spinner"></div>Loading kitting queue…</div>`;
+  }
   try {
-    /* Step 1: fetch columns and groups */
-    const colRes = await mondayQuery(`{ boards(ids:[${BOARD_ID}]) { columns { id title type } groups { id title } subscribers { id name } } }`);
+    /* Fetch board metadata and items in parallel */
+    const [colRes, itemRes] = await Promise.all([
+      mondayQuery(`{ boards(ids:[${BOARD_ID}]) { columns { id title type } groups { id title } subscribers { id name } } }`),
+      mondayQuery(`{ boards(ids:[${BOARD_ID}]) { items_page(limit:200) { items { id name group { id title } column_values { id text value } } } } }`)
+    ]);
     const board  = colRes.data.boards[0];
     discoverColumns(board.columns);
     const gMap = {}; board.groups.forEach(g => { gMap[g.title] = g.id; });
@@ -5262,9 +5650,13 @@ async function loadKitBoard() {
     /* Resolve Jake and Ayden IDs for kit complete mentions */
     resolveInventoryContacts(board.subscribers || []);
 
-    /* Step 2: fetch items separately */
-    const itemRes = await mondayQuery(`{ boards(ids:[${BOARD_ID}]) { items_page(limit:200) { items { id name group { id title } column_values { id text value } } } } }`);
     kitBoardItems = itemRes.data.boards[0].items_page.items;
+    saveTimedCache(KIT_BOARD_CACHE_KEY, {
+      columns: board.columns,
+      groups: board.groups,
+      subscribers: board.subscribers || [],
+      items: kitBoardItems,
+    });
     renderKitScreen(kitBoardItems);
 
     /* Auto-fetch pick lists from P1 API for all kit queue items (full + partial) */
@@ -5393,7 +5785,7 @@ function renderKitScreen(items) {
       const dateLabel = fmtShipDate(shipDate);
       let cls = "ok", suffix = "";
       if (days < 0)      { cls="overdue"; suffix=` · ${Math.abs(days)}d OVERDUE`; }
-      else if (days===0) { cls="soon";    suffix=" · Ships today!"; }
+      else if (days===0) { cls="soon";    suffix=" · Ships today"; }
       else if (days<=7)  { cls="soon";    suffix=` · ${days}d away`; }
       else               {                suffix=` · ${days}d away`; }
       shipHtml = `<div class="ship-date-row">
@@ -5466,6 +5858,72 @@ function toggleKitChecklist(itemId) {
   const isOpen = list.classList.contains("open");
   list.classList.toggle("open", !isOpen);
   toggle.classList.toggle("open", !isOpen);
+}
+
+function kitCheckSvg() {
+  return `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+}
+
+function updateKitChecklistProgress(itemId) {
+  const kitLines = KIT_LINE_CACHE[itemId] || [];
+  const ic       = getItemChecks(itemId);
+  const relevant = kitLines.filter(l => !ic.skips[l]);
+  const done     = relevant.filter(l => ic.checks[l]).length;
+  const pct      = relevant.length ? Math.round(done / relevant.length * 100) : 0;
+  const bar      = document.getElementById("kpf-" + itemId);
+  const countEl  = document.getElementById("kcc-" + itemId);
+  if (bar)     bar.style.width = pct + "%";
+  if (countEl) countEl.textContent = `Kitting Checklist — ${done}/${relevant.length} items`;
+
+  const doneBtn = document.getElementById("kdone-" + itemId);
+  if (doneBtn) {
+    const allNowDone = relevant.length > 0 && done >= relevant.length;
+    doneBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> ${allNowDone ? "Done Kitting — Move to Parts Pulled" : "Submit Kit (Missing Items)"}`;
+  }
+}
+
+function ensureKitBulkCheckControls(itemId, checklistDiv, doneBtn) {
+  if (!checklistDiv || document.getElementById("kbulk-" + itemId)) return;
+  const bulk = document.createElement("div");
+  bulk.id = "kbulk-" + itemId;
+  bulk.style.cssText = "background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.24);border-radius:var(--radius-xs);padding:9px 10px;margin-bottom:8px";
+  bulk.innerHTML = `<button type="button" onclick="event.stopPropagation();checkAllKitItems('${itemId}')"
+      style="width:100%;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:var(--radius-xs);padding:9px 10px;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#10b981;cursor:pointer">
+      Check All
+    </button>
+    <div style="font-size:10px;color:#fbbf24;line-height:1.35;margin-top:7px;text-align:center">
+      Shortcut only — double-check every item before submitting.
+    </div>`;
+  if (doneBtn) checklistDiv.insertBefore(bulk, doneBtn);
+  else checklistDiv.appendChild(bulk);
+}
+
+function checkAllKitItems(itemId) {
+  const data = loadKitChecks();
+  if (!data[itemId]) data[itemId] = { checks: {}, skips: {} };
+  if (!data[itemId].skips) data[itemId].skips = {};
+  if (!data[itemId].checks) data[itemId].checks = {};
+
+  const kitLines = KIT_LINE_CACHE[itemId] || [];
+  kitLines.forEach(label => {
+    if (!data[itemId].skips[label]) data[itemId].checks[label] = true;
+  });
+  saveKitChecks(data);
+
+  const card = document.getElementById("kit-card-" + itemId);
+  card?.querySelectorAll(".kit-check-row").forEach(row => {
+    const label = row.querySelector(".kit-check-label")?.textContent || "";
+    if (data[itemId].skips[label]) return;
+    const cb = row.querySelector(".kit-checkbox");
+    const lbl = row.querySelector(".kit-check-label");
+    const skipBtn = row.querySelector(".kit-skip-btn");
+    cb?.classList.add("checked");
+    if (cb) cb.innerHTML = kitCheckSvg();
+    if (lbl) lbl.className = "kit-check-label checked";
+    if (skipBtn) { skipBtn.classList.remove("skipped"); skipBtn.textContent = "Skip"; }
+  });
+  updateKitChecklistProgress(itemId);
+  showToast("All visible kit items checked. Double-check before submitting.", "ok");
 }
 
 /* Fetch pick list from P1 backend API — primary source, instant, no PDF needed */
@@ -5549,6 +6007,7 @@ async function fetchPickListFromApi(itemId, woNum) {
       .filter(l => l.length > 2);
 
     KIT_LINE_CACHE[itemId] = lines;
+    saveKitLineCache();
 
     /* 4. Update the card if it's currently visible */
     const card = document.getElementById("kit-card-" + itemId);
@@ -5572,6 +6031,7 @@ async function fetchPickListFromApi(itemId, woNum) {
 
     if (bar)     bar.style.width = pct + "%";
     if (countEl) countEl.textContent = `Kitting Checklist — ${done}/${relevant.length} items`;
+    ensureKitBulkCheckControls(itemId, checklistDiv, doneBtn);
 
     const _isPartial2 = card?.dataset.isPartialKit === "1";
     lines.forEach(label => {
@@ -5601,7 +6061,11 @@ async function fetchPickListFromApi(itemId, woNum) {
 ═══════════════════════════════════════ */
 
 /* Cache of fetched pick lists: itemId → string[] */
-const KIT_LINE_CACHE = {};
+const KIT_LINE_CACHE_KEY = "pt_kit_line_cache";
+const KIT_LINE_CACHE = loadTimedCache(KIT_LINE_CACHE_KEY, 30 * 60 * 1000) || {};
+function saveKitLineCache() {
+  saveTimedCache(KIT_LINE_CACHE_KEY, KIT_LINE_CACHE);
+}
 
 /* Extract Google Doc ID from a Drive URL */
 function extractDocId(url) {
@@ -5843,6 +6307,7 @@ async function buildKitChecklistAsync(item) {
           .map(it => it.label || buildItemLabel(it))
           .filter(l => l.length > 2);
         KIT_LINE_CACHE[item.id] = lines;
+        saveKitLineCache();
         return lines;
       }
     }
@@ -5851,6 +6316,7 @@ async function buildKitChecklistAsync(item) {
   /* Fallback to static if Supabase unavailable */
   const lines = buildKitChecklistStatic(item);
   KIT_LINE_CACHE[item.id] = lines;
+  saveKitLineCache();
   return lines;
 }
 
@@ -6009,7 +6475,7 @@ function onKitPhotoSelected(itemId) {
     const btn     = document.getElementById("kphoto-btn-" + itemId);
     const retake  = document.getElementById("kphoto-retake-" + itemId);
     if (preview) { preview.src = base64; preview.classList.add("show"); }
-    if (btn)     { btn.classList.add("has-photo"); btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Kit photo ready`; }
+    if (btn)     { btn.classList.add("has-photo"); btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Kit Photo Ready`; }
     if (retake)  retake.classList.add("show");
   };
   reader.readAsDataURL(file);
@@ -6023,7 +6489,7 @@ function retakeKitPhoto(itemId) {
   const retake  = document.getElementById("kphoto-retake-" + itemId);
   if (inp)     inp.value = "";
   if (preview) { preview.src = ""; preview.classList.remove("show"); }
-  if (btn)     { btn.classList.remove("has-photo"); btn.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Tap to take kit photo`; }
+  if (btn)     { btn.classList.remove("has-photo"); btn.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Take Kit Photo`; }
   if (retake)  retake.classList.remove("show");
 }
 
@@ -6272,6 +6738,7 @@ async function handleKitPdfDrop(itemId, file) {
 
     /* Cache and re-render checklist */
     KIT_LINE_CACHE[itemId] = lines;
+    saveKitLineCache();
 
     /* Remove drop zone */
     if (dropZone) dropZone.remove();
@@ -6288,6 +6755,7 @@ async function handleKitPdfDrop(itemId, file) {
     const doneBtn      = document.getElementById("kdone-" + itemId);
     const countEl      = document.getElementById("kcc-" + itemId);
     const ic           = getItemChecks(itemId);
+    ensureKitBulkCheckControls(itemId, checklistDiv, doneBtn);
 
     const _isPartial3 = card?.dataset.isPartialKit === "1";
     lines.forEach(label => {
@@ -6373,7 +6841,7 @@ async function openPickListScreen() {
   _plKittedAccessMode = false;
   _plCallerScreen = document.querySelector(".screen.active")?.id || "screen-admin";
   _plCurrentWo    = null;
-  document.getElementById("pl-header-sub").textContent = "All pick lists";
+  document.getElementById("pl-header-sub").textContent = "All Pick Lists";
   showScreen("screen-picklist");
 
   /* Show tabs for the overview */
@@ -6613,11 +7081,11 @@ function normalizeMissingItems(missingItems) {
   }
 }
 
-async function repairKittedPickListAllocation(woNum) {
+async function repairKittedPickListAllocation(woNum, completions = null) {
   const mondayItem = findKnownBoardItemByWo(woNum);
   const cleanName = cleanMondayName(mondayItem?.name || "").toLowerCase();
-  const completions = await sbGetKitCompletions();
-  const completion = completions.find(k =>
+  const completionRows = completions || await sbGetKitCompletions();
+  const completion = completionRows.find(k =>
     String(k.item_id || "") === String(woNum || "") ||
     (mondayItem?.id && String(k.item_id || "") === String(mondayItem.id)) ||
     cleanMondayName(k.item_name || "").toLowerCase() === cleanName
@@ -6637,14 +7105,14 @@ async function repairKittedPickListAllocation(woNum) {
   const missingLabels = new Set((missingItems || [])
     .map(i => String(i || "").toLowerCase().trim()));
 
-  for (const item of items) {
+  await Promise.all(items.map(item => {
     const label = (item.label || buildItemLabel(item)).toLowerCase().trim();
-    await sbFetch(`picklist_items?id=eq.${encodeURIComponent(item.id)}`, {
+    return sbFetch(`picklist_items?id=eq.${encodeURIComponent(item.id)}`, {
       method: "PATCH",
       prefer: "return=minimal",
       body: JSON.stringify({ allocated: !missingLabels.has(label) }),
     });
-  }
+  }));
 
   await sbFetch(`picklists?wo_number=eq.${encodeURIComponent(woNum)}&status=neq.complete`, {
     method: "PATCH",
@@ -6839,6 +7307,7 @@ async function renderPickLists() {
     if (!itemsByPl[ownerId]) itemsByPl[ownerId] = [];
     itemsByPl[ownerId].push(it);
   });
+  window._plItemsByPl = itemsByPl;
 
   let html = "";
 
@@ -6859,6 +7328,23 @@ async function renderPickLists() {
       fully_kitted:  "Fully Kitted",
       complete:      "Complete"
     }[pl.status] || pl.status;
+    const showKitCheckAll = pl.status !== "complete" && currentUser?.role === KIT_ROLE && !isLead() && !_plKittedAccessMode;
+    const checkAllHtml = showKitCheckAll ? `
+      <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.24);border-radius:var(--radius-xs);padding:9px 10px;margin:0 12px 10px">
+        <div style="display:flex;gap:7px;align-items:stretch">
+          <button type="button" onclick="checkAllPickListItems('${pl.id}',event)"
+            style="flex:1;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:var(--radius-xs);padding:9px 10px;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#10b981;cursor:pointer">
+            Check All
+          </button>
+          <button type="button" onclick="deselectAllPickListItems('${pl.id}',event)"
+            style="width:104px;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:var(--radius-xs);padding:9px 8px;font-size:9px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);cursor:pointer">
+            Deselect All
+          </button>
+        </div>
+        <div style="font-size:10px;color:#fbbf24;line-height:1.35;margin-top:7px;text-align:center">
+          Shortcut only — double-check every item before submitting.
+        </div>
+      </div>` : "";
 
     html += `<div class="pl-card status-${pl.status}${pl.has_changes ? " has-changes" : ""}" id="plcard-${pl.id}">
       <div class="pl-card-header">
@@ -6875,6 +7361,8 @@ async function renderPickLists() {
           <span class="pl-status-pill ${pl.status}">${statusLabel}</span>
         </div>
       </div>
+
+      ${checkAllHtml}
 
       ${items.map(it => {
         const label = escHtml(it.label || buildItemLabel(it));
@@ -7002,6 +7490,110 @@ async function togglePickListItem(itemId, plId, e) {
   });
 
   await refreshPickListCard(plId);
+}
+
+/* ── Pete shortcut: check every item on an initial kit pick list ── */
+async function checkAllPickListItems(plId, e) {
+  if (e) {
+    e.stopPropagation();
+    e.preventDefault();
+  }
+
+  const items = (window._plItemsByPl || {})[plId] || [];
+  if (!items.length) {
+    showToast("No pick list items found.", "err");
+    return;
+  }
+
+  const remaining = items.filter(it => !it.allocated);
+  if (!remaining.length) {
+    showToast("Everything is already checked.", "ok");
+    return;
+  }
+
+  const btn = e?.currentTarget;
+  const oldText = btn?.textContent;
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Checking…";
+  }
+
+  try {
+    await Promise.all(remaining.map(it =>
+      sbFetch(`picklist_items?id=eq.${encodeURIComponent(it.id)}`, {
+        method: "PATCH",
+        prefer: "return=minimal",
+        body: JSON.stringify({ allocated: true }),
+      })
+    ));
+
+    await sbFetch(`picklists?id=eq.${encodeURIComponent(plId)}&status=neq.complete`, {
+      method: "PATCH",
+      prefer: "return=minimal",
+      body: JSON.stringify({ status: "fully_kitted", updated_at: new Date().toISOString() }),
+    });
+
+    showToast("All pick list items checked. Double-check before submitting.", "ok");
+    await renderPickLists();
+  } catch (err) {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = oldText || "Check All";
+    }
+    showToast("Could not check all items. Try again.", "err");
+  }
+}
+
+/* ── Pete shortcut: clear every item on an initial kit pick list ── */
+async function deselectAllPickListItems(plId, e) {
+  if (e) {
+    e.stopPropagation();
+    e.preventDefault();
+  }
+
+  const items = (window._plItemsByPl || {})[plId] || [];
+  if (!items.length) {
+    showToast("No pick list items found.", "err");
+    return;
+  }
+
+  const selected = items.filter(it => it.allocated);
+  if (!selected.length) {
+    showToast("Everything is already unchecked.", "ok");
+    return;
+  }
+
+  const btn = e?.currentTarget;
+  const oldText = btn?.textContent;
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Clearing…";
+  }
+
+  try {
+    await Promise.all(selected.map(it =>
+      sbFetch(`picklist_items?id=eq.${encodeURIComponent(it.id)}`, {
+        method: "PATCH",
+        prefer: "return=minimal",
+        body: JSON.stringify({ allocated: false }),
+      })
+    ));
+
+    await sbFetch(`picklists?id=eq.${encodeURIComponent(plId)}&status=neq.complete`, {
+      method: "PATCH",
+      prefer: "return=minimal",
+      body: JSON.stringify({ status: "missing_items", updated_at: new Date().toISOString() }),
+    });
+
+    showToast("All pick list items unchecked.", "ok");
+    await renderPickLists();
+  } catch (err) {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = oldText || "Deselect All";
+    }
+    showToast("Could not deselect all items. Try again.", "err");
+  }
 }
 
 /* ── Refresh a single card's meta after item changes ── */
@@ -7132,7 +7724,7 @@ async function confirmSubmitKitFromPickList(plId, woNum, mondayItemId, e) {
 
     if (!mondayItem) {
       showToast("Could not find Monday item — kit not moved", "err");
-      if (btn) { btn.disabled = false; btn.textContent = "Try Again"; }
+      if (btn) { btn.disabled = false; btn.textContent = "Try again"; }
       return;
     }
 
@@ -7216,7 +7808,7 @@ async function confirmSubmitKitFromPickList(plId, woNum, mondayItemId, e) {
 
   } catch(err) {
     showToast("Error: " + err.message, "err");
-    if (btn) { btn.disabled = false; btn.textContent = "Try Again"; }
+    if (btn) { btn.disabled = false; btn.textContent = "Try again"; }
   }
 }
 
@@ -7257,7 +7849,7 @@ async function ensurePeteKittedPickListsFromKnownItems(completedItemIds, complet
       .filter(Boolean)
   )];
 
-  for (const woNum of kittedWos) {
+  await Promise.all(kittedWos.map(async woNum => {
     const existing = await sbFetch(
       `picklists?wo_number=eq.${encodeURIComponent(woNum)}&select=id,status&limit=1`,
       { method: "GET", headers: { "Prefer": "return=representation" } }
@@ -7268,7 +7860,7 @@ async function ensurePeteKittedPickListsFromKnownItems(completedItemIds, complet
     } else if (existing[0].status !== "complete") {
       await syncPickListStatusFromMonday(woNum);
     }
-  }
+  }));
 }
 
 function isPeteKittedCompletion(pl, completedItemIds, completedItemNames) {
@@ -7321,7 +7913,7 @@ function confirmPeteMissingItemArrived(itemId, plId, woNum, label, e) {
         </button>
         <button onclick="markPeteMissingItemArrived('${itemId}','${plId}','${woNum}',event)"
           style="flex:2;background:var(--green);border:none;border-radius:var(--radius-xs);padding:13px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#fff;cursor:pointer">
-          Confirm Item Here
+          Confirm Item Is Here
         </button>
       </div>
     </div>`;
@@ -7332,7 +7924,7 @@ function confirmPeteMissingItemArrived(itemId, plId, woNum, label, e) {
 async function markPeteMissingItemArrived(itemId, plId, woNum, e) {
   if (e) e.stopPropagation();
   const btn = e?.currentTarget;
-  if (btn) { btn.disabled = true; btn.textContent = "Updating..."; }
+  if (btn) { btn.disabled = true; btn.textContent = "Updating…"; }
 
   await sbFetch(`picklist_items?id=eq.${encodeURIComponent(itemId)}`, {
     method: "PATCH",
@@ -7376,7 +7968,13 @@ async function openPeteKittedPickLists() {
   const search = document.getElementById("pete-pl-search");
   if (search) search.value = "";
   const listEl = document.getElementById("pete-pl-list");
-  if (listEl) listEl.innerHTML = `<div class="loading-state"><div class="spinner"></div>Loading kitted pick lists…</div>`;
+  const cachedLists = loadTimedCache(PETE_KITTED_CACHE_KEY, 5 * 60 * 1000);
+  if (Array.isArray(cachedLists) && cachedLists.length) {
+    window._petePlLists = cachedLists;
+    renderPetePlList();
+  } else if (listEl) {
+    listEl.innerHTML = `<div class="loading-state"><div class="spinner"></div>Loading kitted pick lists…</div>`;
+  }
 
   /* Load open picklists Pete has kitted from Supabase */
   try {
@@ -7389,7 +7987,7 @@ async function openPeteKittedPickLists() {
     }) || [];
     const reviewByWo = {};
 
-    for (const pl of rows) {
+    await Promise.all(rows.map(async pl => {
       const mondayItem = findKnownBoardItemByWo(pl.wo_number);
       const groupMatch = isPeteKittedAccessGroup(mondayItem?.group?.title);
       const completionMatch =
@@ -7397,10 +7995,10 @@ async function openPeteKittedPickLists() {
         (mondayItem?.id && completedItemIds.has(String(mondayItem.id))) ||
         completedItemNames.has((cleanMondayName(mondayItem?.name) || pl.customer_name || "").toLowerCase());
       if (groupMatch && (completionMatch || pl.status === "fully_kitted")) {
-        const repairState = await repairKittedPickListAllocation(pl.wo_number);
+        const repairState = await repairKittedPickListAllocation(pl.wo_number, completions);
         if (repairState === "needs_review") reviewByWo[pl.wo_number] = true;
       }
-    }
+    }));
 
     const visibleWos = rows.map(pl => pl.wo_number).filter(Boolean);
     const openItems = visibleWos.length ? await sbFetch(
@@ -7452,6 +8050,7 @@ async function openPeteKittedPickLists() {
       });
 
     window._petePlLists = withDates;
+    saveTimedCache(PETE_KITTED_CACHE_KEY, withDates);
     renderPetePlList();
   } catch(err) {
     document.getElementById("pete-pl-list").innerHTML =
@@ -7516,7 +8115,11 @@ function renderPetePlList() {
       </button>
       <div style="display:${isExpanded ? "block" : "none"};border-top:1px solid var(--border);padding:10px 14px 14px">
         ${pl.needsReview ? `<div style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);border-radius:var(--radius-xs);padding:9px 10px;margin-bottom:10px;font-size:11px;line-height:1.35;color:#fbbf24">
-          Allocation history is incomplete. Please review and use Item Here to fix missing items manually.
+          Allocation history is incomplete. Use Review Allocation to fix this pick list in one step.
+          <button onclick="openPeteAllocationReview('${pl.id}','${woArg}',event)"
+            style="width:100%;margin-top:9px;background:rgba(245,158,11,0.16);border:1px solid rgba(245,158,11,0.38);border-radius:var(--radius-xs);padding:9px 10px;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#fbbf24;cursor:pointer">
+            Review Allocation
+          </button>
         </div>` : ""}
         <div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:8px">
           <div style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">Checklist</div>
@@ -7533,7 +8136,7 @@ function renderPetePlList() {
             <div style="font-size:12px;color:${item.allocated ? "var(--muted)" : "var(--text)"};text-decoration:${item.allocated ? "line-through" : "none"};line-height:1.35;flex:1">${label}</div>
             ${item.allocated ? "" : `<button onclick="confirmPeteMissingItemArrived('${item.id}','${pl.id}','${woArg}','${itemLabelArg}',event)"
               style="background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:var(--radius-xs);padding:6px 8px;font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#10b981;cursor:pointer;flex-shrink:0">
-              Item Here
+              Item Is Here
             </button>`}
           </div>`;
         }).join("") : `<div style="font-size:12px;color:var(--muted);padding:12px 0">No checklist items found yet.</div>`}
@@ -7545,6 +8148,113 @@ function renderPetePlList() {
     </div>`;
   });
   el.innerHTML = html;
+}
+
+function openPeteAllocationReview(plId, woNum, e) {
+  if (e) { e.stopPropagation(); e.preventDefault(); }
+  const pl = (window._petePlLists || []).find(p => p.id === plId || p.wo_number === woNum);
+  if (!pl) return;
+  const items = pl.checklistItems || [];
+  const existing = document.getElementById("pete-review-modal");
+  if (existing) existing.remove();
+
+  const modal = document.createElement("div");
+  modal.id = "pete-review-modal";
+  modal.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:1000;display:flex;align-items:flex-end;justify-content:center;padding:0";
+  const title = escHtml(getPetePickListCustomer(pl) ? `${getPetePickListCustomer(pl)} · ${pl.wo_number}` : pl.wo_number);
+  modal.innerHTML = `
+    <div style="background:var(--surface);border-top:1px solid var(--border);border-radius:var(--radius) var(--radius) 0 0;padding:22px 18px 34px;width:100%;max-width:520px;max-height:86vh;overflow-y:auto">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:6px">
+        <div>
+          <div style="font-size:16px;font-weight:800">Review Allocation</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px">${title}</div>
+        </div>
+        <button onclick="document.getElementById('pete-review-modal')?.remove()"
+          style="background:none;border:none;color:var(--muted);font-size:24px;line-height:1;cursor:pointer">×</button>
+      </div>
+      <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.28);border-radius:var(--radius-xs);padding:9px 10px;margin:12px 0;font-size:11px;line-height:1.4;color:#fbbf24">
+        Check the items that are allocated/here. Anything left unchecked will stay marked missing.
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <button onclick="peteReviewSetAll(true)"
+          style="flex:1;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:var(--radius-xs);padding:10px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#10b981;cursor:pointer">
+          Check All
+        </button>
+        <button onclick="peteReviewSetAll(false)"
+          style="flex:1;background:rgba(224,32,32,0.1);border:1px solid rgba(224,32,32,0.28);border-radius:var(--radius-xs);padding:10px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);cursor:pointer">
+          Clear All
+        </button>
+      </div>
+      <div id="pete-review-items" style="display:flex;flex-direction:column;border-top:1px solid var(--border)">
+        ${items.length ? items.map(item => {
+          const label = escHtml(item.label || buildItemLabel(item));
+          const checked = item.allocated ? "checked" : "";
+          return `<label style="display:flex;align-items:flex-start;gap:9px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:12px;line-height:1.35;color:var(--text);cursor:pointer">
+            <input type="checkbox" class="pete-review-allocated" data-item-id="${escHtml(item.id)}" ${checked}
+              style="margin-top:2px;accent-color:var(--green);width:16px;height:16px;flex-shrink:0">
+            <span>${label}</span>
+          </label>`;
+        }).join("") : `<div style="font-size:12px;color:var(--muted);padding:16px 0">No checklist items found.</div>`}
+      </div>
+      <button onclick="savePeteAllocationReview('${plId}','${woNum}',event)" ${items.length ? "" : "disabled"}
+        style="width:100%;margin-top:14px;background:var(--accent);border:none;border-radius:var(--radius-xs);padding:13px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#fff;cursor:${items.length ? "pointer" : "not-allowed"};opacity:${items.length ? "1" : ".45"}">
+        Save Review
+      </button>
+    </div>`;
+  modal.addEventListener("click", ev => { if (ev.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
+
+function peteReviewSetAll(allocated) {
+  document.querySelectorAll("#pete-review-modal .pete-review-allocated").forEach(cb => {
+    cb.checked = !!allocated;
+  });
+}
+
+async function savePeteAllocationReview(plId, woNum, e) {
+  if (e) e.stopPropagation();
+  const btn = e?.currentTarget;
+  if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
+  const allocatedIds = new Set([...document.querySelectorAll("#pete-review-modal .pete-review-allocated")]
+    .filter(cb => cb.checked)
+    .map(cb => cb.dataset.itemId));
+  const pl = (window._petePlLists || []).find(p => p.id === plId || p.wo_number === woNum);
+  const items = pl?.checklistItems || [];
+
+  await Promise.all(items.map(item => sbFetch(`picklist_items?id=eq.${encodeURIComponent(item.id)}`, {
+    method: "PATCH",
+    prefer: "return=minimal",
+    body: JSON.stringify({ allocated: allocatedIds.has(String(item.id)) }),
+  })));
+
+  const allAllocated = items.length > 0 && allocatedIds.size === items.length;
+  await sbFetch(`picklists?id=eq.${encodeURIComponent(plId)}&status=neq.complete`, {
+    method: "PATCH",
+    prefer: "return=minimal",
+    body: JSON.stringify({
+      status: allAllocated ? "fully_kitted" : "missing_items",
+      updated_at: new Date().toISOString(),
+    }),
+  });
+
+  window._petePlLists = (window._petePlLists || []).map(p => {
+    if (p.id !== plId && p.wo_number !== woNum) return p;
+    const checklistItems = (p.checklistItems || []).map(item => ({
+      ...item,
+      allocated: allocatedIds.has(String(item.id)),
+    }));
+    return {
+      ...p,
+      checklistItems,
+      needsReview: false,
+      status: allAllocated ? "fully_kitted" : "missing_items",
+      displayStatus: allAllocated ? "fully_kitted" : "missing_items",
+    };
+  });
+  saveTimedCache(PETE_KITTED_CACHE_KEY, window._petePlLists || []);
+  document.getElementById("pete-review-modal")?.remove();
+  renderPetePlList();
+  showToast(allAllocated ? "Review saved — all allocated." : "Review saved — missing items marked.", "ok");
 }
 
 /* ── Confirmation modal before completing pick list ── */
@@ -8004,11 +8714,18 @@ function showToast(msg, type, undoFn) {
    BOOT
 ═══════════════════════════════════════ */
 buildNameList();
+syncTeamFromSupabase().then(changed => {
+  if (changed) buildNameList();
+}).catch(()=>{});
 syncPinsFromSupabase().catch(()=>{});
 try {
   const saved=localStorage.getItem("pt_user");
   if(saved && localStorage.getItem("pt_gate_passed")==="1"){
-    const u=JSON.parse(saved); currentUser=TEAM.find(m=>m.name===u.name)||u;
+    const u=JSON.parse(saved);
+    const storedMember = TEAM.find(m=>m.name===u.name);
+    currentUser = storedMember && storedMember.role === FLOAT_ROLE && [MS_ROLE, CHASSIS_ROLE, KIT_ROLE].includes(u.role)
+      ? { ...storedMember, role: u.role, baseRole: FLOAT_ROLE }
+      : storedMember || u;
     if(currentUser.role==="admin"){showScreen("screen-admin");document.getElementById("admin-date").textContent=new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});loadAdminData();}
     else { showDash(); }
   } else if (saved) {
@@ -8030,7 +8747,7 @@ try {
       </button>
       <div>
         <div class="hname">Kitted Pick Lists</div>
-        <div class="hdate">Open after kitting, sorted by ship date</div>
+        <div class="hdate">Open after kitting, sorted by kitted date</div>
       </div>
     </div>
     <div class="header-right">
@@ -8043,7 +8760,7 @@ try {
   <div class="main-content">
     <div style="position:relative;margin-bottom:12px">
       <svg style="position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-      <input id="pete-pl-search" type="text" placeholder="Search customer name or WO number..."
+      <input id="pete-pl-search" type="text" placeholder="Search customer name or WO number…"
         style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-xs);padding:12px 12px 12px 36px;color:var(--text);font-size:13px;outline:none"
         oninput="renderPetePlList()">
     </div>
@@ -8062,7 +8779,7 @@ try {
       </button>
       <div>
         <div class="hname">Pick Lists</div>
-        <div class="hdate" id="pl-header-sub">All pick lists</div>
+        <div class="hdate" id="pl-header-sub">All Pick Lists</div>
       </div>
     </div>
     <div class="header-right">
@@ -8170,14 +8887,6 @@ try {
           <span class="srow-label">Change PIN</span>
           <svg class="srow-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
         </button>
-        <div style="height:1px;background:var(--border);margin:0 14px;"></div>
-        <button class="srow" id="biometric-row" onclick="manageBiometric()">
-          <div class="srow-icon" style="background:rgba(16,185,129,0.15);color:#10b981;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          </div>
-          <span class="srow-label" id="biometric-label">Set Up Face ID / Touch ID</span>
-          <svg class="srow-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
-        </button>
       </div>
     </div>
 
@@ -8259,6 +8968,7 @@ try {
         <option value="ms">MS Builder</option>
         <option value="chassis">Chassis Builder</option>
         <option value="kit">Kitter</option>
+        <option value="float">Floater</option>
       </select>
     </div>
     <div class="pin-error" id="add-member-error"></div>
