@@ -4398,7 +4398,7 @@ function renderAdminStreamlineWidgets(items, sbTimers = [], sbKits = []) {
   const nextWo = next ? getWoNumberFromItem(next) : "";
   const nextId = next?.id || "";
   const actionButton = nextWo
-    ? `<button class="next-action-btn" onclick="openAdminActionPickList('${nextId}','${nextWo}',event)">Open This Pick List</button>`
+    ? `<button class="next-action-btn" onclick="openAdminAllocationReview('${nextId}','${nextWo}',event)">Open Allocation Review</button>`
     : next
       ? `<button class="next-action-btn" onclick="showToast('This project does not have a work order number yet.', '')">No Pick List Yet</button>`
       : `<button class="next-action-btn" onclick="manualRefresh('admin')">Refresh Admin View</button>`;
@@ -4428,12 +4428,13 @@ function renderAdminStreamlineWidgets(items, sbTimers = [], sbKits = []) {
   </div>` : ""}`;
 }
 
-function openAdminActionPickList(itemId, woNum, e) {
+async function openAdminAllocationReview(itemId, woNum, e) {
+  if (e) { e.stopPropagation(); e.preventDefault(); }
   if (!woNum) {
     showToast("This project does not have a work order number yet.", "");
     return;
   }
-  openPickListForItem(itemId, woNum, e, { reviewOnly: true });
+  await openAllocationReviewByWo(woNum, "Admin Allocation Review");
 }
 
 function openManageMembers() {
@@ -8427,10 +8428,125 @@ function openPeteAllocationReview(plId, woNum, e) {
   document.body.appendChild(modal);
 }
 
+async function openAllocationReviewByWo(woNum, heading = "Review Allocation") {
+  const existing = document.getElementById("pete-review-modal");
+  if (existing) existing.remove();
+
+  const modal = document.createElement("div");
+  modal.id = "pete-review-modal";
+  modal.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:1000;display:flex;align-items:flex-end;justify-content:center;padding:0";
+  modal.innerHTML = `
+    <div style="background:var(--surface);border-top:1px solid var(--border);border-radius:var(--radius) var(--radius) 0 0;padding:22px 18px 34px;width:100%;max-width:520px;max-height:86vh;overflow-y:auto">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:6px">
+        <div>
+          <div style="font-size:16px;font-weight:800">${escHtml(heading)}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px">${escHtml(woNum)}</div>
+        </div>
+        <button onclick="document.getElementById('pete-review-modal')?.remove()"
+          style="background:none;border:none;color:var(--muted);font-size:24px;line-height:1;cursor:pointer">×</button>
+      </div>
+      <div id="generic-review-body">
+        <div class="loading-state" style="padding:22px 0"><div class="spinner"></div>Loading pick list…</div>
+      </div>
+    </div>`;
+  modal.addEventListener("click", ev => { if (ev.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+
+  try {
+    await ensurePickList(woNum);
+    const plRows = await sbFetch(`picklists?wo_number=eq.${encodeURIComponent(woNum)}&order=updated_at.desc&limit=1`, {
+      method: "GET", headers: { "Prefer": "return=representation" }
+    }) || [];
+    const pl = plRows[0];
+    if (!pl?.id) throw new Error("No pick list found for this work order.");
+    const byPickList = await sbFetch(
+      `picklist_items?picklist_id=eq.${encodeURIComponent(pl.id)}&order=id.asc`,
+      { method: "GET", headers: { "Prefer": "return=representation" } }
+    ) || [];
+    const byWorkOrder = await sbFetch(
+      `picklist_items?wo_number=eq.${encodeURIComponent(woNum)}&order=id.asc`,
+      { method: "GET", headers: { "Prefer": "return=representation" } }
+    ) || [];
+    const itemMap = new Map();
+    [...byPickList, ...byWorkOrder].forEach(item => {
+      if (item?.id) itemMap.set(String(item.id), item);
+    });
+    const items = [...itemMap.values()];
+    renderAllocationReviewBody(pl, items, woNum);
+  } catch (err) {
+    const body = document.getElementById("generic-review-body");
+    if (body) body.innerHTML = `<div class="empty-state" style="padding:22px 0">Could not load allocation review.<br><small>${escHtml(err.message)}</small></div>`;
+  }
+}
+
+function renderAllocationReviewBody(pl, items, woNum) {
+  const body = document.getElementById("generic-review-body");
+  if (!body) return;
+  body.innerHTML = `
+    <div style="background:rgba(99,102,241,0.09);border:1px solid rgba(99,102,241,0.25);border-radius:var(--radius-xs);padding:9px 10px;margin:12px 0;font-size:11px;line-height:1.4;color:var(--muted)">
+      This only updates allocation data in Supabase. It does not move the order in Monday.
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <button onclick="peteReviewSetAll(true)"
+        style="flex:1;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:var(--radius-xs);padding:10px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#10b981;cursor:pointer">
+        Check All
+      </button>
+      <button onclick="peteReviewSetAll(false)"
+        style="flex:1;background:rgba(224,32,32,0.1);border:1px solid rgba(224,32,32,0.28);border-radius:var(--radius-xs);padding:10px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);cursor:pointer">
+        Clear All
+      </button>
+    </div>
+    <div id="pete-review-items" style="display:flex;flex-direction:column;border-top:1px solid var(--border)">
+      ${items.length ? items.map(item => {
+        const label = escHtml(item.label || buildItemLabel(item));
+        const checked = item.allocated ? "checked" : "";
+        return `<label style="display:flex;align-items:flex-start;gap:9px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:12px;line-height:1.35;color:var(--text);cursor:pointer">
+          <input type="checkbox" class="pete-review-allocated" data-item-id="${escHtml(item.id)}" ${checked}
+            style="margin-top:2px;accent-color:var(--green);width:16px;height:16px;flex-shrink:0">
+          <span>${label}</span>
+        </label>`;
+      }).join("") : `<div style="font-size:12px;color:var(--muted);padding:16px 0">No checklist items found.</div>`}
+    </div>
+    <button onclick="saveAllocationReview('${pl.id}','${woNum}',event)" ${items.length ? "" : "disabled"}
+      style="width:100%;margin-top:14px;background:var(--accent);border:none;border-radius:var(--radius-xs);padding:13px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#fff;cursor:${items.length ? "pointer" : "not-allowed"};opacity:${items.length ? "1" : ".45"}">
+      Save Allocation
+    </button>`;
+}
+
 function peteReviewSetAll(allocated) {
   document.querySelectorAll("#pete-review-modal .pete-review-allocated").forEach(cb => {
     cb.checked = !!allocated;
   });
+}
+
+async function saveAllocationReview(plId, woNum, e) {
+  if (e) e.stopPropagation();
+  const btn = e?.currentTarget;
+  if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
+  const boxes = [...document.querySelectorAll("#pete-review-modal .pete-review-allocated")];
+  const allIds = boxes.map(cb => cb.dataset.itemId).filter(Boolean);
+  const allocatedIds = new Set(boxes
+    .filter(cb => cb.checked)
+    .map(cb => cb.dataset.itemId));
+
+  await Promise.all(allIds.map(id => sbFetch(`picklist_items?id=eq.${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    prefer: "return=minimal",
+    body: JSON.stringify({ allocated: allocatedIds.has(String(id)) }),
+  })));
+
+  const allAllocated = allIds.length > 0 && allocatedIds.size === allIds.length;
+  await sbFetch(`picklists?id=eq.${encodeURIComponent(plId)}&status=neq.complete`, {
+    method: "PATCH",
+    prefer: "return=minimal",
+    body: JSON.stringify({
+      status: allAllocated ? "fully_kitted" : "missing_items",
+      updated_at: new Date().toISOString(),
+    }),
+  });
+
+  document.getElementById("pete-review-modal")?.remove();
+  showToast(allAllocated ? "Allocation saved — all items allocated." : "Allocation saved — missing items remain.", "ok");
 }
 
 async function savePeteAllocationReview(plId, woNum, e) {
