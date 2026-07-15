@@ -626,31 +626,6 @@ input.photo-file-inp { display:none; }
 .toast-undo:hover { background:rgba(255,255,255,0.2); }
 .pwa-hint { background:rgba(99,102,241,0.09); border:1px solid rgba(99,102,241,0.22); border-radius:9px; padding:9px 13px; margin-bottom:13px; font-size:11px; color:var(--accent2); line-height:1.6; }
 .no-proj { background:var(--surface); border:1px dashed var(--border2); border-radius:var(--radius); padding:24px; text-align:center; color:var(--muted); font-size:13px; line-height:1.8; }
-.page-race-transition {
-  position:fixed;
-  inset:0;
-  z-index:9999;
-  pointer-events:none;
-  opacity:0;
-  transform:translateX(-105%);
-  background-color:#050505;
-  background-image:
-    linear-gradient(45deg, rgba(224,32,32,.88) 0 10%, transparent 10% 90%, rgba(224,32,32,.88) 90% 100%),
-    linear-gradient(45deg, #fff 25%, transparent 25% 75%, #fff 75%),
-    linear-gradient(45deg, #fff 25%, transparent 25% 75%, #fff 75%);
-  background-position:0 0, 0 0, 18px 18px;
-  background-size:100% 100%, 36px 36px, 36px 36px;
-  box-shadow:0 0 50px rgba(224,32,32,.28);
-}
-.page-race-transition.run {
-  animation:checkeredFlagWipe .48s cubic-bezier(.76,0,.24,1) both;
-}
-@keyframes checkeredFlagWipe {
-  0%   { opacity:0;   transform:translateX(-105%) skewX(-10deg); }
-  18%  { opacity:.96; transform:translateX(-32%) skewX(-10deg); }
-  52%  { opacity:.96; transform:translateX(0) skewX(-10deg); }
-  100% { opacity:0;   transform:translateX(105%) skewX(-10deg); }
-}
 .login-loading-overlay {
   position:fixed;
   inset:0;
@@ -856,7 +831,6 @@ input.photo-file-inp { display:none; }
 </style>
 </head>
 <body>
-<div id="page-race-transition" class="page-race-transition" aria-hidden="true"></div>
 <div id="login-loading-overlay" class="login-loading-overlay" aria-hidden="true">
   <img class="login-loading-img" src="assets/podium1-login-loading.png" alt="">
   <div class="login-loading-status">
@@ -2521,21 +2495,11 @@ function doLogout() {
 /* ═══════════════════════════════════════
    SCREENS
 ═══════════════════════════════════════ */
-function runRacePageTransition() {
-  if (window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) return;
-  const overlay = document.getElementById("page-race-transition");
-  if (!overlay) return;
-  overlay.classList.remove("run");
-  void overlay.offsetWidth;
-  overlay.classList.add("run");
-}
-let suppressNextRaceTransition = false;
 function showLoginLoading(nextAction) {
   const overlay = document.getElementById("login-loading-overlay");
   const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
 
   if (!overlay || reduced) {
-    suppressNextRaceTransition = true;
     nextAction();
     return;
   }
@@ -2544,7 +2508,6 @@ function showLoginLoading(nextAction) {
   overlay.classList.add("show");
 
   setTimeout(() => {
-    suppressNextRaceTransition = true;
     nextAction();
 
     setTimeout(() => {
@@ -2557,11 +2520,6 @@ function showLoginLoading(nextAction) {
 function showScreen(id) {
   const next = document.getElementById(id);
   if (!next) return;
-  const current = document.querySelector(".screen.active");
-  if (current && current.id !== id) {
-    if (suppressNextRaceTransition) suppressNextRaceTransition = false;
-    else runRacePageTransition();
-  }
   document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
   next.classList.add("active");
 }
