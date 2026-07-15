@@ -7909,25 +7909,25 @@ function openPeteAllocationReview(plId, woNum, e) {
           style="background:none;border:none;color:var(--muted);font-size:24px;line-height:1;cursor:pointer">×</button>
       </div>
       <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.28);border-radius:var(--radius-xs);padding:9px 10px;margin:12px 0;font-size:11px;line-height:1.4;color:#fbbf24">
-        Check the items that were missing when Pete kitted this order. Anything left unchecked will be marked allocated.
+        Check the items that are allocated/here. Anything left unchecked will stay marked missing.
       </div>
       <div style="display:flex;gap:8px;margin-bottom:10px">
-        <button onclick="peteReviewSetAll(false)"
-          style="flex:1;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:var(--radius-xs);padding:10px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#10b981;cursor:pointer">
-          Mark All Allocated
-        </button>
         <button onclick="peteReviewSetAll(true)"
+          style="flex:1;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:var(--radius-xs);padding:10px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#10b981;cursor:pointer">
+          Check All
+        </button>
+        <button onclick="peteReviewSetAll(false)"
           style="flex:1;background:rgba(224,32,32,0.1);border:1px solid rgba(224,32,32,0.28);border-radius:var(--radius-xs);padding:10px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);cursor:pointer">
-          Mark All Missing
+          Clear All
         </button>
       </div>
       <div id="pete-review-items" style="display:flex;flex-direction:column;border-top:1px solid var(--border)">
         ${items.length ? items.map(item => {
           const label = escHtml(item.label || buildItemLabel(item));
-          const checked = item.allocated === false ? "checked" : "";
+          const checked = item.allocated ? "checked" : "";
           return `<label style="display:flex;align-items:flex-start;gap:9px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:12px;line-height:1.35;color:var(--text);cursor:pointer">
-            <input type="checkbox" class="pete-review-missing" data-item-id="${escHtml(item.id)}" ${checked}
-              style="margin-top:2px;accent-color:var(--accent);width:16px;height:16px;flex-shrink:0">
+            <input type="checkbox" class="pete-review-allocated" data-item-id="${escHtml(item.id)}" ${checked}
+              style="margin-top:2px;accent-color:var(--green);width:16px;height:16px;flex-shrink:0">
             <span>${label}</span>
           </label>`;
         }).join("") : `<div style="font-size:12px;color:var(--muted);padding:16px 0">No checklist items found.</div>`}
@@ -7941,9 +7941,9 @@ function openPeteAllocationReview(plId, woNum, e) {
   document.body.appendChild(modal);
 }
 
-function peteReviewSetAll(missing) {
-  document.querySelectorAll("#pete-review-modal .pete-review-missing").forEach(cb => {
-    cb.checked = !!missing;
+function peteReviewSetAll(allocated) {
+  document.querySelectorAll("#pete-review-modal .pete-review-allocated").forEach(cb => {
+    cb.checked = !!allocated;
   });
 }
 
@@ -7951,7 +7951,7 @@ async function savePeteAllocationReview(plId, woNum, e) {
   if (e) e.stopPropagation();
   const btn = e?.currentTarget;
   if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
-  const missingIds = new Set([...document.querySelectorAll("#pete-review-modal .pete-review-missing")]
+  const allocatedIds = new Set([...document.querySelectorAll("#pete-review-modal .pete-review-allocated")]
     .filter(cb => cb.checked)
     .map(cb => cb.dataset.itemId));
   const pl = (window._petePlLists || []).find(p => p.id === plId || p.wo_number === woNum);
@@ -7960,10 +7960,10 @@ async function savePeteAllocationReview(plId, woNum, e) {
   await Promise.all(items.map(item => sbFetch(`picklist_items?id=eq.${encodeURIComponent(item.id)}`, {
     method: "PATCH",
     prefer: "return=minimal",
-    body: JSON.stringify({ allocated: !missingIds.has(String(item.id)) }),
+    body: JSON.stringify({ allocated: allocatedIds.has(String(item.id)) }),
   })));
 
-  const allAllocated = missingIds.size === 0;
+  const allAllocated = items.length > 0 && allocatedIds.size === items.length;
   await sbFetch(`picklists?id=eq.${encodeURIComponent(plId)}&status=neq.complete`, {
     method: "PATCH",
     prefer: "return=minimal",
@@ -7977,7 +7977,7 @@ async function savePeteAllocationReview(plId, woNum, e) {
     if (p.id !== plId && p.wo_number !== woNum) return p;
     const checklistItems = (p.checklistItems || []).map(item => ({
       ...item,
-      allocated: !missingIds.has(String(item.id)),
+      allocated: allocatedIds.has(String(item.id)),
     }));
     return {
       ...p,
