@@ -3859,6 +3859,71 @@ function loadRoleOverrides() { try { return JSON.parse(localStorage.getItem("pt_
 function saveRoleOverrides(obj) { localStorage.setItem("pt_role_overrides", JSON.stringify(obj)); }
 function loadHiddenMembers() { try { return JSON.parse(localStorage.getItem("pt_hidden_members")||"[]"); } catch { return []; } }
 function saveHiddenMembers(arr) { localStorage.setItem("pt_hidden_members", JSON.stringify(arr)); }
+function activeTeamSnapshot() {
+  return TEAM.map(m => ({
+    name: m.name,
+    initials: m.initials || nameToInitials(m.name),
+    color: m.color || "#6366f1",
+    role: [MS_ROLE, CHASSIS_ROLE, KIT_ROLE, FLOAT_ROLE].includes(m.role) ? m.role : MS_ROLE,
+    active: true,
+    is_custom: !!m._custom,
+    updated_at: new Date().toISOString(),
+  }));
+}
+function hydrateTeamFromRows(rows) {
+  const next = rows
+    .filter(r => r && r.name && r.active !== false)
+    .map((r, idx) => ({
+      name: r.name,
+      initials: r.initials || nameToInitials(r.name),
+      color: r.color || ACCENT_COLORS[idx % ACCENT_COLORS.length],
+      role: [MS_ROLE, CHASSIS_ROLE, KIT_ROLE, FLOAT_ROLE].includes(r.role) ? r.role : MS_ROLE,
+      _custom: r.is_custom !== false,
+    }));
+  if (!next.length) return false;
+  TEAM.splice(0, TEAM.length, ...next);
+  saveExtraMembers(next.filter(m => m._custom));
+  saveHiddenMembers([]);
+  saveRoleOverrides({});
+  return true;
+}
+async function saveTeamMembersToSupabase(members) {
+  return await sbFetch("team_members?on_conflict=name", {
+    method: "POST",
+    prefer: "resolution=merge-duplicates,return=minimal",
+    body: JSON.stringify(members.map(m => ({
+      name: m.name,
+      initials: m.initials || nameToInitials(m.name),
+      color: m.color || "#6366f1",
+      role: [MS_ROLE, CHASSIS_ROLE, KIT_ROLE, FLOAT_ROLE].includes(m.role) ? m.role : MS_ROLE,
+      active: m.active !== false,
+      is_custom: !!m._custom || !!m.is_custom,
+      updated_at: new Date().toISOString(),
+    }))),
+  });
+}
+async function saveTeamMemberToSupabase(member) {
+  return await saveTeamMembersToSupabase([member]);
+}
+async function setTeamMemberActiveInSupabase(name, active) {
+  return await sbFetch(`team_members?name=eq.${encodeURIComponent(name)}`, {
+    method: "PATCH",
+    prefer: "return=minimal",
+    body: JSON.stringify({ active: !!active, updated_at: new Date().toISOString() }),
+  });
+}
+async function syncTeamFromSupabase() {
+  const rows = await sbFetch("team_members?select=name,initials,color,role,active,is_custom&order=name.asc", {
+    method: "GET",
+    headers: { "Prefer": "return=representation" },
+  });
+  if (!Array.isArray(rows)) return false;
+  if (!rows.length) {
+    await saveTeamMembersToSupabase(activeTeamSnapshot()).catch(()=>{});
+    return false;
+  }
+  return hydrateTeamFromRows(rows);
+}
 
 function getUsedColors() { return TEAM.map(m=>m.color); }
 function autoColor() {
@@ -3892,6 +3957,7 @@ function persistMemberRole(name, role) {
   const member = TEAM.find(m => m.name === name);
   if (!member) return;
   member.role = role;
+  saveTeamMemberToSupabase(member).catch(()=>{});
   if (member._custom) {
     const extras = loadExtraMembers().map(m => m.name === name ? { ...m, role } : m);
     saveExtraMembers(extras);
@@ -3910,7 +3976,7 @@ function openAddMember() {
   document.getElementById("modal-add-member").style.display = "flex";
 }
 
-function doAddMember() {
+async function doAddMember() {
   const name = document.getElementById("add-member-name").value.trim();
   const role = document.getElementById("add-member-role").value;
   const err  = document.getElementById("add-member-error");
@@ -3921,6 +3987,7 @@ function doAddMember() {
   const member = { name, initials: nameToInitials(name), color: autoColor(), role, _custom: true };
   TEAM.push(member);
   const extras = loadExtraMembers(); extras.push(member); saveExtraMembers(extras);
+  await saveTeamMemberToSupabase(member).catch(()=>{});
   buildNameList();
   closeModal("modal-add-member");
   alert(`${name} added! They can set their PIN on first login.`);
@@ -3994,6 +4061,7 @@ function removeMember(name) {
   const idx = TEAM.findIndex(m=>m.name===name);
   const member = TEAM[idx];
   if (idx > -1) TEAM.splice(idx,1);
+  setTeamMemberActiveInSupabase(name, false).catch(()=>{});
   const extras = loadExtraMembers().filter(m=>m.name!==name);
   saveExtraMembers(extras);
   if (member && !member._custom) {
@@ -8072,6 +8140,9 @@ function showToast(msg, type, undoFn) {
    BOOT
 ═══════════════════════════════════════ */
 buildNameList();
+syncTeamFromSupabase().then(changed => {
+  if (changed) buildNameList();
+}).catch(()=>{});
 syncPinsFromSupabase().catch(()=>{});
 try {
   const saved=localStorage.getItem("pt_user");
