@@ -180,6 +180,8 @@ button, input, select, textarea { font-family:inherit; }
 .pl-checkbox.checked { background:var(--green); border-color:var(--green); }
 .pl-item-label { flex:1; font-size:13px; color:var(--text); }
 .pl-item-label.allocated { text-decoration:line-through; color:var(--muted); }
+.pl-more-info-btn { background:rgba(255,255,255,0.045); border:1px solid var(--border2); color:var(--muted); border-radius:999px; padding:4px 8px; font-size:9px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; cursor:pointer; flex-shrink:0; white-space:nowrap; transition:background .15s,color .15s,border-color .15s; }
+.pl-more-info-btn:hover { background:rgba(255,255,255,0.08); color:var(--text); border-color:var(--muted); }
 .pl-item-new-badge { font-size:9px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; background:rgba(224,32,32,0.15); color:var(--accent); padding:2px 6px; border-radius:3px; flex-shrink:0; }
 .pl-dual-wrap { display:flex; flex-direction:column; gap:0; }
 .pl-dual-row { display:flex; align-items:center; gap:10px; padding:7px 14px; border-top:1px solid var(--border); }
@@ -6171,6 +6173,89 @@ function buildItemLabel(it) {
   return qty > 1 ? `${base} (×${qty})` : base;
 }
 
+function jsArg(s) {
+  return String(s || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\n/g, "\\n").replace(/\r/g, "");
+}
+
+function getPickListItemMemo(it) {
+  return (it?.memo || it?.description || "").trim();
+}
+
+function registerPickListItemsForInfo(items = []) {
+  if (!window._pickListItemInfoById) window._pickListItemInfoById = {};
+  items.forEach(item => {
+    if (item?.id) window._pickListItemInfoById[String(item.id)] = item;
+  });
+}
+
+function findPickListItemForInfo(itemId) {
+  const key = String(itemId || "");
+  if (!key) return null;
+  if (window._pickListItemInfoById?.[key]) return window._pickListItemInfoById[key];
+  for (const list of Object.values(window._plItemsByPl || {})) {
+    const found = (list || []).find(item => String(item.id) === key);
+    if (found) return found;
+  }
+  for (const pl of (window._petePlLists || [])) {
+    const found = (pl.checklistItems || []).find(item => String(item.id) === key);
+    if (found) return found;
+  }
+  return null;
+}
+
+function pickListInfoButton(itemId) {
+  return `<button type="button" class="pl-more-info-btn" onclick="openPickListItemInfo('${jsArg(itemId)}',event)">More Info</button>`;
+}
+
+function openPickListItemInfo(itemId, e) {
+  if (e) { e.stopPropagation(); e.preventDefault(); }
+  const item = findPickListItemForInfo(itemId);
+  if (!item) {
+    showToast("Item details are not available yet.", "");
+    return;
+  }
+
+  const existing = document.getElementById("picklist-item-info-modal");
+  if (existing) existing.remove();
+
+  const label = item.label || buildItemLabel(item);
+  const memo = getPickListItemMemo(item);
+  const brand = (item.brand || "").trim();
+  const name = (item.item_name || "").trim();
+  const qty = parseInt(item.quantity) || 1;
+
+  const modal = document.createElement("div");
+  modal.id = "picklist-item-info-modal";
+  modal.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:1100;display:flex;align-items:flex-end;justify-content:center;padding:0";
+  modal.innerHTML = `
+    <div style="background:var(--surface);border-top:1px solid var(--border);border-radius:var(--radius) var(--radius) 0 0;padding:22px 18px 34px;width:100%;max-width:520px;max-height:82vh;overflow-y:auto">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px">
+        <div style="min-width:0">
+          <div style="font-size:16px;font-weight:800;line-height:1.25">${escHtml(label)}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:5px">Quantity: ${escHtml(qty)}</div>
+        </div>
+        <button onclick="document.getElementById('picklist-item-info-modal')?.remove()"
+          style="background:none;border:none;color:var(--muted);font-size:24px;line-height:1;cursor:pointer">×</button>
+      </div>
+
+      <div style="height:150px;border:1px dashed var(--border2);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.025);margin-bottom:12px;color:var(--muted2);font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;text-align:center;padding:14px">
+        Item Photo Coming Soon
+      </div>
+
+      <div style="display:grid;gap:8px;margin-bottom:12px">
+        ${brand ? `<div style="font-size:12px;color:var(--muted)"><span style="color:var(--text);font-weight:700">Brand:</span> ${escHtml(brand)}</div>` : ""}
+        ${name ? `<div style="font-size:12px;color:var(--muted)"><span style="color:var(--text);font-weight:700">Item:</span> ${escHtml(name)}</div>` : ""}
+      </div>
+
+      <div style="font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);margin-bottom:6px">Pick List Memo</div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-xs);padding:11px 12px;font-size:12px;line-height:1.45;color:${memo ? "var(--text)" : "var(--muted2)"};white-space:pre-wrap">
+        ${memo ? escHtml(memo) : "No memo saved for this item yet."}
+      </div>
+    </div>`;
+  modal.addEventListener("click", ev => { if (ev.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
+
 async function fetchPickListFromApi(itemId, woNum) {
   try {
     /* ── Single source of truth: Supabase picklist_items ──
@@ -7214,18 +7299,19 @@ async function syncPickListItems(woNum) {
     const plId = pl[0].id;
 
     /* Get existing items for this WO */
-    const existing = await sbFetch(`picklist_items?wo_number=eq.${encodeURIComponent(woNum)}&select=id,item_name,brand,quantity`, {
+    const existing = await sbFetch(`picklist_items?wo_number=eq.${encodeURIComponent(woNum)}&select=id,item_name,brand,quantity,memo,label`, {
       method: "GET", headers: { "Prefer": "return=representation" }
     }) || [];
 
-    const existingKeys = new Set(existing.map(e => `${e.brand||""}|${e.item_name}|${e.quantity}`));
+    const existingByKey = new Map(existing.map(e => [`${e.brand||""}|${e.item_name}|${e.quantity}`, e]));
     let newItemCount = 0;
 
     for (const it of data.items) {
       if (isServiceItem(it)) continue;
       const key = `${(it.brand||"").trim()}|${(it.item_name||"").trim()}|${parseInt(it.quantity)||1}`;
-      if (!existingKeys.has(key)) {
-        const label = buildItemLabel(it); /* identical to kit checklist label */
+      const label = buildItemLabel(it); /* identical to kit checklist label */
+      const existingItem = existingByKey.get(key);
+      if (!existingItem) {
         await sbFetch("picklist_items", {
           method: "POST",
           prefer: "return=minimal",
@@ -7243,11 +7329,15 @@ async function syncPickListItems(woNum) {
         });
         newItemCount++;
       } else {
-        /* Link existing unlinked items to this picklist */
-        await sbFetch(`picklist_items?wo_number=eq.${encodeURIComponent(woNum)}&picklist_id=is.null`, {
+        /* Keep existing rows linked and refresh non-allocation details without changing allocated state. */
+        await sbFetch(`picklist_items?id=eq.${encodeURIComponent(existingItem.id)}`, {
           method: "PATCH",
           prefer: "return=minimal",
-          body: JSON.stringify({ picklist_id: plId }),
+          body: JSON.stringify({
+            picklist_id: plId,
+            memo:        (it.memo || "").trim(),
+            label,
+          }),
         });
       }
     }
@@ -7509,6 +7599,7 @@ async function renderPickLists() {
     if (!itemsByPl[ownerId]) itemsByPl[ownerId] = [];
     itemsByPl[ownerId].push(it);
   });
+  registerPickListItemsForInfo(allItems);
   window._plItemsByPl = itemsByPl;
 
   let html = "";
@@ -7588,6 +7679,7 @@ async function renderPickLists() {
               ${it.allocated ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>` : ""}
             </div>
             <span class="pl-item-label${it.allocated ? " allocated" : ""}" style="flex:1" onclick="togglePickListItem('${it.id}','${pl.id}',event)">${label}</span>
+            ${pickListInfoButton(it.id)}
             ${pl.has_changes && isNew ? `<span class="pl-item-new-badge">NEW</span>` : ""}
             <div style="display:flex;align-items:center;gap:5px;flex-shrink:0" onclick="toggleBuilderConfirm('${it.id}','${pl.id}',event)">
               <span style="font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#818cf8">Builder</span>
@@ -7603,6 +7695,7 @@ async function renderPickLists() {
             ${it.allocated ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>` : ""}
           </div>
           <span class="pl-item-label${it.allocated ? " allocated" : ""}">${label}</span>
+          ${pickListInfoButton(it.id)}
           ${pl.has_changes && isNew ? `<span class="pl-item-new-badge">NEW</span>` : ""}
         </div>`;
       }).join("")}
@@ -8357,6 +8450,7 @@ function renderPetePlList() {
               ${item.allocated ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>` : ""}
             </div>
             <div style="font-size:12px;color:${item.allocated ? "var(--muted)" : "var(--text)"};text-decoration:${item.allocated ? "line-through" : "none"};line-height:1.35;flex:1">${label}</div>
+            ${pickListInfoButton(item.id)}
             ${item.allocated ? "" : `<button onclick="confirmPeteMissingItemArrived('${item.id}','${pl.id}','${woArg}','${itemLabelArg}',event)"
               style="background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:var(--radius-xs);padding:6px 8px;font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#10b981;cursor:pointer;flex-shrink:0">
               Item Is Here
@@ -8378,6 +8472,7 @@ function openPeteAllocationReview(plId, woNum, e) {
   const pl = (window._petePlLists || []).find(p => p.id === plId || p.wo_number === woNum);
   if (!pl) return;
   const items = pl.checklistItems || [];
+  registerPickListItemsForInfo(items);
   const existing = document.getElementById("pete-review-modal");
   if (existing) existing.remove();
 
@@ -8415,7 +8510,8 @@ function openPeteAllocationReview(plId, woNum, e) {
           return `<label style="display:flex;align-items:flex-start;gap:9px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:12px;line-height:1.35;color:var(--text);cursor:pointer">
             <input type="checkbox" class="pete-review-allocated" data-item-id="${escHtml(item.id)}" ${checked}
               style="margin-top:2px;accent-color:var(--green);width:16px;height:16px;flex-shrink:0">
-            <span>${label}</span>
+            <span style="flex:1">${label}</span>
+            ${pickListInfoButton(item.id)}
           </label>`;
         }).join("") : `<div style="font-size:12px;color:var(--muted);padding:16px 0">No checklist items found.</div>`}
       </div>
@@ -8482,6 +8578,7 @@ async function openAllocationReviewByWo(woNum, heading = "Review Allocation") {
 function renderAllocationReviewBody(pl, items, woNum) {
   const body = document.getElementById("generic-review-body");
   if (!body) return;
+  registerPickListItemsForInfo(items);
   body.innerHTML = `
     <div style="background:rgba(99,102,241,0.09);border:1px solid rgba(99,102,241,0.25);border-radius:var(--radius-xs);padding:9px 10px;margin:12px 0;font-size:11px;line-height:1.4;color:var(--muted)">
       This only updates allocation data in Supabase. It does not move the order in Monday.
@@ -8503,7 +8600,8 @@ function renderAllocationReviewBody(pl, items, woNum) {
         return `<label style="display:flex;align-items:flex-start;gap:9px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:12px;line-height:1.35;color:var(--text);cursor:pointer">
           <input type="checkbox" class="pete-review-allocated" data-item-id="${escHtml(item.id)}" ${checked}
             style="margin-top:2px;accent-color:var(--green);width:16px;height:16px;flex-shrink:0">
-          <span>${label}</span>
+          <span style="flex:1">${label}</span>
+          ${pickListInfoButton(item.id)}
         </label>`;
       }).join("") : `<div style="font-size:12px;color:var(--muted);padding:16px 0">No checklist items found.</div>`}
     </div>
