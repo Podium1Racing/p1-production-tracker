@@ -4356,6 +4356,16 @@ buildNameList();
 
 function renderAdminStreamlineWidgets(items, sbTimers = [], sbKits = []) {
   const today = todayStr();
+  const isOpenWorkflowItem = (item) => {
+    const g = (item.group?.title || "").toLowerCase();
+    return (
+      g === PARTS_PULLED.toLowerCase() ||
+      g === KIT_SOURCE_GROUP.toLowerCase() ||
+      g.includes("building queue") ||
+      g.includes("stand by") ||
+      g.includes("quality control")
+    );
+  };
   const completedToday = items.filter(i =>
     (getCompletionTs(i, "ms") || "").slice(0,10) === today ||
     (getCompletionTs(i, "chassis") || "").slice(0,10) === today
@@ -4367,7 +4377,7 @@ function renderAdminStreamlineWidgets(items, sbTimers = [], sbKits = []) {
   const qc = items.filter(i => (i.group?.title || "").toLowerCase().includes("quality control"));
   const overdue = items.filter(i => {
     const d = parseShipDate(i);
-    return d && daysUntil(d) < 0 && !(i.group?.title || "").toLowerCase().includes("complete");
+    return d && daysUntil(d) < 0 && isOpenWorkflowItem(i);
   }).sort(compareScores);
   const unassigned = items.filter(i => {
     const g = i.group?.title || "";
