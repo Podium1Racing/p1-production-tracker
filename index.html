@@ -2649,6 +2649,8 @@ async function mondayQuery(query, apiVersion) {
 }
 
 const BOARD_CACHE_KEY = "pt_board_cache";
+const KIT_BOARD_CACHE_KEY = "pt_kit_board_cache";
+const PETE_KITTED_CACHE_KEY = "pt_pete_kitted_cache";
 
 function saveBoardCache(data) {
   try { localStorage.setItem(BOARD_CACHE_KEY, JSON.stringify({ ts: Date.now(), data })); } catch(e) {}
@@ -2659,6 +2661,17 @@ function loadBoardCache() {
     if (!raw) return null;
     /* Cache valid for 10 minutes */
     if (Date.now() - raw.ts > 10 * 60 * 1000) return null;
+    return raw.data;
+  } catch(e) { return null; }
+}
+function saveTimedCache(key, data) {
+  try { localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data })); } catch(e) {}
+}
+function loadTimedCache(key, maxAgeMs) {
+  try {
+    const raw = JSON.parse(localStorage.getItem(key) || "null");
+    if (!raw) return null;
+    if (Date.now() - raw.ts > maxAgeMs) return null;
     return raw.data;
   } catch(e) { return null; }
 }
@@ -5541,10 +5554,23 @@ let kitBoardItems = [];  /* cached kit board items — survives re-renders */
 
 async function loadKitBoard() {
   const content = document.getElementById("kit-content");
-  content.innerHTML = `<div class="loading-state"><div class="spinner"></div>Loading kitting queue…</div>`;
+  const cached = loadTimedCache(KIT_BOARD_CACHE_KEY, 10 * 60 * 1000);
+  if (cached?.items?.length) {
+    discoverColumns(cached.columns || []);
+    const gMap = {}; (cached.groups || []).forEach(g => { gMap[g.title] = g.id; });
+    window._kitGroupMap = gMap;
+    resolveInventoryContacts(cached.subscribers || []);
+    kitBoardItems = cached.items;
+    renderKitScreen(kitBoardItems);
+  } else {
+    content.innerHTML = `<div class="loading-state"><div class="spinner"></div>Loading kitting queue…</div>`;
+  }
   try {
-    /* Step 1: fetch columns and groups */
-    const colRes = await mondayQuery(`{ boards(ids:[${BOARD_ID}]) { columns { id title type } groups { id title } subscribers { id name } } }`);
+    /* Fetch board metadata and items in parallel */
+    const [colRes, itemRes] = await Promise.all([
+      mondayQuery(`{ boards(ids:[${BOARD_ID}]) { columns { id title type } groups { id title } subscribers { id name } } }`),
+      mondayQuery(`{ boards(ids:[${BOARD_ID}]) { items_page(limit:200) { items { id name group { id title } column_values { id text value } } } } }`)
+    ]);
     const board  = colRes.data.boards[0];
     discoverColumns(board.columns);
     const gMap = {}; board.groups.forEach(g => { gMap[g.title] = g.id; });
@@ -5552,9 +5578,13 @@ async function loadKitBoard() {
     /* Resolve Jake and Ayden IDs for kit complete mentions */
     resolveInventoryContacts(board.subscribers || []);
 
-    /* Step 2: fetch items separately */
-    const itemRes = await mondayQuery(`{ boards(ids:[${BOARD_ID}]) { items_page(limit:200) { items { id name group { id title } column_values { id text value } } } } }`);
     kitBoardItems = itemRes.data.boards[0].items_page.items;
+    saveTimedCache(KIT_BOARD_CACHE_KEY, {
+      columns: board.columns,
+      groups: board.groups,
+      subscribers: board.subscribers || [],
+      items: kitBoardItems,
+    });
     renderKitScreen(kitBoardItems);
 
     /* Auto-fetch pick lists from P1 API for all kit queue items (full + partial) */
@@ -5839,6 +5869,7 @@ async function fetchPickListFromApi(itemId, woNum) {
       .filter(l => l.length > 2);
 
     KIT_LINE_CACHE[itemId] = lines;
+    saveKitLineCache();
 
     /* 4. Update the card if it's currently visible */
     const card = document.getElementById("kit-card-" + itemId);
@@ -5891,7 +5922,11 @@ async function fetchPickListFromApi(itemId, woNum) {
 ═══════════════════════════════════════ */
 
 /* Cache of fetched pick lists: itemId → string[] */
-const KIT_LINE_CACHE = {};
+const KIT_LINE_CACHE_KEY = "pt_kit_line_cache";
+const KIT_LINE_CACHE = loadTimedCache(KIT_LINE_CACHE_KEY, 30 * 60 * 1000) || {};
+function saveKitLineCache() {
+  saveTimedCache(KIT_LINE_CACHE_KEY, KIT_LINE_CACHE);
+}
 
 /* Extract Google Doc ID from a Drive URL */
 function extractDocId(url) {
@@ -6133,6 +6168,7 @@ async function buildKitChecklistAsync(item) {
           .map(it => it.label || buildItemLabel(it))
           .filter(l => l.length > 2);
         KIT_LINE_CACHE[item.id] = lines;
+        saveKitLineCache();
         return lines;
       }
     }
@@ -6141,6 +6177,7 @@ async function buildKitChecklistAsync(item) {
   /* Fallback to static if Supabase unavailable */
   const lines = buildKitChecklistStatic(item);
   KIT_LINE_CACHE[item.id] = lines;
+  saveKitLineCache();
   return lines;
 }
 
@@ -6562,6 +6599,7 @@ async function handleKitPdfDrop(itemId, file) {
 
     /* Cache and re-render checklist */
     KIT_LINE_CACHE[itemId] = lines;
+    saveKitLineCache();
 
     /* Remove drop zone */
     if (dropZone) dropZone.remove();
@@ -6903,11 +6941,11 @@ function normalizeMissingItems(missingItems) {
   }
 }
 
-async function repairKittedPickListAllocation(woNum) {
+async function repairKittedPickListAllocation(woNum, completions = null) {
   const mondayItem = findKnownBoardItemByWo(woNum);
   const cleanName = cleanMondayName(mondayItem?.name || "").toLowerCase();
-  const completions = await sbGetKitCompletions();
-  const completion = completions.find(k =>
+  const completionRows = completions || await sbGetKitCompletions();
+  const completion = completionRows.find(k =>
     String(k.item_id || "") === String(woNum || "") ||
     (mondayItem?.id && String(k.item_id || "") === String(mondayItem.id)) ||
     cleanMondayName(k.item_name || "").toLowerCase() === cleanName
@@ -6927,14 +6965,14 @@ async function repairKittedPickListAllocation(woNum) {
   const missingLabels = new Set((missingItems || [])
     .map(i => String(i || "").toLowerCase().trim()));
 
-  for (const item of items) {
+  await Promise.all(items.map(item => {
     const label = (item.label || buildItemLabel(item)).toLowerCase().trim();
-    await sbFetch(`picklist_items?id=eq.${encodeURIComponent(item.id)}`, {
+    return sbFetch(`picklist_items?id=eq.${encodeURIComponent(item.id)}`, {
       method: "PATCH",
       prefer: "return=minimal",
       body: JSON.stringify({ allocated: !missingLabels.has(label) }),
     });
-  }
+  }));
 
   await sbFetch(`picklists?wo_number=eq.${encodeURIComponent(woNum)}&status=neq.complete`, {
     method: "PATCH",
@@ -7547,7 +7585,7 @@ async function ensurePeteKittedPickListsFromKnownItems(completedItemIds, complet
       .filter(Boolean)
   )];
 
-  for (const woNum of kittedWos) {
+  await Promise.all(kittedWos.map(async woNum => {
     const existing = await sbFetch(
       `picklists?wo_number=eq.${encodeURIComponent(woNum)}&select=id,status&limit=1`,
       { method: "GET", headers: { "Prefer": "return=representation" } }
@@ -7558,7 +7596,7 @@ async function ensurePeteKittedPickListsFromKnownItems(completedItemIds, complet
     } else if (existing[0].status !== "complete") {
       await syncPickListStatusFromMonday(woNum);
     }
-  }
+  }));
 }
 
 function isPeteKittedCompletion(pl, completedItemIds, completedItemNames) {
@@ -7666,7 +7704,13 @@ async function openPeteKittedPickLists() {
   const search = document.getElementById("pete-pl-search");
   if (search) search.value = "";
   const listEl = document.getElementById("pete-pl-list");
-  if (listEl) listEl.innerHTML = `<div class="loading-state"><div class="spinner"></div>Loading kitted pick lists…</div>`;
+  const cachedLists = loadTimedCache(PETE_KITTED_CACHE_KEY, 5 * 60 * 1000);
+  if (Array.isArray(cachedLists) && cachedLists.length) {
+    window._petePlLists = cachedLists;
+    renderPetePlList();
+  } else if (listEl) {
+    listEl.innerHTML = `<div class="loading-state"><div class="spinner"></div>Loading kitted pick lists…</div>`;
+  }
 
   /* Load open picklists Pete has kitted from Supabase */
   try {
@@ -7679,7 +7723,7 @@ async function openPeteKittedPickLists() {
     }) || [];
     const reviewByWo = {};
 
-    for (const pl of rows) {
+    await Promise.all(rows.map(async pl => {
       const mondayItem = findKnownBoardItemByWo(pl.wo_number);
       const groupMatch = isPeteKittedAccessGroup(mondayItem?.group?.title);
       const completionMatch =
@@ -7687,10 +7731,10 @@ async function openPeteKittedPickLists() {
         (mondayItem?.id && completedItemIds.has(String(mondayItem.id))) ||
         completedItemNames.has((cleanMondayName(mondayItem?.name) || pl.customer_name || "").toLowerCase());
       if (groupMatch && (completionMatch || pl.status === "fully_kitted")) {
-        const repairState = await repairKittedPickListAllocation(pl.wo_number);
+        const repairState = await repairKittedPickListAllocation(pl.wo_number, completions);
         if (repairState === "needs_review") reviewByWo[pl.wo_number] = true;
       }
-    }
+    }));
 
     const visibleWos = rows.map(pl => pl.wo_number).filter(Boolean);
     const openItems = visibleWos.length ? await sbFetch(
@@ -7742,6 +7786,7 @@ async function openPeteKittedPickLists() {
       });
 
     window._petePlLists = withDates;
+    saveTimedCache(PETE_KITTED_CACHE_KEY, withDates);
     renderPetePlList();
   } catch(err) {
     document.getElementById("pete-pl-list").innerHTML =
