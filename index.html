@@ -668,6 +668,17 @@ input.photo-file-inp { display:none; }
     <div class="name-list" id="name-list"></div>
   </div>
 
+  <!-- Floater role choice -->
+  <div id="floater-role-wrap" style="display:none;width:100%;max-width:400px;">
+    <div class="pin-sub" id="floater-role-label" style="margin-bottom:14px">What are you working on?</div>
+    <div class="name-list">
+      <button class="name-btn" onclick="chooseFloaterRole('ms')"><span class="role-tag tag-ms" style="margin-left:0">MS Build</span>Monitor Stand</button>
+      <button class="name-btn" onclick="chooseFloaterRole('chassis')"><span class="role-tag tag-chassis" style="margin-left:0">Chassis</span>Chassis</button>
+      <button class="name-btn" onclick="chooseFloaterRole('kit')"><span class="role-tag tag-kit" style="margin-left:0">Kitting</span>Kitting</button>
+    </div>
+    <button class="auth-back-btn" onclick="authBack()" style="margin-top:14px">Back</button>
+  </div>
+
   <!-- Step 2: PIN entry (shown after name tap) -->
   <div id="pin-entry-wrap" style="display:none;width:100%;max-width:320px;align-items:center;flex-direction:column;">
     <div class="pin-sub" id="pin-entry-label" style="margin-bottom:16px">Enter your PIN</div>
@@ -1997,19 +2008,39 @@ const SETUP_CODE   = "5248";
 const ADMIN_NAME   = "Elijah Moosekian";
 let setupCodeUsed  = localStorage.getItem("pt_setup_used") === "1";
 let pendingUser    = null;
+let pendingFloater = null;
 
 /* ── Name list ─────────────────────────────────────────────── */
 function buildNameList() {
   const list = document.getElementById("name-list"); list.innerHTML = "";
   [{label:"Monitor Stand Builders",role:MS_ROLE},{label:"Chassis Builders",role:CHASSIS_ROLE},{label:"Kitting",role:KIT_ROLE}].forEach(({label,role})=>{
     const lbl = document.createElement("div"); lbl.className = "divider-label"; lbl.textContent = label; list.appendChild(lbl);
-    TEAM.filter(m=>memberWorksAs(m, role)).forEach(m=>{
+    TEAM.filter(m=>role === KIT_ROLE ? (m.role === KIT_ROLE || m.role === FLOAT_ROLE) : m.role === role).forEach(m=>{
+      const isFloater = m.role === FLOAT_ROLE;
       const btn = document.createElement("button"); btn.className = "name-btn";
-      btn.innerHTML = `<div class="av" style="background:${m.color}25;color:${m.color}">${m.initials}</div>${m.name}<span class="role-tag ${roleTagClass(role)}">${roleLoginLabel(role)}</span>`;
-      btn.onclick = () => selectUser(m, role);
+      btn.innerHTML = `<div class="av" style="background:${m.color}25;color:${m.color}">${m.initials}</div>${m.name}<span class="role-tag ${roleTagClass(isFloater ? FLOAT_ROLE : role)}">${isFloater ? "Choose Role" : roleLoginLabel(role)}</span>`;
+      btn.onclick = () => isFloater ? openFloaterRoleChoice(m) : selectUser(m);
       list.appendChild(btn);
     });
   });
+}
+
+function openFloaterRoleChoice(m) {
+  pendingFloater = m;
+  pendingUser = null;
+  document.querySelectorAll(".name-btn").forEach(b=>b.classList.remove("selected"));
+  document.querySelectorAll("#name-list .name-btn").forEach(b=>{ if(b.textContent.includes(m.name)) b.classList.add("selected"); });
+  document.getElementById("name-list-wrap").style.display = "none";
+  document.getElementById("pin-entry-wrap").style.display = "none";
+  document.getElementById("admin-login-btn").style.display = "none";
+  const wrap = document.getElementById("floater-role-wrap");
+  document.getElementById("floater-role-label").textContent = `What is ${m.name.split(" ")[0]} working on?`;
+  wrap.style.display = "block";
+}
+
+function chooseFloaterRole(role) {
+  if (!pendingFloater) return;
+  selectUser(pendingFloater, role);
 }
 
 function selectUser(m, roleOverride) {
@@ -2018,6 +2049,7 @@ function selectUser(m, roleOverride) {
   pendingUser = roleOverride && m.role === FLOAT_ROLE ? { ...m, role: roleOverride, baseRole: FLOAT_ROLE } : m;
   /* Show PIN entry, hide name list + admin button */
   document.getElementById("name-list-wrap").style.display  = "none";
+  document.getElementById("floater-role-wrap").style.display = "none";
   document.getElementById("admin-login-btn").style.display = "none";
   const wrap = document.getElementById("pin-entry-wrap");
   wrap.style.display = "flex";
@@ -2027,12 +2059,13 @@ function selectUser(m, roleOverride) {
   document.getElementById("pin-entry-label").textContent = hasPin ? `Welcome back, ${m.name.split(" ")[0]}` : `Set a 4-digit PIN, ${m.name.split(" ")[0]}`;
   const pkBtn = document.getElementById("passkey-btn");
   pkBtn.style.display = hasPasskey ? "flex" : "none";
-  if (hasPasskey) setTimeout(() => autoLoginWithPasskey(m), 300);
+  if (hasPasskey) setTimeout(() => autoLoginWithPasskey(pendingUser), 300);
 }
 
 function authBack() {
-  pendingUser = null;
+  pendingUser = null; pendingFloater = null;
   document.getElementById("pin-entry-wrap").style.display  = "none";
+  document.getElementById("floater-role-wrap").style.display = "none";
   document.getElementById("name-list-wrap").style.display  = "block";
   document.getElementById("admin-login-btn").style.display = "flex";
   document.querySelectorAll(".name-btn").forEach(b=>b.classList.remove("selected"));
@@ -2276,8 +2309,9 @@ function signOutCompletely() {
   stopRealTimeSync();
   localStorage.removeItem("pt_user");
   localStorage.removeItem("pt_gate_passed");
-  currentUser = null; pendingUser = null;
+  currentUser = null; pendingUser = null; pendingFloater = null;
   document.getElementById("pin-entry-wrap").style.display  = "none";
+  document.getElementById("floater-role-wrap").style.display = "none";
   document.getElementById("name-list-wrap").style.display  = "block";
   document.getElementById("admin-login-btn").style.display = "flex";
   const soBtn = document.getElementById("login-signout-btn");
@@ -2295,8 +2329,9 @@ function signOutCompletely() {
 
 function doLogout() {
   stopRealTimeSync();
-  localStorage.removeItem("pt_user"); currentUser = null; pendingUser = null;
+  localStorage.removeItem("pt_user"); currentUser = null; pendingUser = null; pendingFloater = null;
   document.getElementById("pin-entry-wrap").style.display  = "none";
+  document.getElementById("floater-role-wrap").style.display = "none";
   document.getElementById("name-list-wrap").style.display  = "block";
   document.getElementById("admin-login-btn").style.display = "flex";
   const soBtn = document.getElementById("login-signout-btn");
