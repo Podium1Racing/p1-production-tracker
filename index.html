@@ -4395,6 +4395,13 @@ function renderAdminStreamlineWidgets(items, sbTimers = [], sbKits = []) {
   const actionSub = next
     ? `${compactProjectLabel(next)} · ${next.group?.title || "No group"}`
     : "No obvious bottlenecks found in the current board load.";
+  const nextWo = next ? getWoNumberFromItem(next) : "";
+  const nextId = next?.id || "";
+  const actionButton = nextWo
+    ? `<button class="next-action-btn" onclick="openAdminActionPickList('${nextId}','${nextWo}',event)">Open This Pick List</button>`
+    : next
+      ? `<button class="next-action-btn" onclick="showToast('This project does not have a work order number yet.', '')">No Pick List Yet</button>`
+      : `<button class="next-action-btn" onclick="manualRefresh('admin')">Refresh Admin View</button>`;
 
   const alerts = [
     overdue.length ? { title:`${overdue.length} overdue ship date${overdue.length===1?"":"s"}`, sub:compactProjectLabel(overdue[0]) } : null,
@@ -4407,7 +4414,7 @@ function renderAdminStreamlineWidgets(items, sbTimers = [], sbKits = []) {
     <div class="next-action-kicker">Admin Next Action</div>
     <div class="next-action-title">${escHtml(actionTitle)}</div>
     <div class="next-action-sub">${escHtml(actionSub)}</div>
-    <button class="next-action-btn" onclick="openPickListScreen()">Open Pick Lists / Review</button>
+    ${actionButton}
   </div>
   <div class="stream-grid">
     <div class="health-card"><div class="health-val" style="color:var(--green)">${completedToday}</div><div class="health-lbl">Builds Done Today</div><div class="health-sub">MS or Chassis</div></div>
@@ -4419,6 +4426,14 @@ function renderAdminStreamlineWidgets(items, sbTimers = [], sbKits = []) {
     <div style="font-size:13px;font-weight:800;margin-bottom:8px">Smart Alerts</div>
     ${alerts.map(a => `<div class="stream-alert"><div class="stream-alert-title">${escHtml(a.title)}</div><div class="stream-alert-sub">${escHtml(a.sub)}</div></div>`).join("")}
   </div>` : ""}`;
+}
+
+function openAdminActionPickList(itemId, woNum, e) {
+  if (!woNum) {
+    showToast("This project does not have a work order number yet.", "");
+    return;
+  }
+  openPickListForItem(itemId, woNum, e);
 }
 
 function openManageMembers() {
