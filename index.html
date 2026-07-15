@@ -4433,7 +4433,7 @@ function openAdminActionPickList(itemId, woNum, e) {
     showToast("This project does not have a work order number yet.", "");
     return;
   }
-  openPickListForItem(itemId, woNum, e);
+  openPickListForItem(itemId, woNum, e, { reviewOnly: true });
 }
 
 function openManageMembers() {
@@ -7015,11 +7015,13 @@ let _plAllPicklists  = [];      /* full list from Supabase */
 let _plCallerScreen  = "screen-dash"; /* for back button */
 let _plCurrentWo     = null;    /* WO number when opened from a card */
 let _plKittedAccessMode = false; /* Pete reviewing already-kitted open lists */
+let _plReviewOnlyMode = false; /* Admin/build review: allocation only, no kitter submit flow */
 
 /* ── Open pick list screen from a project card button ── */
 async function openPickListForItem(itemId, woNum, e, opts = {}) {
   if (e) { e.stopPropagation(); e.preventDefault(); }
   _plKittedAccessMode = !!opts.kittedAccess;
+  _plReviewOnlyMode = !!opts.reviewOnly;
   _plCallerScreen = document.querySelector(".screen.active")?.id || "screen-dash";
   _plCurrentWo    = woNum;
 
@@ -7037,6 +7039,7 @@ async function openPickListForItem(itemId, woNum, e, opts = {}) {
 /* ── Open pick list screen from a nav/menu (all lists) ── */
 async function openPickListScreen() {
   _plKittedAccessMode = false;
+  _plReviewOnlyMode = false;
   _plCallerScreen = document.querySelector(".screen.active")?.id || "screen-admin";
   _plCurrentWo    = null;
   document.getElementById("pl-header-sub").textContent = "All Pick Lists";
@@ -7612,12 +7615,16 @@ async function renderPickLists() {
                 Complete Locked Until QC
               </button>`
         }
-        ${pl.status !== "complete" && !isLead() && !_plKittedAccessMode ? `
+        ${pl.status !== "complete" && currentUser?.role === KIT_ROLE && !isLead() && !_plKittedAccessMode && !_plReviewOnlyMode ? `
         <button onclick="submitKitFromPickList('${pl.id}','${pl.wo_number}',event)"
           style="width:100%;background:var(--green);border:none;border-radius:var(--radius-xs);padding:13px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#fff;cursor:pointer">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="margin-right:5px"><polyline points="20 6 9 17 4 12"/></svg>
           Submit Kit → Move to Parts Pulled
         </button>` : ""}
+        ${_plReviewOnlyMode && pl.status !== "complete" ? `
+        <div style="padding:10px 11px;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.22);border-radius:var(--radius-xs);font-size:11px;color:var(--muted);line-height:1.45;text-align:center">
+          Review mode: tap checklist items to update allocation. This will not move the order in Monday.
+        </div>` : ""}
       </div>
     </div>`;
   }
