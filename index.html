@@ -7259,10 +7259,16 @@ async function renderPickLists() {
     const showKitCheckAll = pl.status !== "complete" && currentUser?.role === KIT_ROLE && !isLead() && !_plKittedAccessMode;
     const checkAllHtml = showKitCheckAll ? `
       <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.24);border-radius:var(--radius-xs);padding:9px 10px;margin:0 12px 10px">
-        <button type="button" onclick="checkAllPickListItems('${pl.id}',event)"
-          style="width:100%;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:var(--radius-xs);padding:9px 10px;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#10b981;cursor:pointer">
-          Check All
-        </button>
+        <div style="display:flex;gap:7px;align-items:stretch">
+          <button type="button" onclick="checkAllPickListItems('${pl.id}',event)"
+            style="flex:1;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:var(--radius-xs);padding:9px 10px;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#10b981;cursor:pointer">
+            Check All
+          </button>
+          <button type="button" onclick="deselectAllPickListItems('${pl.id}',event)"
+            style="width:104px;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:var(--radius-xs);padding:9px 8px;font-size:9px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);cursor:pointer">
+            Deselect All
+          </button>
+        </div>
         <div style="font-size:10px;color:#fbbf24;line-height:1.35;margin-top:7px;text-align:center">
           Shortcut only — double-check every item before submitting.
         </div>
@@ -7463,6 +7469,58 @@ async function checkAllPickListItems(plId, e) {
       btn.textContent = oldText || "Check All";
     }
     showToast("Could not check all items. Try again.", "err");
+  }
+}
+
+/* ── Pete shortcut: clear every item on an initial kit pick list ── */
+async function deselectAllPickListItems(plId, e) {
+  if (e) {
+    e.stopPropagation();
+    e.preventDefault();
+  }
+
+  const items = (window._plItemsByPl || {})[plId] || [];
+  if (!items.length) {
+    showToast("No pick list items found.", "err");
+    return;
+  }
+
+  const selected = items.filter(it => it.allocated);
+  if (!selected.length) {
+    showToast("Everything is already unchecked.", "ok");
+    return;
+  }
+
+  const btn = e?.currentTarget;
+  const oldText = btn?.textContent;
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Clearing…";
+  }
+
+  try {
+    await Promise.all(selected.map(it =>
+      sbFetch(`picklist_items?id=eq.${encodeURIComponent(it.id)}`, {
+        method: "PATCH",
+        prefer: "return=minimal",
+        body: JSON.stringify({ allocated: false }),
+      })
+    ));
+
+    await sbFetch(`picklists?id=eq.${encodeURIComponent(plId)}&status=neq.complete`, {
+      method: "PATCH",
+      prefer: "return=minimal",
+      body: JSON.stringify({ status: "missing_items", updated_at: new Date().toISOString() }),
+    });
+
+    showToast("All pick list items unchecked.", "ok");
+    await renderPickLists();
+  } catch (err) {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = oldText || "Deselect All";
+    }
+    showToast("Could not deselect all items. Try again.", "err");
   }
 }
 
