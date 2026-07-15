@@ -62,6 +62,7 @@ button:not(:disabled):active, .name-btn:active, .srow:active, .seg-btn:active {
   --chassis-color:#d97706; --ms-color:#444444;
 }
 body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif; min-height:100dvh; overflow-x:hidden; }
+button, input, select, textarea { font-family:inherit; }
 .screen { display:none; flex-direction:column; min-height:100dvh; }
 .screen.active { display:flex; }
 
@@ -674,7 +675,7 @@ input.photo-file-inp { display:none; }
     <div class="name-list">
       <button class="name-btn" onclick="chooseFloaterRole('ms')"><span class="role-tag tag-ms" style="margin-left:0">MS Build</span>Monitor Stand</button>
       <button class="name-btn" onclick="chooseFloaterRole('chassis')"><span class="role-tag tag-chassis" style="margin-left:0">Chassis</span>Chassis</button>
-      <button class="name-btn" onclick="chooseFloaterRole('kit')"><span class="role-tag tag-kit" style="margin-left:0">Kitting</span>Kitting</button>
+      <button class="name-btn" onclick="chooseFloaterRole('kit')"><span class="role-tag tag-kit" style="margin-left:0">Kitting</span>Kitter</button>
     </div>
     <button class="auth-back-btn" onclick="authBack()" style="margin-top:14px">Back</button>
   </div>
@@ -2599,7 +2600,7 @@ async function loadBoard() {
     renderDash(boardItems);
   } catch(e) {
     if (!cached) {
-      listEl.innerHTML = `<div class="empty-state"> Could not load board.<br><small style="opacity:.55;font-size:11px">${e.message}</small></div>`;
+      listEl.innerHTML = `<div class="empty-state">Could not load board.<br><small style="opacity:.55;font-size:11px">${e.message}</small></div>`;
     } else {
       showToast("Could not sync — showing cached data", "");
     }
@@ -2665,7 +2666,7 @@ function renderDash(items) {
 
   /* Role-specific status label */
   const statusEl = document.getElementById("kpi-status");
-  if      (weeklyDone >= WEEKLY_GOAL) { statusEl.textContent = "Goal Met!";    statusEl.className = "kpi-v g"; }
+  if      (weeklyDone >= WEEKLY_GOAL) { statusEl.textContent = "Goal Met";     statusEl.className = "kpi-v g"; }
   else if (doneToday  >= 1)           { statusEl.textContent = "On Track";     statusEl.className = "kpi-v g"; }
   else if (avgPct     >= 70)          { statusEl.textContent = "Almost There"; statusEl.className = "kpi-v y"; }
   else if (avgPct     >= 35)          { statusEl.textContent = "Keep Going";   statusEl.className = "kpi-v y"; }
@@ -3123,7 +3124,7 @@ async function savePauseComment(itemId, colType, e) {
     await mondayQuery(`mutation { create_update(item_id:${itemId}, body:"${body}") { id } }`);
     savePauseReason(itemId, colType, reason);
     const prevReason = getPauseReason(itemId, colType);
-    btn.textContent = " Saved!";
+    btn.textContent = "Saved!";
     const undoPause = () =>{
       /* Remove the saved reason locally */
       const data = loadPauseReasons();
@@ -3247,7 +3248,7 @@ function renderPartsPulled(items,isMS) {
       const dateLabel=fmtShipDate(shipDate);
       let cls="ok", suffix="";
       if(days<0){cls="overdue";suffix=` · ${Math.abs(days)}d OVERDUE`;}
-      else if(days===0){cls="soon";suffix=" · Ships today!";}
+      else if(days===0){cls="soon";suffix=" · Ships today";}
       else if(days<=7){cls="soon";suffix=` · ${days}d away`;}
       else{suffix=` · ${days}d away`;}
       shipHtml=`<div class="ship-date-row">
@@ -3391,7 +3392,7 @@ async function grabBuild(itemId, e) {
     }
 
     addDelta({ user:currentUser.name, itemId, itemName:item?.name||itemId, colType:"grab", date:todayStr(), ts:new Date().toISOString() });
-    btn.innerHTML = " Assigned to You!";
+    btn.innerHTML = "Assigned to You";
     btn.classList.remove("priority-grab");
     btn.classList.add("grabbed");
 
@@ -3428,7 +3429,7 @@ async function grabBuild(itemId, e) {
       renderDash(boardItems);
     };
 
-    showToast(`Assigned to ${currentUser.name.split(" ")[0]}! Tap Undo to cancel.`, "ok", undoGrab);
+    showToast(`Assigned to ${currentUser.name.split(" ")[0]}. Tap Undo to cancel.`, "ok", undoGrab);
     renderDash(boardItems);
 
   } catch(err) {
@@ -3473,7 +3474,7 @@ function onPhotoSelected(itemId) {
     const btn     = document.getElementById("photo-btn-" + itemId);
     const retake  = document.getElementById("photo-retake-" + itemId);
     if (preview) { preview.src = base64; preview.classList.add("show"); }
-    if (btn)     { btn.classList.add("has-photo"); btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Photo ready`; }
+    if (btn)     { btn.classList.add("has-photo"); btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Photo Ready`; }
     if (retake)  retake.classList.add("show");
   };
   reader.readAsDataURL(file);
@@ -3487,7 +3488,7 @@ function retakePhoto(itemId) {
   const retake  = document.getElementById("photo-retake-" + itemId);
   if (inp)     inp.value = "";
   if (preview) { preview.src = ""; preview.classList.remove("show"); }
-  if (btn)     { btn.classList.remove("has-photo"); btn.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Tap to take a photo`; }
+  if (btn)     { btn.classList.remove("has-photo"); btn.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Take Photo`; }
   if (retake)  retake.classList.remove("show");
 }
 
@@ -3562,7 +3563,7 @@ function openUpdateSheet(itemId, colType, e) {
       <input type="file" accept="image/*" capture="environment" class="photo-file-inp" id="photo-inp-${itemId}" onchange="onPhotoSelected('${itemId}')">
       <div class="photo-capture-btn" id="photo-btn-${itemId}" onclick="document.getElementById('photo-inp-${itemId}').click()">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-        Tap to take a photo
+        Take Photo
       </div>
       <img class="photo-preview" id="photo-preview-${itemId}" alt="Progress photo">
       <button class="photo-retake" id="photo-retake-${itemId}" onclick="retakePhoto('${itemId}')">Retake photo</button>
@@ -3711,7 +3712,7 @@ async function saveUpdate(itemId,e) {
     }).catch(()=>{});
 
     addDelta({user:currentUser.name,itemId,itemName:local?.name||itemId,colType,date:todayStr(),prevPct,newPct,delta,creditedPct:Math.min(100,newPct)-Math.min(100,prevPct),overCredit,note,ts:now.toISOString()});
-    btn.textContent=" Saved!"; btn.classList.add("saved");
+    btn.textContent="Saved!"; btn.classList.add("saved");
     const undoSave = async () =>{
       try {
         await mondayQuery(`mutation { change_column_value(board_id:${BOARD_ID}, item_id:${itemId}, column_id:"${colId}", value:"${prevPct}") { id } }`);
@@ -4208,7 +4209,7 @@ async function loadAdminData() {
       if (record) updateAdminTimerDisplay(record);
     });
   } catch(e) {
-    content.innerHTML = `<div class="empty-state"> Could not load board.<br><small>${e.message}</small></div>`;
+    content.innerHTML = `<div class="empty-state">Could not load board.<br><small>${e.message}</small></div>`;
   }
 }
 
@@ -5564,7 +5565,7 @@ function renderKitScreen(items) {
       const dateLabel = fmtShipDate(shipDate);
       let cls = "ok", suffix = "";
       if (days < 0)      { cls="overdue"; suffix=` · ${Math.abs(days)}d OVERDUE`; }
-      else if (days===0) { cls="soon";    suffix=" · Ships today!"; }
+      else if (days===0) { cls="soon";    suffix=" · Ships today"; }
       else if (days<=7)  { cls="soon";    suffix=` · ${days}d away`; }
       else               {                suffix=` · ${days}d away`; }
       shipHtml = `<div class="ship-date-row">
@@ -6180,7 +6181,7 @@ function onKitPhotoSelected(itemId) {
     const btn     = document.getElementById("kphoto-btn-" + itemId);
     const retake  = document.getElementById("kphoto-retake-" + itemId);
     if (preview) { preview.src = base64; preview.classList.add("show"); }
-    if (btn)     { btn.classList.add("has-photo"); btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Kit photo ready`; }
+    if (btn)     { btn.classList.add("has-photo"); btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Kit Photo Ready`; }
     if (retake)  retake.classList.add("show");
   };
   reader.readAsDataURL(file);
@@ -6194,7 +6195,7 @@ function retakeKitPhoto(itemId) {
   const retake  = document.getElementById("kphoto-retake-" + itemId);
   if (inp)     inp.value = "";
   if (preview) { preview.src = ""; preview.classList.remove("show"); }
-  if (btn)     { btn.classList.remove("has-photo"); btn.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Tap to take kit photo`; }
+  if (btn)     { btn.classList.remove("has-photo"); btn.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Take Kit Photo`; }
   if (retake)  retake.classList.remove("show");
 }
 
@@ -6544,7 +6545,7 @@ async function openPickListScreen() {
   _plKittedAccessMode = false;
   _plCallerScreen = document.querySelector(".screen.active")?.id || "screen-admin";
   _plCurrentWo    = null;
-  document.getElementById("pl-header-sub").textContent = "All pick lists";
+  document.getElementById("pl-header-sub").textContent = "All Pick Lists";
   showScreen("screen-picklist");
 
   /* Show tabs for the overview */
@@ -7303,7 +7304,7 @@ async function confirmSubmitKitFromPickList(plId, woNum, mondayItemId, e) {
 
     if (!mondayItem) {
       showToast("Could not find Monday item — kit not moved", "err");
-      if (btn) { btn.disabled = false; btn.textContent = "Try Again"; }
+      if (btn) { btn.disabled = false; btn.textContent = "Try again"; }
       return;
     }
 
@@ -7387,7 +7388,7 @@ async function confirmSubmitKitFromPickList(plId, woNum, mondayItemId, e) {
 
   } catch(err) {
     showToast("Error: " + err.message, "err");
-    if (btn) { btn.disabled = false; btn.textContent = "Try Again"; }
+    if (btn) { btn.disabled = false; btn.textContent = "Try again"; }
   }
 }
 
@@ -7492,7 +7493,7 @@ function confirmPeteMissingItemArrived(itemId, plId, woNum, label, e) {
         </button>
         <button onclick="markPeteMissingItemArrived('${itemId}','${plId}','${woNum}',event)"
           style="flex:2;background:var(--green);border:none;border-radius:var(--radius-xs);padding:13px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#fff;cursor:pointer">
-          Confirm Item Here
+          Confirm Item Is Here
         </button>
       </div>
     </div>`;
@@ -7503,7 +7504,7 @@ function confirmPeteMissingItemArrived(itemId, plId, woNum, label, e) {
 async function markPeteMissingItemArrived(itemId, plId, woNum, e) {
   if (e) e.stopPropagation();
   const btn = e?.currentTarget;
-  if (btn) { btn.disabled = true; btn.textContent = "Updating..."; }
+  if (btn) { btn.disabled = true; btn.textContent = "Updating…"; }
 
   await sbFetch(`picklist_items?id=eq.${encodeURIComponent(itemId)}`, {
     method: "PATCH",
@@ -7687,7 +7688,7 @@ function renderPetePlList() {
       </button>
       <div style="display:${isExpanded ? "block" : "none"};border-top:1px solid var(--border);padding:10px 14px 14px">
         ${pl.needsReview ? `<div style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);border-radius:var(--radius-xs);padding:9px 10px;margin-bottom:10px;font-size:11px;line-height:1.35;color:#fbbf24">
-          Allocation history is incomplete. Please review and use Item Here to fix missing items manually.
+          Allocation history is incomplete. Please review and use Item Is Here to fix missing items manually.
         </div>` : ""}
         <div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:8px">
           <div style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">Checklist</div>
@@ -7704,7 +7705,7 @@ function renderPetePlList() {
             <div style="font-size:12px;color:${item.allocated ? "var(--muted)" : "var(--text)"};text-decoration:${item.allocated ? "line-through" : "none"};line-height:1.35;flex:1">${label}</div>
             ${item.allocated ? "" : `<button onclick="confirmPeteMissingItemArrived('${item.id}','${pl.id}','${woArg}','${itemLabelArg}',event)"
               style="background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:var(--radius-xs);padding:6px 8px;font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#10b981;cursor:pointer;flex-shrink:0">
-              Item Here
+              Item Is Here
             </button>`}
           </div>`;
         }).join("") : `<div style="font-size:12px;color:var(--muted);padding:12px 0">No checklist items found yet.</div>`}
@@ -8208,7 +8209,7 @@ try {
       </button>
       <div>
         <div class="hname">Kitted Pick Lists</div>
-        <div class="hdate">Open after kitting, sorted by ship date</div>
+        <div class="hdate">Open after kitting, sorted by kitted date</div>
       </div>
     </div>
     <div class="header-right">
@@ -8221,7 +8222,7 @@ try {
   <div class="main-content">
     <div style="position:relative;margin-bottom:12px">
       <svg style="position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-      <input id="pete-pl-search" type="text" placeholder="Search customer name or WO number..."
+      <input id="pete-pl-search" type="text" placeholder="Search customer name or WO number…"
         style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-xs);padding:12px 12px 12px 36px;color:var(--text);font-size:13px;outline:none"
         oninput="renderPetePlList()">
     </div>
@@ -8240,7 +8241,7 @@ try {
       </button>
       <div>
         <div class="hname">Pick Lists</div>
-        <div class="hdate" id="pl-header-sub">All pick lists</div>
+        <div class="hdate" id="pl-header-sub">All Pick Lists</div>
       </div>
     </div>
     <div class="header-right">
