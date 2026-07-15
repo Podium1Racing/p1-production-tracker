@@ -626,6 +626,24 @@ input.photo-file-inp { display:none; }
 .toast-undo:hover { background:rgba(255,255,255,0.2); }
 .pwa-hint { background:rgba(99,102,241,0.09); border:1px solid rgba(99,102,241,0.22); border-radius:9px; padding:9px 13px; margin-bottom:13px; font-size:11px; color:var(--accent2); line-height:1.6; }
 .no-proj { background:var(--surface); border:1px dashed var(--border2); border-radius:var(--radius); padding:24px; text-align:center; color:var(--muted); font-size:13px; line-height:1.8; }
+.next-action-card { background:linear-gradient(135deg,rgba(224,32,32,.14),rgba(99,102,241,.08)); border:1px solid rgba(224,32,32,.28); border-radius:var(--radius); padding:14px; margin-bottom:13px; box-shadow:0 10px 34px rgba(0,0,0,.16); }
+.next-action-kicker { font-size:9px; font-weight:900; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); margin-bottom:6px; }
+.next-action-title { font-size:16px; font-weight:850; line-height:1.25; margin-bottom:5px; }
+.next-action-sub { font-size:12px; color:var(--muted); line-height:1.45; margin-bottom:11px; }
+.next-action-meta { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:11px; }
+.next-action-btn { width:100%; border:none; border-radius:var(--radius-xs); background:var(--accent); color:#fff; padding:11px 12px; font-size:11px; font-weight:850; letter-spacing:.08em; text-transform:uppercase; cursor:pointer; }
+.stream-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
+.stream-alert { background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--yellow); border-radius:var(--radius-sm); padding:11px 12px; margin-bottom:8px; }
+.stream-alert-title { font-size:12px; font-weight:800; margin-bottom:3px; }
+.stream-alert-sub { font-size:11px; color:var(--muted); line-height:1.4; }
+.bottom-nav { position:fixed; left:10px; right:10px; bottom:calc(10px + env(safe-area-inset-bottom)); z-index:60; display:none; background:rgba(18,18,18,.88); border:1px solid var(--border); border-radius:18px; backdrop-filter:blur(16px); box-shadow:0 14px 40px rgba(0,0,0,.34); padding:6px; gap:4px; }
+.bottom-nav-btn { flex:1; border:none; background:none; color:var(--muted); border-radius:13px; padding:7px 4px 6px; font-size:9px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer; }
+.bottom-nav-btn.active { background:rgba(224,32,32,.16); color:#fff; }
+.bottom-nav-btn svg { width:15px; height:15px; }
+@media (max-width:720px) {
+  .bottom-nav { display:flex; }
+  .main-content,.kit-content,.admin-content,.hist-content,.team-screen-content { padding-bottom:88px !important; }
+}
 .login-loading-overlay {
   position:fixed;
   inset:0;
@@ -1057,6 +1075,7 @@ input.photo-file-inp { display:none; }
     <div id="pwa-banner" class="pwa-hint" style="display:none">
        <strong>Save to Home Screen</strong> — tap Share → "Add to Home Screen" in Safari.
     </div>
+    <div id="dash-next-action"></div>
 
     <div class="perf-card">
       <div class="card-eyebrow">Performance Review</div>
@@ -2522,7 +2541,46 @@ function showScreen(id) {
   if (!next) return;
   document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
   next.classList.add("active");
+  updateBottomNav(id);
 }
+
+function updateBottomNav(activeId) {
+  const nav = document.getElementById("bottom-nav");
+  if (!nav) return;
+  const loggedIn = !!currentUser;
+  nav.style.display = loggedIn ? "" : "none";
+  ["bn-home","bn-queue","bn-history","bn-updates","bn-settings"].forEach(id => document.getElementById(id)?.classList.remove("active"));
+  if (activeId === "screen-dash" || activeId === "screen-kit" || activeId === "screen-admin") document.getElementById("bn-home")?.classList.add("active");
+  if (activeId === "screen-picklist" || activeId === "screen-pete-kitted") document.getElementById("bn-queue")?.classList.add("active");
+  if (activeId === "screen-history") document.getElementById("bn-history")?.classList.add("active");
+  if (activeId === "screen-updates") document.getElementById("bn-updates")?.classList.add("active");
+}
+
+function bottomNavHome() {
+  if (!currentUser) return;
+  if (currentUser.role === "admin") {
+    showScreen("screen-admin");
+    loadAdminData();
+  } else if (currentUser.role === KIT_ROLE) {
+    showKitScreen();
+  } else {
+    showDash();
+  }
+}
+
+function bottomNavQueue() {
+  if (!currentUser) return;
+  if (currentUser.role === KIT_ROLE) openPeteKittedPickLists();
+  else openPickListScreen();
+}
+
+function bottomNavHistory() {
+  if (!currentUser) return;
+  if (currentUser.role === KIT_ROLE) openPeteKittedPickLists();
+  else if (currentUser.role === "admin") openPickListScreen();
+  else showHistory();
+}
+
 function showDash() {
   /* Pete goes to the kitting screen instead */
   if (currentUser.role === KIT_ROLE) { showKitScreen(); startRealTimeSync(); return; }
@@ -2802,6 +2860,75 @@ async function loadBoard() {
 /* ═══════════════════════════════════════
    RENDER DASHBOARD
 ═══════════════════════════════════════ */
+function compactProjectLabel(item) {
+  const customer = cvText(item, COL.project);
+  return customer ? `${customer} · ${item.name}` : item.name;
+}
+
+function actionMetaPills(item, roleLabelText) {
+  const shipDate = parseShipDate(item);
+  const ship = shipDate ? `<span class="meta-pill pill-blue">${fmtShipDate(shipDate)}</span>` : "";
+  const firm = isFirm(item) ? `<span class="meta-pill pill-yellow">Firm</span>` : "";
+  const wg = isWhiteGlove(item) ? `<span class="meta-pill pill-white-glove">White Glove</span>` : "";
+  const role = roleLabelText ? `<span class="meta-pill" style="background:rgba(224,32,32,.12);color:var(--accent)">${roleLabelText}</span>` : "";
+  return `${role}${ship}${firm}${wg}`;
+}
+
+function findNextAvailableBuild(items, isMS) {
+  const role = isMS ? MS_ROLE : CHASSIS_ROLE;
+  const whoCol = isMS ? COL.ms_who : COL.chassis_who;
+  const statCol = isMS ? COL.ms_status : COL.chassis_status;
+  return items
+    .filter(i => (i.group?.title || "") === PARTS_PULLED || (i.group?.title || "").includes("Stand By"))
+    .filter(i => !parsePeople(i, whoCol).length)
+    .filter(i => {
+      const st = (cvText(i, statCol) || "").toLowerCase();
+      return !st.includes("complete");
+    })
+    .sort(compareScores)[0] || null;
+}
+
+function renderBuilderNextAction(items, myItems, isMS) {
+  const el = document.getElementById("dash-next-action");
+  if (!el) return;
+  const colType = isMS ? "ms" : "chassis";
+  const roleText = isMS ? "Monitor Stand" : "Chassis";
+  const paused = myItems.find(i => isBuildPaused(i, colType));
+  const active = myItems
+    .filter(i => !isBuildPaused(i, colType))
+    .sort((a,b) => parsePct(cvText(a, isMS ? COL.ms_pct : COL.chassis_pct)) - parsePct(cvText(b, isMS ? COL.ms_pct : COL.chassis_pct)))[0];
+  const next = paused || active || findNextAvailableBuild(items, isMS);
+
+  if (!next) {
+    el.innerHTML = `<div class="next-action-card">
+      <div class="next-action-kicker">My Next Action</div>
+      <div class="next-action-title">You’re clear right now</div>
+      <div class="next-action-sub">No active ${roleText.toLowerCase()} builds are waiting on you. Check the queue or refresh if something changed.</div>
+      <button class="next-action-btn" onclick="manualRefresh('dash')">Refresh My Work</button>
+    </div>`;
+    return;
+  }
+
+  const pct = parsePct(cvText(next, isMS ? COL.ms_pct : COL.chassis_pct));
+  const title = paused ? "Resume or update paused build" : active ? "Update your current build" : "Grab the next available build";
+  const sub = paused
+    ? `${compactProjectLabel(next)} is paused. Open it, add progress, or unpause when ready.`
+    : active
+      ? `${compactProjectLabel(next)} is at ${pct}%. This is the next thing to move forward.`
+      : `${compactProjectLabel(next)} is available in Parts Pulled / Stand By.`;
+  const btn = paused || active
+    ? `<button class="next-action-btn" onclick="openUpdateSheet('${next.id}','${colType}',event)">Open Update</button>`
+    : `<button class="next-action-btn" onclick="grabBuild('${next.id}',event)">Grab Build</button>`;
+
+  el.innerHTML = `<div class="next-action-card">
+    <div class="next-action-kicker">My Next Action</div>
+    <div class="next-action-title">${escHtml(title)}</div>
+    <div class="next-action-sub">${escHtml(sub)}</div>
+    <div class="next-action-meta">${actionMetaPills(next, roleText)}</div>
+    ${btn}
+  </div>`;
+}
+
 function renderDash(items) {
   const isMS      = currentUser.role === MS_ROLE;
   const myWhoCol  = isMS ? COL.ms_who      : COL.chassis_who;
@@ -2871,6 +2998,7 @@ function renderDash(items) {
     pausedEl.className   = "kpi-v " + (pausedCount > 0 ? "y" : "");
     document.getElementById("kpi-paused-row").style.display = pausedCount > 0 ? "" : "none";
   }
+  renderBuilderNextAction(items, myItems, isMS);
 
   const activeCount = myItems.length;
   document.getElementById("sec-title").textContent =
@@ -4226,23 +4354,91 @@ async function submitGate() {
 
 buildNameList();
 
+function renderAdminStreamlineWidgets(items, sbTimers = [], sbKits = []) {
+  const today = todayStr();
+  const completedToday = items.filter(i =>
+    (getCompletionTs(i, "ms") || "").slice(0,10) === today ||
+    (getCompletionTs(i, "chassis") || "").slice(0,10) === today
+  ).length;
+  const kitsToday = (sbKits || []).filter(k => k.date_str === today).length;
+  const running = (sbTimers || []).filter(t => t.state === "running").length;
+  const partsPulled = items.filter(i => (i.group?.title || "") === PARTS_PULLED);
+  const standBy = items.filter(i => (i.group?.title || "").includes("Stand By"));
+  const qc = items.filter(i => (i.group?.title || "").toLowerCase().includes("quality control"));
+  const overdue = items.filter(i => {
+    const d = parseShipDate(i);
+    return d && daysUntil(d) < 0 && !(i.group?.title || "").toLowerCase().includes("complete");
+  }).sort(compareScores);
+  const unassigned = items.filter(i => {
+    const g = i.group?.title || "";
+    if (!g.includes("Building") && g !== PARTS_PULLED && !g.includes("Stand By")) return false;
+    return !parsePeople(i, COL.ms_who).length && !parsePeople(i, COL.chassis_who).length;
+  }).sort(compareScores);
+
+  const next = overdue[0] || unassigned[0] || partsPulled[0] || standBy[0] || qc[0];
+  const actionTitle = overdue[0] ? "Overdue project needs attention"
+    : unassigned[0] ? "Assign the next project"
+    : partsPulled[0] ? "Parts Pulled is ready"
+    : standBy[0] ? "Stand By needs a decision"
+    : qc[0] ? "QC projects ready to verify"
+    : "Shop is looking clean";
+  const actionSub = next
+    ? `${compactProjectLabel(next)} · ${next.group?.title || "No group"}`
+    : "No obvious bottlenecks found in the current board load.";
+
+  const alerts = [
+    overdue.length ? { title:`${overdue.length} overdue ship date${overdue.length===1?"":"s"}`, sub:compactProjectLabel(overdue[0]) } : null,
+    unassigned.length ? { title:`${unassigned.length} unassigned item${unassigned.length===1?"":"s"}`, sub:"Assign MS/chassis ownership before it stalls." } : null,
+    partsPulled.length ? { title:`${partsPulled.length} in Parts Pulled`, sub:"Ready for builders to grab or for Pete follow-up." } : null,
+    qc.length ? { title:`${qc.length} in Quality Control`, sub:"Verify pick lists are complete before closing." } : null,
+  ].filter(Boolean).slice(0,4);
+
+  return `<div class="next-action-card">
+    <div class="next-action-kicker">Admin Next Action</div>
+    <div class="next-action-title">${escHtml(actionTitle)}</div>
+    <div class="next-action-sub">${escHtml(actionSub)}</div>
+    <button class="next-action-btn" onclick="openPickListScreen()">Open Pick Lists / Review</button>
+  </div>
+  <div class="stream-grid">
+    <div class="health-card"><div class="health-val" style="color:var(--green)">${completedToday}</div><div class="health-lbl">Builds Done Today</div><div class="health-sub">MS or Chassis</div></div>
+    <div class="health-card"><div class="health-val" style="color:var(--yellow)">${kitsToday}</div><div class="health-lbl">Kits Today</div><div class="health-sub">From Pete/Kitting</div></div>
+    <div class="health-card"><div class="health-val" style="color:var(--accent2)">${running}</div><div class="health-lbl">Running Timers</div><div class="health-sub">Live production</div></div>
+    <div class="health-card"><div class="health-val" style="color:${alerts.length ? "var(--red)" : "var(--green)"}">${alerts.length}</div><div class="health-lbl">Watch Items</div><div class="health-sub">Need attention</div></div>
+  </div>
+  ${alerts.length ? `<div style="margin-bottom:16px">
+    <div style="font-size:13px;font-weight:800;margin-bottom:8px">Smart Alerts</div>
+    ${alerts.map(a => `<div class="stream-alert"><div class="stream-alert-title">${escHtml(a.title)}</div><div class="stream-alert-sub">${escHtml(a.sub)}</div></div>`).join("")}
+  </div>` : ""}`;
+}
+
 function openManageMembers() {
   const list = document.getElementById("manage-members-list");
   list.innerHTML = "";
   TEAM.forEach(m=>{
     const row = document.createElement("div");
-    row.style.cssText = "display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--card);border-radius:10px;border:1px solid var(--border)";
-    row.innerHTML = `<div class="av" style="background:${m.color}25;color:${m.color};width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">${m.initials}</div>
+    row.style.cssText = "display:flex;align-items:flex-start;gap:10px;padding:12px;background:var(--card);border-radius:12px;border:1px solid var(--border)";
+    const floaterNote = m.role === FLOAT_ROLE
+      ? `<div style="font-size:10px;color:#fbbf24;margin-top:5px;line-height:1.35">Floater access: Monitor Stands · Chassis · Kitting</div>`
+      : "";
+    row.innerHTML = `<div class="av" style="background:${m.color}25;color:${m.color};width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0">${m.initials}</div>
       <div style="flex:1;min-width:0">
-        <div style="font-size:14px;font-weight:600">${escHtml(m.name)}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <div style="font-size:14px;font-weight:700">${escHtml(m.name)}</div>
+          <span style="font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;background:rgba(16,185,129,.12);color:#10b981;border-radius:999px;padding:3px 7px">Active</span>
+        </div>
         <select onchange="updateMemberRole('${m.name.replace(/'/g,"\\'")}',this.value)" style="margin-top:6px;width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-xs);padding:8px 9px;color:var(--text);font-size:12px">
           <option value="${MS_ROLE}" ${m.role===MS_ROLE?"selected":""}>MS Builder</option>
           <option value="${CHASSIS_ROLE}" ${m.role===CHASSIS_ROLE?"selected":""}>Chassis Builder</option>
           <option value="${KIT_ROLE}" ${m.role===KIT_ROLE?"selected":""}>Kitter</option>
           <option value="${FLOAT_ROLE}" ${m.role===FLOAT_ROLE?"selected":""}>Floater</option>
         </select>
+        ${floaterNote}
+        <div style="display:flex;gap:8px;margin-top:9px">
+          <button class="member-remove-btn" style="flex:1;color:var(--muted);border-color:var(--border2)" onclick="resetMemberPin('${m.name.replace(/'/g,"\\'")}')">Reset PIN</button>
+          <button class="member-remove-btn" style="flex:1" onclick="removeMember('${m.name.replace(/'/g,"\\'")}')">Deactivate</button>
+        </div>
       </div>
-      <button class="member-remove-btn" onclick="removeMember('${m.name.replace(/'/g,"\\'")}')">Remove</button>`;
+      `;
     list.appendChild(row);
   });
   closeSettings();
@@ -4506,6 +4702,7 @@ function renderAdminDesktop(items, sbTimers, sbKits, sbUpdates) {
       <button class="seg-btn ${range==="month"?"active":""}" onclick="setAdminRange('month')">This Month</button>
     </div>
   </div>
+  ${renderAdminStreamlineWidgets(items, sbTimers, sbKits)}
 
   <!-- Board Health KPIs -->
   <div class="dt-grid">
@@ -4865,7 +5062,7 @@ function renderAdminDash(items, sbTimers = [], sbKits = []) {
   const maxWeekDone = Math.max(1, ...ranked.map(m => weekStats[m.name].weekDone));
 
   /* ── BUILD HTML ── */
-  let html = "";
+  let html = renderAdminStreamlineWidgets(items, sbTimers, sbKits);
 
   /* Board Health */
   html += `
@@ -5679,6 +5876,24 @@ function getNeedKittedSide(item) {
   return null;
 }
 
+function renderKitNextAction(kitItems) {
+  const next = kitItems[0];
+  if (!next) return "";
+  const woNum = getWoNumberFromItem(next);
+  const side = getNeedKittedSide(next);
+  const sideText = side === "both" ? "Both sides need kitted" : side === "ms" ? "Monitor stand needs kitted" : side === "chassis" ? "Chassis needs kitted" : "Full kit";
+  const btn = woNum
+    ? `<button class="next-action-btn" onclick="openPickListForItem('${next.id}','${woNum}',event)">Open Pick List</button>`
+    : `<button class="next-action-btn" onclick="manualRefresh('kit')">Refresh Kitting Queue</button>`;
+  return `<div class="next-action-card">
+    <div class="next-action-kicker">Pete’s Next Action</div>
+    <div class="next-action-title">${escHtml(compactProjectLabel(next))}</div>
+    <div class="next-action-sub">${escHtml(sideText)}. This is first in the queue by ship date and priority.</div>
+    <div class="next-action-meta">${actionMetaPills(next, "Kitting")}</div>
+    ${btn}
+  </div>`;
+}
+
 function renderKitScreen(items) {
   const content = document.getElementById("kit-content");
 
@@ -5697,7 +5912,7 @@ function renderKitScreen(items) {
     return;
   }
 
-  content.innerHTML = "";
+  content.innerHTML = renderKitNextAction(kitItems);
 
   kitItems.forEach((item, idx) => {
     try {
@@ -7852,6 +8067,14 @@ function openPeteKittedPickList(woNum, e) {
   renderPetePlList();
 }
 
+function openFirstPeteReview() {
+  const pl = (window._petePlLists || []).find(p => p.needsReview);
+  if (!pl) return;
+  window._peteExpandedWo = pl.wo_number;
+  renderPetePlList();
+  setTimeout(() => openPeteAllocationReview(pl.id, pl.wo_number, null), 80);
+}
+
 function confirmPeteMissingItemArrived(itemId, plId, woNum, label, e) {
   if (e) { e.stopPropagation(); e.preventDefault(); }
   const existing = document.getElementById("pete-missing-confirm-modal");
@@ -8036,6 +8259,15 @@ function renderPetePlList() {
   const statusColor = { in_queue:"#f59e0b", missing_items:"var(--accent)", fully_kitted:"#10b981", complete:"var(--muted2)" };
 
   let html = "";
+  const reviewCount = lists.filter(pl => pl.needsReview).length;
+  if (reviewCount) {
+    html += `<div class="next-action-card">
+      <div class="next-action-kicker">Needs Review</div>
+      <div class="next-action-title">${reviewCount} previous kit${reviewCount===1?"":"s"} need allocation review</div>
+      <div class="next-action-sub">Fix these in one step with Check All / Clear All instead of touching every item one at a time.</div>
+      <button class="next-action-btn" onclick="openFirstPeteReview()">Review First One</button>
+    </div>`;
+  }
   let lastKitDay = "";
   lists.forEach(pl => {
     const customer = getPetePickListCustomer(pl);
@@ -8954,6 +9186,28 @@ try {
   </div>
 </div>
 
+<nav class="bottom-nav" id="bottom-nav" aria-label="Quick navigation">
+  <button class="bottom-nav-btn" id="bn-home" onclick="bottomNavHome()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+    Home
+  </button>
+  <button class="bottom-nav-btn" id="bn-queue" onclick="bottomNavQueue()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+    Queue
+  </button>
+  <button class="bottom-nav-btn" id="bn-history" onclick="bottomNavHistory()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+    History
+  </button>
+  <button class="bottom-nav-btn" id="bn-updates" onclick="showBuildUpdates()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+    Updates
+  </button>
+  <button class="bottom-nav-btn" id="bn-settings" onclick="openSettings()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33"/></svg>
+    Settings
+  </button>
+</nav>
 
 </body>
 </html>
