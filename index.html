@@ -5767,39 +5767,6 @@ function renderKitScreen(items) {
           </button>` : ""}
         </div>
       </div>
-      <div class="kit-checklist-toggle" id="kct-${item.id}" onclick="toggleKitChecklist('${item.id}')">
-        <div class="kit-checklist-toggle-label" id="kcc-${item.id}">Kitting Checklist — Loading…</div>
-        <div class="kit-checklist-toggle-right">
-          <span class="kit-checklist-arrow">⌄</span>
-        </div>
-      </div>
-      <div class="kit-checklist" id="kcl-${item.id}">
-        <div class="kit-progress"><div class="kit-progress-fill" id="kpf-${item.id}" style="width:0%"></div></div>
-        <div class="kit-pdf-drop" id="kpd-${item.id}">
-          <span>Loading pick list…</span>
-        </div>
-        <button class="kit-done-btn" id="kdone-${item.id}" disabled onclick="kitDone('${item.id}',event)">
-          Loading Checklist…
-        </button>
-        <div class="kit-missing-confirm" id="kmc-${item.id}">
-          <div class="kit-missing-title">Submit with missing items?</div>
-          <div class="kit-missing-list" id="kml-${item.id}"></div>
-          <textarea class="kit-note-inp" id="kit-note-${item.id}" rows="2" placeholder="Add a note for missing items (optional)…"></textarea>
-          <div class="kit-missing-actions" style="margin-top:10px">
-            <button class="kit-missing-cancel" onclick="event.stopPropagation();document.getElementById('kmc-${item.id}')?.classList.remove('show')">Review Again</button>
-            <button class="kit-missing-submit" onclick="kitDoneConfirmed('${item.id}',event)">Submit Kit</button>
-          </div>
-        </div>
-        <div class="kit-missing-confirm" id="kac-${item.id}" style="background:rgba(16,185,129,0.08);border-color:rgba(16,185,129,0.28)">
-          <div class="kit-missing-title" style="color:var(--green)">Full kit confirmed?</div>
-          <div class="kit-missing-list">Everything is checked. Double-check before moving this to Parts Pulled.</div>
-          <textarea class="kit-note-inp" id="kit-note-${item.id}-all" rows="2" placeholder="Add a note (optional)…"></textarea>
-          <div class="kit-missing-actions" style="margin-top:10px">
-            <button class="kit-missing-cancel" onclick="event.stopPropagation();document.getElementById('kac-${item.id}')?.classList.remove('show')">Review Again</button>
-            <button class="kit-missing-submit" style="background:var(--green)" onclick="kitDoneConfirmed('${item.id}',event)">Move to Parts Pulled</button>
-          </div>
-        </div>
-      </div>
 `;
     content.appendChild(card);
 
@@ -7268,6 +7235,7 @@ async function renderPickLists() {
     if (!itemsByPl[ownerId]) itemsByPl[ownerId] = [];
     itemsByPl[ownerId].push(it);
   });
+  window._plItemsByPl = itemsByPl;
 
   let html = "";
 
@@ -7288,6 +7256,17 @@ async function renderPickLists() {
       fully_kitted:  "Fully Kitted",
       complete:      "Complete"
     }[pl.status] || pl.status;
+    const showKitCheckAll = pl.status !== "complete" && currentUser?.role === KIT_ROLE && !isLead() && !_plKittedAccessMode;
+    const checkAllHtml = showKitCheckAll ? `
+      <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.24);border-radius:var(--radius-xs);padding:9px 10px;margin:0 12px 10px">
+        <button type="button" onclick="checkAllPickListItems('${pl.id}',event)"
+          style="width:100%;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:var(--radius-xs);padding:9px 10px;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#10b981;cursor:pointer">
+          Check All
+        </button>
+        <div style="font-size:10px;color:#fbbf24;line-height:1.35;margin-top:7px;text-align:center">
+          Shortcut only — double-check every item before submitting.
+        </div>
+      </div>` : "";
 
     html += `<div class="pl-card status-${pl.status}${pl.has_changes ? " has-changes" : ""}" id="plcard-${pl.id}">
       <div class="pl-card-header">
@@ -7304,6 +7283,8 @@ async function renderPickLists() {
           <span class="pl-status-pill ${pl.status}">${statusLabel}</span>
         </div>
       </div>
+
+      ${checkAllHtml}
 
       ${items.map(it => {
         const label = escHtml(it.label || buildItemLabel(it));
@@ -7431,6 +7412,58 @@ async function togglePickListItem(itemId, plId, e) {
   });
 
   await refreshPickListCard(plId);
+}
+
+/* ── Pete shortcut: check every item on an initial kit pick list ── */
+async function checkAllPickListItems(plId, e) {
+  if (e) {
+    e.stopPropagation();
+    e.preventDefault();
+  }
+
+  const items = (window._plItemsByPl || {})[plId] || [];
+  if (!items.length) {
+    showToast("No pick list items found.", "err");
+    return;
+  }
+
+  const remaining = items.filter(it => !it.allocated);
+  if (!remaining.length) {
+    showToast("Everything is already checked.", "ok");
+    return;
+  }
+
+  const btn = e?.currentTarget;
+  const oldText = btn?.textContent;
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Checking…";
+  }
+
+  try {
+    await Promise.all(remaining.map(it =>
+      sbFetch(`picklist_items?id=eq.${encodeURIComponent(it.id)}`, {
+        method: "PATCH",
+        prefer: "return=minimal",
+        body: JSON.stringify({ allocated: true }),
+      })
+    ));
+
+    await sbFetch(`picklists?id=eq.${encodeURIComponent(plId)}&status=neq.complete`, {
+      method: "PATCH",
+      prefer: "return=minimal",
+      body: JSON.stringify({ status: "fully_kitted", updated_at: new Date().toISOString() }),
+    });
+
+    showToast("All pick list items checked. Double-check before submitting.", "ok");
+    await renderPickLists();
+  } catch (err) {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = oldText || "Check All";
+    }
+    showToast("Could not check all items. Try again.", "err");
+  }
 }
 
 /* ── Refresh a single card's meta after item changes ── */
