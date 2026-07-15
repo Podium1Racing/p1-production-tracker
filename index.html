@@ -7388,11 +7388,34 @@ async function repairKittedPickListAllocation(woNum, completions = null) {
     { method: "GET", headers: { "Prefer": "return=representation" } }
   ) || [];
   if (!items.length) return "no_items";
-  if (items.some(i => i.allocated)) return "has_allocations";
 
   const missingItems = completion ? normalizeMissingItems(completion.missing_items) : null;
   if (!Array.isArray(missingItems)) return "needs_review";
-  if (missingItems.length === 0) return "needs_review";
+
+  /* A recorded Full Kit means every checklist row should be allocated.
+     This repairs older pick lists where the completion history existed
+     before allocation rows were kept in sync. */
+  if (missingItems.length === 0) {
+    const unallocated = items.filter(item => !item.allocated);
+    if (unallocated.length) {
+      await Promise.all(unallocated.map(item => sbFetch(`picklist_items?id=eq.${encodeURIComponent(item.id)}`, {
+        method: "PATCH",
+        prefer: "return=minimal",
+        body: JSON.stringify({ allocated: true }),
+      })));
+    }
+    await sbFetch(`picklists?wo_number=eq.${encodeURIComponent(woNum)}&status=neq.complete`, {
+      method: "PATCH",
+      prefer: "return=minimal",
+      body: JSON.stringify({
+        status: "fully_kitted",
+        updated_at: new Date().toISOString(),
+      }),
+    });
+    return unallocated.length ? "repaired_full" : "full_confirmed";
+  }
+
+  if (items.some(i => i.allocated)) return "has_allocations";
 
   const missingLabels = new Set((missingItems || [])
     .map(i => String(i || "").toLowerCase().trim()));
@@ -8333,9 +8356,12 @@ async function openPeteKittedPickLists() {
         const kittedAt = kitCompletion?.completed_at || null;
         const completionMissingItems = kitCompletion ? normalizeMissingItems(kitCompletion.missing_items) : null;
         const hasExplicitMissingHistory = Array.isArray(completionMissingItems) && completionMissingItems.length > 0;
+        const hasConfirmedFullKitHistory = Array.isArray(completionMissingItems) && completionMissingItems.length === 0;
         const allAllocatedNoExplicitHistory = !!itemState?.total &&
           itemState.allocated === itemState.total &&
-          !hasExplicitMissingHistory;
+          !kitCompletion &&
+          !hasExplicitMissingHistory &&
+          !hasConfirmedFullKitHistory;
         const needsReview = !!reviewByWo[pl.wo_number] || (
           !!itemState?.total &&
           itemState.allocated === 0 &&
