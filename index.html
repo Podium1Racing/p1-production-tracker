@@ -5788,6 +5788,72 @@ function toggleKitChecklist(itemId) {
   toggle.classList.toggle("open", !isOpen);
 }
 
+function kitCheckSvg() {
+  return `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+}
+
+function updateKitChecklistProgress(itemId) {
+  const kitLines = KIT_LINE_CACHE[itemId] || [];
+  const ic       = getItemChecks(itemId);
+  const relevant = kitLines.filter(l => !ic.skips[l]);
+  const done     = relevant.filter(l => ic.checks[l]).length;
+  const pct      = relevant.length ? Math.round(done / relevant.length * 100) : 0;
+  const bar      = document.getElementById("kpf-" + itemId);
+  const countEl  = document.getElementById("kcc-" + itemId);
+  if (bar)     bar.style.width = pct + "%";
+  if (countEl) countEl.textContent = `Kitting Checklist — ${done}/${relevant.length} items`;
+
+  const doneBtn = document.getElementById("kdone-" + itemId);
+  if (doneBtn) {
+    const allNowDone = relevant.length > 0 && done >= relevant.length;
+    doneBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> ${allNowDone ? "Done Kitting — Move to Parts Pulled" : "Submit Kit (Missing Items)"}`;
+  }
+}
+
+function ensureKitBulkCheckControls(itemId, checklistDiv, doneBtn) {
+  if (!checklistDiv || document.getElementById("kbulk-" + itemId)) return;
+  const bulk = document.createElement("div");
+  bulk.id = "kbulk-" + itemId;
+  bulk.style.cssText = "background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.24);border-radius:var(--radius-xs);padding:9px 10px;margin-bottom:8px";
+  bulk.innerHTML = `<button type="button" onclick="event.stopPropagation();checkAllKitItems('${itemId}')"
+      style="width:100%;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:var(--radius-xs);padding:9px 10px;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#10b981;cursor:pointer">
+      Check All
+    </button>
+    <div style="font-size:10px;color:#fbbf24;line-height:1.35;margin-top:7px;text-align:center">
+      Shortcut only — double-check every item before submitting.
+    </div>`;
+  if (doneBtn) checklistDiv.insertBefore(bulk, doneBtn);
+  else checklistDiv.appendChild(bulk);
+}
+
+function checkAllKitItems(itemId) {
+  const data = loadKitChecks();
+  if (!data[itemId]) data[itemId] = { checks: {}, skips: {} };
+  if (!data[itemId].skips) data[itemId].skips = {};
+  if (!data[itemId].checks) data[itemId].checks = {};
+
+  const kitLines = KIT_LINE_CACHE[itemId] || [];
+  kitLines.forEach(label => {
+    if (!data[itemId].skips[label]) data[itemId].checks[label] = true;
+  });
+  saveKitChecks(data);
+
+  const card = document.getElementById("kit-card-" + itemId);
+  card?.querySelectorAll(".kit-check-row").forEach(row => {
+    const label = row.querySelector(".kit-check-label")?.textContent || "";
+    if (data[itemId].skips[label]) return;
+    const cb = row.querySelector(".kit-checkbox");
+    const lbl = row.querySelector(".kit-check-label");
+    const skipBtn = row.querySelector(".kit-skip-btn");
+    cb?.classList.add("checked");
+    if (cb) cb.innerHTML = kitCheckSvg();
+    if (lbl) lbl.className = "kit-check-label checked";
+    if (skipBtn) { skipBtn.classList.remove("skipped"); skipBtn.textContent = "Skip"; }
+  });
+  updateKitChecklistProgress(itemId);
+  showToast("All visible kit items checked. Double-check before submitting.", "ok");
+}
+
 /* Fetch pick list from P1 backend API — primary source, instant, no PDF needed */
 /* ── Shared P1 API item → label helper (used by kit checklist AND pick list) ──
    Both systems must use identical labels so allocation matching is exact. */
@@ -5893,6 +5959,7 @@ async function fetchPickListFromApi(itemId, woNum) {
 
     if (bar)     bar.style.width = pct + "%";
     if (countEl) countEl.textContent = `Kitting Checklist — ${done}/${relevant.length} items`;
+    ensureKitBulkCheckControls(itemId, checklistDiv, doneBtn);
 
     const _isPartial2 = card?.dataset.isPartialKit === "1";
     lines.forEach(label => {
@@ -6616,6 +6683,7 @@ async function handleKitPdfDrop(itemId, file) {
     const doneBtn      = document.getElementById("kdone-" + itemId);
     const countEl      = document.getElementById("kcc-" + itemId);
     const ic           = getItemChecks(itemId);
+    ensureKitBulkCheckControls(itemId, checklistDiv, doneBtn);
 
     const _isPartial3 = card?.dataset.isPartialKit === "1";
     lines.forEach(label => {
