@@ -653,6 +653,72 @@ input.photo-file-inp { display:none; }
   52%  { opacity:.96; transform:translateX(0) skewX(-10deg); }
   100% { opacity:0;   transform:translateX(105%) skewX(-10deg); }
 }
+.login-loading-overlay {
+  position:fixed;
+  inset:0;
+  z-index:10050;
+  pointer-events:none;
+  opacity:0;
+  visibility:hidden;
+  background:#030303 url("assets/podium1-login-loading.png") center / cover no-repeat;
+  transform:scale(1.035);
+  transition:opacity .42s ease, transform 1.25s cubic-bezier(.2,.8,.2,1), visibility 0s linear .42s;
+}
+.login-loading-overlay::before {
+  content:"";
+  position:absolute;
+  inset:0;
+  background:
+    radial-gradient(circle at 50% 44%, rgba(224,32,32,.05), transparent 30%),
+    linear-gradient(180deg, rgba(0,0,0,.08), rgba(0,0,0,.18) 72%, rgba(0,0,0,.56));
+}
+.login-loading-overlay.show {
+  opacity:1;
+  visibility:visible;
+  transform:scale(1);
+  transition:opacity .42s ease, transform 1.25s cubic-bezier(.2,.8,.2,1), visibility 0s;
+}
+.login-loading-overlay.hide {
+  opacity:0;
+  transform:scale(1.018);
+}
+.login-loading-status {
+  position:absolute;
+  left:50%;
+  bottom:calc(42px + env(safe-area-inset-bottom));
+  transform:translateX(-50%);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:12px;
+  color:rgba(255,255,255,.78);
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+}
+.login-loading-bar {
+  width:118px;
+  height:2px;
+  border-radius:999px;
+  overflow:hidden;
+  background:rgba(255,255,255,.12);
+  box-shadow:0 0 22px rgba(224,32,32,.25);
+}
+.login-loading-bar::after {
+  content:"";
+  display:block;
+  width:42%;
+  height:100%;
+  border-radius:999px;
+  background:linear-gradient(90deg, transparent, var(--accent), #fff, var(--accent), transparent);
+  animation:loginLoadSweep 1.05s ease-in-out infinite;
+}
+@keyframes loginLoadSweep {
+  0%   { transform:translateX(-120%); opacity:.2; }
+  50%  { opacity:1; }
+  100% { transform:translateX(260%); opacity:.2; }
+}
 
 /* Professional motion polish */
 .screen.active .app-header,
@@ -729,6 +795,12 @@ input.photo-file-inp { display:none; }
 </head>
 <body>
 <div id="page-race-transition" class="page-race-transition" aria-hidden="true"></div>
+<div id="login-loading-overlay" class="login-loading-overlay" aria-hidden="true">
+  <div class="login-loading-status">
+    <div class="login-loading-bar"></div>
+    <div>Loading Workspace</div>
+  </div>
+</div>
 
 <!-- LOGIN -->
 <!-- FIRST LAUNCH GATE -->
@@ -2247,7 +2319,7 @@ async function loginSuccess() {
       }
     } catch(e) {}
   }
-  showDash();
+  showLoginLoading(showDash);
 }
 
 /* ── Passkey (Face ID / Touch ID) ──────────────────────────── */
@@ -2288,7 +2360,7 @@ async function autoLoginWithPasskey(user) {
     }, mediation: "optional" });
     currentUser = user;
     localStorage.setItem("pt_user", JSON.stringify(currentUser));
-    showDash();
+    showLoginLoading(showDash);
   } catch(e) {
     /* Biometric failed or cancelled — fall back to PIN silently */
     document.getElementById("login-pin-error").textContent = "";
@@ -2345,9 +2417,11 @@ async function processAdminPin() {
   }
   currentUser = { name:ADMIN_NAME, initials:"EM", color:"#6366f1", role:"admin" };
   localStorage.setItem("pt_user", JSON.stringify(currentUser));
-  showScreen("screen-admin");
-  document.getElementById("admin-date").textContent = new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
-  loadAdminData();
+  showLoginLoading(() => {
+    showScreen("screen-admin");
+    document.getElementById("admin-date").textContent = new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
+    loadAdminData();
+  });
 }
 
 /* ── First-time PIN setup ───────────────────────────────────── */
@@ -2398,13 +2472,15 @@ async function processSetupPin() {
     if (setupUser._isAdmin) {
       currentUser = { name:ADMIN_NAME, initials:"EM", color:"#6366f1", role:"admin" };
       localStorage.setItem("pt_user", JSON.stringify(currentUser));
-      showScreen("screen-admin");
-      document.getElementById("admin-date").textContent = new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
-      loadAdminData();
+      showLoginLoading(() => {
+        showScreen("screen-admin");
+        document.getElementById("admin-date").textContent = new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
+        loadAdminData();
+      });
     } else {
       currentUser = setupUser;
       localStorage.setItem("pt_user", JSON.stringify(currentUser));
-      showDash();
+      showLoginLoading(showDash);
     }
   }
 }
@@ -2455,11 +2531,39 @@ function runRacePageTransition() {
   void overlay.offsetWidth;
   overlay.classList.add("run");
 }
+let suppressNextRaceTransition = false;
+function showLoginLoading(nextAction) {
+  const overlay = document.getElementById("login-loading-overlay");
+  const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+
+  if (!overlay || reduced) {
+    suppressNextRaceTransition = true;
+    nextAction();
+    return;
+  }
+
+  overlay.classList.remove("hide");
+  overlay.classList.add("show");
+
+  setTimeout(() => {
+    suppressNextRaceTransition = true;
+    nextAction();
+
+    setTimeout(() => {
+      overlay.classList.add("hide");
+      overlay.classList.remove("show");
+      setTimeout(() => overlay.classList.remove("hide"), 480);
+    }, 520);
+  }, 720);
+}
 function showScreen(id) {
   const next = document.getElementById(id);
   if (!next) return;
   const current = document.querySelector(".screen.active");
-  if (current && current.id !== id) runRacePageTransition();
+  if (current && current.id !== id) {
+    if (suppressNextRaceTransition) suppressNextRaceTransition = false;
+    else runRacePageTransition();
+  }
   document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
   next.classList.add("active");
 }
