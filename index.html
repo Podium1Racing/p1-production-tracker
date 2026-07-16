@@ -721,8 +721,9 @@ input.photo-file-inp { display:none; }
 .labor-chip.pto,.labor-chip.off { background:rgba(239,68,68,.16); border-color:rgba(239,68,68,.34); color:#ffe4e4; }
 .labor-chip-name { white-space:normal; overflow:visible; text-overflow:clip; line-height:1.25; padding-right:22px; }
 .labor-chip-hours { float:right; color:#fff; opacity:.9; }
-.labor-chip-adjust { display:flex; gap:5px; margin-top:6px; }
+.labor-chip-adjust { display:flex; gap:5px; margin-top:6px; align-items:center; }
 .labor-chip-adjust button { width:24px; height:20px; border:none; border-radius:6px; background:rgba(0,0,0,.24); color:#fff; font-size:13px; font-weight:950; cursor:pointer; line-height:1; }
+.labor-chip-reason { flex:1; min-width:0; background:rgba(0,0,0,.22); border:1px solid rgba(255,255,255,.12); border-radius:6px; color:#fff; font-size:10px; padding:4px 5px; }
 .labor-pool { margin-top:14px; border:1px solid var(--border); border-radius:14px; background:var(--surface2); padding:12px; }
 .labor-pool-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:8px; }
 .labor-pool-person { font-size:12px; font-weight:900; }
@@ -4681,6 +4682,7 @@ const ADMIN_DEFAULT_HOURS_KEY = "pt_admin_default_hours";
 let _adminShipTab = "today";
 let _adminDraggedBuilder = null;
 let _adminScheduleDraft = null;
+let _expandedLaborChipKey = "";
 function loadAdminSchedule() {
   try { return JSON.parse(localStorage.getItem(ADMIN_SCHEDULE_KEY) || "{}"); } catch(e) { return {}; }
 }
@@ -4861,10 +4863,25 @@ function adminDropBuilder(e, dateStr, lineKey = null) {
   }
   openAdminScheduleEditor({ dateStr, person: payload.name, role: payload.role });
 }
-function adjustLaborHours(dateStr, person, role, delta, entryId = null, e = null) {
+function toggleLaborChip(key, e = null) {
   if (e) { e.stopPropagation(); e.preventDefault(); }
-  const reason = prompt(delta < 0 ? "Reason for reduced hours?" : "Reason for extra hours?", delta < 0 ? "Leaving early" : "Extra hours");
-  if (reason === null) return;
+  _expandedLaborChipKey = _expandedLaborChipKey === key ? "" : key;
+  refreshAdminViewFromCache();
+}
+function laborReasonValue(key) {
+  return document.getElementById(`labor-reason-${key}`)?.value || "";
+}
+function adminLaborChipKey(entry, dateStr) {
+  const raw = `${dateStr}-${entry.id || entry.person || ""}-${entry.role || ""}`;
+  return raw.replace(/[^a-zA-Z0-9_-]/g, "_");
+}
+function laborReasonOptions(selected = "") {
+  const options = ["Leaving early", "Sick", "PTO", "Extra hours", "Install help", "Other"];
+  return options.map(reason => `<option value="${escHtml(reason)}" ${reason === selected ? "selected" : ""}>${escHtml(reason)}</option>`).join("");
+}
+function adjustLaborHours(dateStr, person, role, delta, entryId = null, e = null, key = "") {
+  if (e) { e.stopPropagation(); e.preventDefault(); }
+  const reason = laborReasonValue(key) || (delta < 0 ? "Leaving early" : "Extra hours");
   const data = loadAdminSchedule();
   if (!data[dateStr]) data[dateStr] = [];
   let entry = entryId ? data[dateStr].find(x => String(x.id) === String(entryId)) : null;
@@ -4877,7 +4894,7 @@ function adjustLaborHours(dateStr, person, role, delta, entryId = null, e = null
       role,
       type: "build",
       hours: baseHours,
-      note: reason.trim() || "Adjusted from default",
+      note: reason.trim(),
     };
     data[dateStr].push(entry);
   }
@@ -5117,11 +5134,12 @@ function scheduleLineForEntry(e) {
 function renderLaborChip(entry, dateStr) {
   const line = scheduleLineForEntry(entry);
   const lineLabel = line === "ms" ? "MS Builder" : line === "chassis" ? "Chassis Builder" : line === "install" ? "Install" : "PTO / Off";
-  const click = entry._defaultSchedule
-    ? `openAdminScheduleEditor({dateStr:'${dateStr}',person:'${escHtml(entry.person)}',role:'${entry.role}',hours:${Number(entry.hours || 0)},note:'Default schedule',type:'build'})`
-    : `openAdminScheduleEditor({dateStr:'${dateStr}',entryId:'${entry.id}'})`;
+  const chipKey = adminLaborChipKey(entry, dateStr);
+  const expanded = _expandedLaborChipKey === chipKey;
+  const click = `toggleLaborChip('${chipKey}',event)`;
   const adjustable = scheduleTypeCountsCapacity(entry.type);
   const entryRef = entry._defaultSchedule ? "null" : `'${entry.id}'`;
+  const selectedReason = (entry.note || "").trim() && entry.note !== "Default schedule" ? entry.note.trim() : "";
   const dragPayload = encodeURIComponent(JSON.stringify({
     person: adminDisplayPersonName(entry.person),
     role: entry.role,
@@ -5135,9 +5153,12 @@ function renderLaborChip(entry, dateStr) {
     <div class="labor-chip-name">${escHtml(adminDisplayPersonName(entry.person))}</div>
     <div style="font-size:9px;color:#fff;margin-top:3px;line-height:1.25">${escHtml(lineLabel)}</div>
     ${(entry.note || "").trim() && entry.note !== "Default schedule" ? `<div style="font-size:9px;color:var(--muted);margin-top:2px;line-height:1.25">${escHtml(entry.note)}</div>` : ""}
-    ${adjustable ? `<div class="labor-chip-adjust">
-      <button onclick="adjustLaborHours('${dateStr}','${escHtml(entry.person)}','${entry.role}',-1,${entryRef},event)">−</button>
-      <button onclick="adjustLaborHours('${dateStr}','${escHtml(entry.person)}','${entry.role}',1,${entryRef},event)">+</button>
+    ${adjustable && expanded ? `<div class="labor-chip-adjust">
+      <select id="labor-reason-${chipKey}" class="labor-chip-reason" onclick="event.stopPropagation()" onchange="event.stopPropagation()">
+        ${laborReasonOptions(selectedReason)}
+      </select>
+      <button title="Subtract one hour" onclick="adjustLaborHours('${dateStr}','${escHtml(entry.person)}','${entry.role}',-1,${entryRef},event,'${chipKey}')">−</button>
+      <button title="Add one hour" onclick="adjustLaborHours('${dateStr}','${escHtml(entry.person)}','${entry.role}',1,${entryRef},event,'${chipKey}')">+</button>
     </div>` : ""}
   </div>`;
 }
