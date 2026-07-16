@@ -4727,6 +4727,10 @@ function openDefaultHoursEditor() {
       <div>
         <div class="labor-pool-person">${escHtml(m.name)}</div>
         <div class="labor-pool-role">${escHtml(roleScheduleLabel(m.role))}</div>
+        <div style="display:flex;gap:4px;margin-top:5px">
+          <button class="labor-default-btn" style="padding:3px 5px" onclick="applyDefaultHourTemplate(this,'5x8')">5×8</button>
+          <button class="labor-default-btn" style="padding:3px 5px" onclick="applyDefaultHourTemplate(this,'4x10')">4×10</button>
+        </div>
       </div>
       ${["mon","tue","wed","thu","fri"].map(k => `<input data-day="${k}" type="number" min="0" step="0.5" value="${Number(h[k] || 0)}">`).join("")}
     </div>`;
@@ -4747,6 +4751,16 @@ function openDefaultHoursEditor() {
   modal.addEventListener("click", ev => { if (ev.target === modal) modal.remove(); });
   document.getElementById("admin-default-hours-modal")?.remove();
   document.body.appendChild(modal);
+}
+function applyDefaultHourTemplate(btn, template) {
+  const row = btn.closest(".labor-default-row");
+  if (!row) return;
+  const values = template === "4x10"
+    ? { mon:10, tue:10, wed:10, thu:10, fri:0 }
+    : { mon:8, tue:8, wed:8, thu:8, fri:8 };
+  row.querySelectorAll("input[data-day]").forEach(inp => {
+    inp.value = values[inp.getAttribute("data-day")] ?? 0;
+  });
 }
 function saveDefaultHoursEditor() {
   const next = {};
@@ -5194,15 +5208,21 @@ function renderAdminLaborCalendar(items = [], timerHistory = []) {
     }).join("");
     return `<div class="labor-cell labor-line-label ${line.key}">${escHtml(line.label)}</div>${cells}`;
   }).join("");
-  const poolRows = TEAM.filter(m => m.role !== KIT_ROLE).map(m => {
-    const scheduledDays = dates.filter(d => (entriesByDay[ymd(d)] || []).some(e => adminDisplayPersonName(e.person) === m.name)).length;
-    const weeklyDefault = adminWeekDates().reduce((sum,d) => sum + defaultHoursForDate(m,d), 0);
-    return `<div class="labor-pool-slot">
-      <div class="labor-pool-person">${escHtml(m.name)}</div>
-      <div class="labor-pool-role">${escHtml(roleScheduleLabel(m.role))} · ${weeklyDefault}h default · ${scheduledDays}/${dates.length} days shown</div>
-      <button class="labor-pool-btn available" onclick="openAdminScheduleEditor({dateStr:'${ymd(dates[0])}',person:'${escHtml(m.name)}',role:'${m.role}'})" style="margin-top:7px">Schedule</button>
-    </div>`;
-  }).join("");
+  const unscheduledSlots = [];
+  TEAM.filter(m => m.role !== KIT_ROLE).forEach(m => {
+    dates.forEach(d => {
+      const ds = ymd(d);
+      const defaultHours = defaultHoursForDate(m, d);
+      if (!defaultHours) return;
+      const scheduled = (entriesByDay[ds] || []).some(e => adminDisplayPersonName(e.person) === m.name);
+      if (!scheduled) unscheduledSlots.push({ member:m, date:d, hours:defaultHours });
+    });
+  });
+  const poolRows = unscheduledSlots.map(slot => `<div class="labor-pool-slot">
+    <div class="labor-pool-person">${escHtml(slot.member.name)}</div>
+    <div class="labor-pool-role">${escHtml(roleScheduleLabel(slot.member.role))} · ${escHtml(slot.date.toLocaleDateString("en-US",{weekday:"short",month:"numeric",day:"numeric"}))} · ${slot.hours}h unscheduled</div>
+    <button class="labor-pool-btn available" onclick="openAdminScheduleEditor({dateStr:'${ymd(slot.date)}',person:'${escHtml(slot.member.name)}',role:'${slot.member.role}'})" style="margin-top:7px">Schedule</button>
+  </div>`).join("");
   const upcomingInstalls = renderUpcomingInstalls(items, dates);
   return `<div class="admin-capacity-grid" style="margin-bottom:10px">
     <div class="admin-capacity-card"><div class="admin-capacity-val">${demand.orders}</div><div class="admin-capacity-lbl">Orders Due This Week</div></div>
@@ -5219,7 +5239,7 @@ function renderAdminLaborCalendar(items = [], timerHistory = []) {
   <div class="labor-calendar"><div class="labor-grid">${header}${body}</div></div>
   <div class="labor-pool">
     <div class="admin-command-title" style="margin-bottom:8px">Available Labor Pool <span class="admin-command-sub">Compact weekly view</span><button class="labor-default-btn" onclick="openDefaultHoursEditor()">Edit Default Hours</button></div>
-    <div class="labor-pool-grid">${poolRows}</div>
+    ${poolRows ? `<div class="labor-pool-grid">${poolRows}</div>` : `<div class="admin-mini-meta">Everyone's default hours are already scheduled for this week.</div>`}
   </div>
   ${upcomingInstalls}`;
 }
