@@ -2496,7 +2496,7 @@ async function processAdminPin() {
   showLoginLoading(() => {
     showScreen("screen-admin");
     document.getElementById("admin-date").textContent = new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
-    loadAdminData();
+    return loadAdminData();
   });
 }
 
@@ -2551,7 +2551,7 @@ async function processSetupPin() {
       showLoginLoading(() => {
         showScreen("screen-admin");
         document.getElementById("admin-date").textContent = new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
-        loadAdminData();
+        return loadAdminData();
       });
     } else {
       currentUser = setupUser;
@@ -2599,27 +2599,29 @@ function doLogout() {
 /* ═══════════════════════════════════════
    SCREENS
 ═══════════════════════════════════════ */
-function showLoginLoading(nextAction) {
+async function showLoginLoading(nextAction) {
   const overlay = document.getElementById("login-loading-overlay");
   const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
 
   if (!overlay || reduced) {
-    nextAction();
+    await Promise.resolve(nextAction());
     return;
   }
 
   overlay.classList.remove("hide");
   overlay.classList.add("show");
 
-  setTimeout(() => {
-    nextAction();
-
+  const minimumIntro = new Promise(resolve => setTimeout(resolve, 720));
+  await minimumIntro;
+  try {
+    await Promise.resolve(nextAction());
+  } finally {
     setTimeout(() => {
       overlay.classList.add("hide");
       overlay.classList.remove("show");
       setTimeout(() => overlay.classList.remove("hide"), 780);
-    }, 520);
-  }, 720);
+    }, 260);
+  }
 }
 function showScreen(id) {
   const next = document.getElementById(id);
@@ -2668,7 +2670,7 @@ function bottomNavHistory() {
 
 function showDash() {
   /* Pete goes to the kitting screen instead */
-  if (currentUser.role === KIT_ROLE) { showKitScreen(); startRealTimeSync(); return; }
+  if (currentUser.role === KIT_ROLE) { startRealTimeSync(); return showKitScreen(); }
   showScreen("screen-dash");
   startRealTimeSync();
   const isMS=currentUser.role===MS_ROLE;
@@ -2685,7 +2687,7 @@ function showDash() {
   const nextUpBtn = document.getElementById("next-up-btn");
   if (teamBtn)   teamBtn.style.display   = isTeamLead(currentUser) ? "flex" : "none";
   if (nextUpBtn) nextUpBtn.style.display = isLead() ? "flex" : "none";
-  loadBoard().then(()=>{ resumeActiveTimers(); updatePickListChangeDots().catch(()=>{}); });
+  return loadBoard().then(()=>{ resumeActiveTimers(); updatePickListChangeDots().catch(()=>{}); });
 }
 /* ── Lead: Next Up assign modal ── */
 function openNextUpAssign() {
@@ -6294,7 +6296,7 @@ function showKitScreen() {
   av.textContent      = currentUser.initials;
   document.getElementById("kit-date").textContent =
     new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
-  loadKitBoard();
+  return loadKitBoard();
 }
 
 let kitBoardItems = [];  /* cached kit board items — survives re-renders */
