@@ -138,26 +138,6 @@ button, input, select, textarea { font-family:inherit; }
 .dt-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:20px; }
 .dt-grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:20px; }
 .dt-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px 20px; }
-.dt-card.admin-expand-card { padding:0; overflow:hidden; }
-.admin-expand-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); overflow:hidden; transition:border-color .18s ease, background .18s ease; }
-.admin-expand-card[open] { border-color:rgba(224,32,32,.38); }
-.admin-expand-card summary { list-style:none; cursor:pointer; }
-.admin-expand-card summary::-webkit-details-marker { display:none; }
-.admin-expand-head { padding:13px 14px; }
-.dt-card .admin-expand-head { padding:18px 20px; }
-.admin-expand-body { border-top:1px solid var(--border); padding:10px 12px 12px; background:rgba(255,255,255,.018); }
-.admin-expand-hint { font-size:9px; color:var(--muted2); text-transform:uppercase; letter-spacing:.08em; margin-top:8px; display:flex; align-items:center; gap:5px; }
-.admin-expand-hint::after { content:"⌄"; font-size:12px; transition:transform .16s ease; }
-.admin-expand-card[open] .admin-expand-hint::after { transform:rotate(180deg); }
-.admin-detail-list { display:flex; flex-direction:column; gap:6px; }
-.admin-detail-row { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; padding:8px 9px; border:1px solid var(--border); border-radius:8px; background:var(--surface2); font-size:11px; }
-.admin-detail-main { min-width:0; }
-.admin-detail-title { font-weight:800; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.admin-detail-sub { color:var(--muted); margin-top:2px; line-height:1.35; }
-.admin-detail-pill { flex-shrink:0; font-size:9px; font-weight:850; letter-spacing:.06em; text-transform:uppercase; color:var(--accent2); background:rgba(99,102,241,.14); border-radius:999px; padding:4px 7px; }
-.admin-table-click { cursor:pointer; }
-.admin-table-detail[hidden] { display:none; }
-.admin-table-detail td { background:rgba(255,255,255,.018) !important; padding:0 10px 12px !important; }
 .dt-kpi-val { font-size:32px; font-weight:800; letter-spacing:-.02em; line-height:1; margin-bottom:4px; }
 .dt-kpi-lbl { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--muted2); }
 .dt-kpi-sub { font-size:12px; color:var(--muted); margin-top:4px; }
@@ -602,7 +582,6 @@ input.photo-file-inp { display:none; }
 .admin-content { flex:1; padding:14px; overflow-y:auto; padding-bottom:36px; }
 .health-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
 .health-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); padding:13px 14px; }
-.health-card.admin-expand-card { padding:0; }
 .health-val  { font-size:26px; font-weight:800; line-height:1; margin-bottom:4px; }
 .health-lbl  { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.8px; color:var(--muted2); }
 .health-sub  { font-size:11px; color:var(--muted); margin-top:3px; }
@@ -657,8 +636,6 @@ input.photo-file-inp { display:none; }
 .next-action-btn { width:100%; border:none; border-radius:var(--radius-xs); background:var(--accent); color:#fff; padding:11px 12px; font-size:11px; font-weight:850; letter-spacing:.08em; text-transform:uppercase; cursor:pointer; }
 .stream-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
 .stream-alert { background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--yellow); border-radius:var(--radius-sm); padding:11px 12px; margin-bottom:8px; }
-.stream-alert.admin-expand-card { padding:0; }
-.stream-alert.admin-expand-card summary { padding:11px 12px; }
 .stream-alert-title { font-size:12px; font-weight:800; margin-bottom:3px; }
 .stream-alert-sub { font-size:11px; color:var(--muted); line-height:1.4; }
 .bottom-nav { position:fixed; left:10px; right:10px; bottom:calc(10px + env(safe-area-inset-bottom)); z-index:60; display:none; background:rgba(18,18,18,.88); border:1px solid var(--border); border-radius:18px; backdrop-filter:blur(16px); box-shadow:0 14px 40px rgba(0,0,0,.34); padding:6px; gap:4px; }
@@ -4421,82 +4398,6 @@ function isAllocationOpenForAdmin(item, allocationSummaryByWo = {}) {
   return state.allocated < state.total;
 }
 
-function adminSlug(s) {
-  return String(s || "x").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "x";
-}
-
-function adminShipLabel(item) {
-  const ship = parseShipDate(item);
-  return ship ? fmtShipDate(ship) : "No ship date";
-}
-
-function adminProjectRows(items = [], empty = "No matching projects right now.", limit = 12) {
-  const rows = (items || []).slice(0, limit).map(item => {
-    const wo = getWoNumberFromItem(item) || "No WO";
-    return `<div class="admin-detail-row">
-      <div class="admin-detail-main">
-        <div class="admin-detail-title">${escHtml(compactProjectLabel(item))}</div>
-        <div class="admin-detail-sub">${escHtml(wo)} · Ship: ${escHtml(adminShipLabel(item))} · ${escHtml(item.group?.title || "No group")}</div>
-      </div>
-      <span class="admin-detail-pill">${escHtml(daysUntil(parseShipDate(item)) < 0 ? "Overdue" : "Open")}</span>
-    </div>`;
-  }).join("");
-  const more = (items || []).length > limit
-    ? `<div class="admin-detail-sub" style="padding:4px 2px">+ ${(items || []).length - limit} more not shown</div>`
-    : "";
-  return `<div class="admin-detail-list">${rows || `<div class="admin-detail-sub">${escHtml(empty)}</div>`}${more}</div>`;
-}
-
-function adminKitRows(kits = [], empty = "No kits recorded for this metric.", limit = 12) {
-  const rows = uniqueKitHistoryRows(kits || []).slice(0, limit).map(k => {
-    const missing = normalizeMissingItems(k.missing_items).filter(Boolean);
-    const ts = k.completed_at ? new Date(k.completed_at) : null;
-    const time = ts && !Number.isNaN(ts.getTime())
-      ? `${ts.toLocaleDateString("en-US",{month:"short",day:"numeric"})} ${ts.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"})}`
-      : "No time";
-    return `<div class="admin-detail-row">
-      <div class="admin-detail-main">
-        <div class="admin-detail-title">${escHtml(kitHistoryProjectLabel(k))}</div>
-        <div class="admin-detail-sub">${escHtml(k.user_name || "Unknown kitter")} · ${escHtml(time)}</div>
-      </div>
-      <span class="admin-detail-pill" style="color:${missing.length ? "var(--red)" : "var(--green)"}">${missing.length ? `Missing ${missing.length}` : "Full kit"}</span>
-    </div>`;
-  }).join("");
-  const more = uniqueKitHistoryRows(kits || []).length > limit
-    ? `<div class="admin-detail-sub" style="padding:4px 2px">+ ${uniqueKitHistoryRows(kits || []).length - limit} more not shown</div>`
-    : "";
-  return `<div class="admin-detail-list">${rows || `<div class="admin-detail-sub">${escHtml(empty)}</div>`}${more}</div>`;
-}
-
-function adminTimerRows(timers = [], empty = "No running timers right now.", limit = 12) {
-  const rows = (timers || []).slice(0, limit).map(t => {
-    const liveMs = t.state === "running"
-      ? (t.duration_ms || 0) + (Date.now() - new Date(t.updated_at).getTime())
-      : (t.duration_ms || 0);
-    return `<div class="admin-detail-row">
-      <div class="admin-detail-main">
-        <div class="admin-detail-title">${escHtml(t.user_name || "Unknown")}</div>
-        <div class="admin-detail-sub">${escHtml(t.item_name || t.item_id || "No project")} · ${escHtml(t.state || "timer")}</div>
-      </div>
-      <span class="admin-detail-pill">${escHtml(fmtMs(liveMs))}</span>
-    </div>`;
-  }).join("");
-  return `<div class="admin-detail-list">${rows || `<div class="admin-detail-sub">${escHtml(empty)}</div>`}</div>`;
-}
-
-function adminExpandableCard(cls, headHtml, bodyHtml, open = false) {
-  return `<details class="${cls} admin-expand-card"${open ? " open" : ""}>
-    <summary>${headHtml}<div class="admin-expand-hint">Tap for details</div></summary>
-    <div class="admin-expand-body">${bodyHtml}</div>
-  </details>`;
-}
-
-function toggleAdminTableDetail(id) {
-  const row = document.getElementById(id);
-  if (!row) return;
-  row.hidden = !row.hidden;
-}
-
 function renderAdminStreamlineWidgets(items, sbTimers = [], sbKits = [], sbUpdates = [], allocationSummaryByWo = {}) {
   const today = todayStr();
   const isOpenWorkflowItem = (item) => {
@@ -4559,25 +4460,6 @@ function renderAdminStreamlineWidgets(items, sbTimers = [], sbKits = [], sbUpdat
     partsPulled.length ? { title:`${partsPulled.length} in Parts Pulled`, sub:"Ready for builders to grab or for Pete follow-up." } : null,
     qc.length ? { title:`${qc.length} in Quality Control`, sub:"Verify pick lists are complete before closing." } : null,
   ].filter(Boolean).slice(0,4);
-  const todayBuildRows = (sbUpdates || []).filter(u => u.date_str === today);
-  const todayBuildDetail = todayBuildRows.length
-    ? `<div class="admin-detail-list">${todayBuildRows.slice(0,12).map(u => `<div class="admin-detail-row">
-        <div class="admin-detail-main">
-          <div class="admin-detail-title">${escHtml(u.item_name || u.item_id || "Build update")}</div>
-          <div class="admin-detail-sub">${escHtml(u.user_name || "Unknown")} · ${escHtml(u.col_type || "build")} · ${Number(u.prev_pct || 0)}% → ${Number(u.new_pct || 0)}%</div>
-        </div>
-        <span class="admin-detail-pill">${escHtml(formatUnits(progressUnitsFromUpdate(u, items)))} unit</span>
-      </div>`).join("")}</div>`
-    : adminProjectRows(items.filter(i =>
-        (getCompletionTs(i, "ms") || "").slice(0,10) === today ||
-        (getCompletionTs(i, "chassis") || "").slice(0,10) === today
-      ), "No build units recorded today yet.");
-  const watchDetail = [
-    overdue.length ? `<div class="admin-detail-sub" style="font-weight:800;color:var(--red);padding:2px 0 4px">Overdue</div>${adminProjectRows(overdue, "No overdue projects.")}` : "",
-    unassigned.length ? `<div class="admin-detail-sub" style="font-weight:800;color:var(--yellow);padding:8px 0 4px">Unassigned</div>${adminProjectRows(unassigned, "No unassigned projects.")}` : "",
-    partsPulled.length ? `<div class="admin-detail-sub" style="font-weight:800;color:var(--green);padding:8px 0 4px">Parts Pulled</div>${adminProjectRows(partsPulled, "Nothing in Parts Pulled.")}` : "",
-    qc.length ? `<div class="admin-detail-sub" style="font-weight:800;color:var(--accent2);padding:8px 0 4px">Quality Control</div>${adminProjectRows(qc, "Nothing in QC.")}` : "",
-  ].filter(Boolean).join("") || `<div class="admin-detail-sub">No watch items right now.</div>`;
 
   return `<div class="next-action-card">
     <div class="next-action-kicker">Admin Next Action</div>
@@ -4586,23 +4468,14 @@ function renderAdminStreamlineWidgets(items, sbTimers = [], sbKits = [], sbUpdat
     ${actionButton}
   </div>
   <div class="stream-grid">
-    ${adminExpandableCard("health-card", `<div class="admin-expand-head"><div class="health-val" style="color:var(--green)">${buildTodayValue}</div><div class="health-lbl">Build Units Today</div><div class="health-sub">${buildTodaySub}</div></div>`, todayBuildDetail)}
-    ${adminExpandableCard("health-card", `<div class="admin-expand-head"><div class="health-val" style="color:var(--yellow)">${kitsToday}</div><div class="health-lbl">Kits Today</div><div class="health-sub">From Pete/Kitting</div></div>`, adminKitRows((sbKits || []).filter(k => k.date_str === today), "No kits completed today yet."))}
-    ${adminExpandableCard("health-card", `<div class="admin-expand-head"><div class="health-val" style="color:var(--accent2)">${running}</div><div class="health-lbl">Running Timers</div><div class="health-sub">Live production</div></div>`, adminTimerRows((sbTimers || []).filter(t => t.state === "running")))}
-    ${adminExpandableCard("health-card", `<div class="admin-expand-head"><div class="health-val" style="color:${alerts.length ? "var(--red)" : "var(--green)"}">${alerts.length}</div><div class="health-lbl">Watch Items</div><div class="health-sub">Need attention</div></div>`, watchDetail)}
+    <div class="health-card"><div class="health-val" style="color:var(--green)">${buildTodayValue}</div><div class="health-lbl">Build Units Today</div><div class="health-sub">${buildTodaySub}</div></div>
+    <div class="health-card"><div class="health-val" style="color:var(--yellow)">${kitsToday}</div><div class="health-lbl">Kits Today</div><div class="health-sub">From Pete/Kitting</div></div>
+    <div class="health-card"><div class="health-val" style="color:var(--accent2)">${running}</div><div class="health-lbl">Running Timers</div><div class="health-sub">Live production</div></div>
+    <div class="health-card"><div class="health-val" style="color:${alerts.length ? "var(--red)" : "var(--green)"}">${alerts.length}</div><div class="health-lbl">Watch Items</div><div class="health-sub">Need attention</div></div>
   </div>
   ${alerts.length ? `<div style="margin-bottom:16px">
     <div style="font-size:13px;font-weight:800;margin-bottom:8px">Smart Alerts</div>
-    ${alerts.map(a => `<details class="stream-alert admin-expand-card">
-      <summary><div class="stream-alert-title">${escHtml(a.title)}</div><div class="stream-alert-sub">${escHtml(a.sub)}</div><div class="admin-expand-hint">Tap for details</div></summary>
-      <div class="admin-expand-body">${
-        a.title.includes("overdue") ? adminProjectRows(overdue) :
-        a.title.includes("unassigned") ? adminProjectRows(unassigned) :
-        a.title.includes("Parts Pulled") ? adminProjectRows(partsPulled) :
-        a.title.includes("Quality Control") ? adminProjectRows(qc) :
-        `<div class="admin-detail-sub">No details available.</div>`
-      }</div>
-    </details>`).join("")}
+    ${alerts.map(a => `<div class="stream-alert"><div class="stream-alert-title">${escHtml(a.title)}</div><div class="stream-alert-sub">${escHtml(a.sub)}</div></div>`).join("")}
   </div>` : ""}`;
 }
 
@@ -4887,20 +4760,15 @@ function renderAdminDesktop(items, sbTimers, sbKits, sbUpdates, allocationSummar
   const topMissing = Object.entries(missingCounts).sort((a,b)=>b[1]-a[1]).slice(0,5);
 
   /* ── Board health counts ── */
-  const inProgressItems    = items.filter(i => (i.group?.title||"").includes("Building Queue"));
-  const standByItems       = items.filter(i => (i.group?.title||"").includes("Stand By"));
-  const partsPulledItemsForHealth = items.filter(i => (i.group?.title||"") === "Parts Pulled");
-  const pickTicketItems    = items.filter(i => (i.group?.title||"") === "Pick Ticket Printed");
-  const bottleneckItems    = items.filter(i => {
+  const inProgress    = items.filter(i => (i.group?.title||"").includes("Building Queue")).length;
+  const standBy       = items.filter(i => (i.group?.title||"").includes("Stand By")).length;
+  const partsPulled   = items.filter(i => (i.group?.title||"") === "Parts Pulled").length;
+  const pickTicket    = items.filter(i => (i.group?.title||"") === "Pick Ticket Printed").length;
+  const bottlenecks   = items.filter(i => {
     const hasMs = !!(cvText(i,COL.ms_who)||"").trim();
     const hasCh = !!(cvText(i,COL.chassis_who)||"").trim();
     return !hasMs && !hasCh && (i.group?.title||"").includes("Building");
-  });
-  const inProgress    = inProgressItems.length;
-  const standBy       = standByItems.length;
-  const partsPulled   = partsPulledItemsForHealth.length;
-  const pickTicket    = pickTicketItems.length;
-  const bottlenecks   = bottleneckItems.length;
+  }).length;
 
   /* ── Board active timers ── */
   const runningTimers = sbTimers.filter(t => t.state === "running");
@@ -4921,10 +4789,26 @@ function renderAdminDesktop(items, sbTimers, sbKits, sbUpdates, allocationSummar
 
   <!-- Board Health KPIs -->
   <div class="dt-grid">
-    ${adminExpandableCard("dt-card", `<div class="admin-expand-head"><div class="dt-kpi-val" style="color:var(--accent2)">${inProgress}</div><div class="dt-kpi-lbl">In Progress</div><div class="dt-kpi-sub">Building Queue</div></div>`, adminProjectRows(inProgressItems, "No projects in Building Queue."))}
-    ${adminExpandableCard("dt-card", `<div class="admin-expand-head"><div class="dt-kpi-val" style="color:var(--yellow)">${standBy}</div><div class="dt-kpi-lbl">Stand By</div><div class="dt-kpi-sub">Pending MS or Chassis</div></div>`, adminProjectRows(standByItems, "No projects on Stand By."))}
-    ${adminExpandableCard("dt-card", `<div class="admin-expand-head"><div class="dt-kpi-val" style="color:var(--green)">${partsPulled}</div><div class="dt-kpi-lbl">Parts Pulled</div><div class="dt-kpi-sub">Ready to grab</div></div>`, adminProjectRows(partsPulledItemsForHealth, "No projects in Parts Pulled."))}
-    ${adminExpandableCard("dt-card", `<div class="admin-expand-head"><div class="dt-kpi-val" style="color:${bottlenecks>0?"var(--red)":"var(--green)"}">${bottlenecks}</div><div class="dt-kpi-lbl">Bottlenecks</div><div class="dt-kpi-sub">Unassigned in queue</div></div>`, adminProjectRows(bottleneckItems, "No unassigned bottlenecks right now."))}
+    <div class="dt-card">
+      <div class="dt-kpi-val" style="color:var(--accent2)">${inProgress}</div>
+      <div class="dt-kpi-lbl">In Progress</div>
+      <div class="dt-kpi-sub">Building Queue</div>
+    </div>
+    <div class="dt-card">
+      <div class="dt-kpi-val" style="color:var(--yellow)">${standBy}</div>
+      <div class="dt-kpi-lbl">Stand By</div>
+      <div class="dt-kpi-sub">Pending MS or Chassis</div>
+    </div>
+    <div class="dt-card">
+      <div class="dt-kpi-val" style="color:var(--green)">${partsPulled}</div>
+      <div class="dt-kpi-lbl">Parts Pulled</div>
+      <div class="dt-kpi-sub">Ready to grab</div>
+    </div>
+    <div class="dt-card">
+      <div class="dt-kpi-val" style="color:${bottlenecks>0?"var(--red)":"var(--green)"}">${bottlenecks}</div>
+      <div class="dt-kpi-lbl">Bottlenecks</div>
+      <div class="dt-kpi-sub">Unassigned in queue</div>
+    </div>
   </div>
 
   <!-- Builder Performance Table -->
@@ -4961,27 +4845,7 @@ function renderAdminDesktop(items, sbTimers, sbKits, sbUpdates, allocationSummar
           const barPct = Math.round((st.units / maxUnits) * 100);
           const roleLabel = m.role === MS_ROLE ? "MS Build" : "Chassis";
           const roleColor = m.role === MS_ROLE ? "#818cf8" : "#f59e0b";
-          const detailId = `admin-builder-detail-${adminSlug(m.name)}`;
-          const buildUpdates = (st.updates || []).filter(u => (u.date_str || "") >= rangeStart);
-          const updateRows = buildUpdates.length
-            ? `<div class="admin-detail-list">${buildUpdates.slice(0,10).map(u => `<div class="admin-detail-row">
-                <div class="admin-detail-main">
-                  <div class="admin-detail-title">${escHtml(u.item_name || u.item_id || "Build update")}</div>
-                  <div class="admin-detail-sub">${escHtml(u.date_str || "")} · ${escHtml(u.col_type || "build")} · ${Number(u.prev_pct || 0)}% → ${Number(u.new_pct || 0)}%</div>
-                </div>
-                <span class="admin-detail-pill">${escHtml(formatUnits(progressUnitsFromUpdate(u, items)))} unit</span>
-              </div>`).join("")}</div>`
-            : `<div class="admin-detail-sub">No build updates in this range.</div>`;
-          const sessionRows = st.sessions.length
-            ? `<div class="admin-detail-list">${st.sessions.slice(0,10).map(s => `<div class="admin-detail-row">
-                <div class="admin-detail-main">
-                  <div class="admin-detail-title">${escHtml(s.itemName || s.itemId || "Timer session")}</div>
-                  <div class="admin-detail-sub">${escHtml(s.date || "")}</div>
-                </div>
-                <span class="admin-detail-pill">${escHtml(fmtMs(s.ms || 0))}</span>
-              </div>`).join("")}</div>`
-            : `<div class="admin-detail-sub">No timer sessions in this range.</div>`;
-          return `<tr class="admin-table-click" onclick="toggleAdminTableDetail('${detailId}')">
+          return `<tr>
             <td>
               <div style="display:flex;align-items:center;gap:8px">
                 <div style="width:28px;height:28px;border-radius:50%;background:${m.color}22;color:${m.color};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">${m.initials}</div>
@@ -5010,22 +4874,6 @@ function renderAdminDesktop(items, sbTimers, sbKits, sbUpdates, allocationSummar
                 isPaused  ? `<span style="color:var(--yellow);font-weight:600;font-size:12px">⏸ ${fmtMs(liveMs)}</span>` :
                 `<span style="color:var(--muted2);font-size:12px">Idle</span>`}
             </td>
-          </tr>
-          <tr class="admin-table-detail" id="${detailId}" hidden>
-            <td colspan="9">
-              <div class="admin-expand-body">
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-                  <div>
-                    <div class="admin-detail-sub" style="font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Build Updates</div>
-                    ${updateRows}
-                  </div>
-                  <div>
-                    <div class="admin-detail-sub" style="font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Time Sessions</div>
-                    ${sessionRows}
-                  </div>
-                </div>
-              </div>
-            </td>
           </tr>`;
         }).join("")}
       </tbody>
@@ -5045,36 +4893,29 @@ function renderAdminDesktop(items, sbTimers, sbKits, sbUpdates, allocationSummar
         const tod   = kitToday.filter(k => k.user_name === m.name).length;
         const full  = sbKits.filter(k => k.user_name === m.name && !(k.missing_items||[]).filter(Boolean).length).length;
         const fullPct = total > 0 ? Math.round(full/total*100) : 0;
-        const kitterRows = adminKitRows(uniqueKitHistoryRows(sbKits).filter(k => k.user_name === m.name), "No kit history for this kitter yet.");
-        return `<details class="admin-expand-card" style="margin-bottom:12px">
-          <summary>
-            <div class="admin-expand-head">
-              <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-                <div style="width:32px;height:32px;border-radius:50%;background:${m.color}22;color:${m.color};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">${m.initials}</div>
-                <div>
-                  <div style="font-weight:700">${escHtml(m.name)}</div>
-                  <div style="font-size:11px;color:var(--muted)">Kitter</div>
-                </div>
-              </div>
-              <div class="dt-grid-3" style="gap:8px;margin-bottom:0">
-                <div style="background:var(--surface2);border-radius:8px;padding:10px;text-align:center">
-                  <div style="font-size:22px;font-weight:800;color:var(--green)">${inR}</div>
-                  <div style="font-size:10px;color:var(--muted2);text-transform:uppercase;font-weight:700">${rangeLabel}</div>
-                </div>
-                <div style="background:var(--surface2);border-radius:8px;padding:10px;text-align:center">
-                  <div style="font-size:22px;font-weight:800">${tod}</div>
-                  <div style="font-size:10px;color:var(--muted2);text-transform:uppercase;font-weight:700">Today</div>
-                </div>
-                <div style="background:var(--surface2);border-radius:8px;padding:10px;text-align:center">
-                  <div style="font-size:22px;font-weight:800;color:var(--accent2)">${fullPct}%</div>
-                  <div style="font-size:10px;color:var(--muted2);text-transform:uppercase;font-weight:700">Full Kits</div>
-                </div>
-              </div>
-              <div class="admin-expand-hint">Tap for details</div>
+        return `<div style="margin-bottom:12px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <div style="width:32px;height:32px;border-radius:50%;background:${m.color}22;color:${m.color};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">${m.initials}</div>
+            <div>
+              <div style="font-weight:700">${escHtml(m.name)}</div>
+              <div style="font-size:11px;color:var(--muted)">Kitter</div>
             </div>
-          </summary>
-          <div class="admin-expand-body">${kitterRows}</div>
-        </details>`;
+          </div>
+          <div class="dt-grid-3" style="gap:8px;margin-bottom:0">
+            <div style="background:var(--surface2);border-radius:8px;padding:10px;text-align:center">
+              <div style="font-size:22px;font-weight:800;color:var(--green)">${inR}</div>
+              <div style="font-size:10px;color:var(--muted2);text-transform:uppercase;font-weight:700">${rangeLabel}</div>
+            </div>
+            <div style="background:var(--surface2);border-radius:8px;padding:10px;text-align:center">
+              <div style="font-size:22px;font-weight:800">${tod}</div>
+              <div style="font-size:10px;color:var(--muted2);text-transform:uppercase;font-weight:700">Today</div>
+            </div>
+            <div style="background:var(--surface2);border-radius:8px;padding:10px;text-align:center">
+              <div style="font-size:22px;font-weight:800;color:var(--accent2)">${fullPct}%</div>
+              <div style="font-size:10px;color:var(--muted2);text-transform:uppercase;font-weight:700">Full Kits</div>
+            </div>
+          </div>
+        </div>`;
       }).join("")}
     </div>
 
@@ -5141,22 +4982,18 @@ function renderAdminDash(items, sbTimers = [], sbKits = [], sbUpdates = [], allo
   const thisWeek = currentWeekKey();
 
   /* ── BOARD HEALTH — based on build status columns ── */
-  const inProgressItems  = items.filter(i =>{
+  const inProgress  = items.filter(i =>{
     const cs = (cvText(i, COL.chassis_status)||"").toLowerCase();
     const ms = (cvText(i, COL.ms_status)||"").toLowerCase();
     return cs.includes("in progress") || ms.includes("in progress");
-  });
-  const standByItems     = items.filter(i => (i.group?.title||"").includes("Stand By"));
-  const partsPulledItemsForHealth = items.filter(i => (i.group?.title||"") === PARTS_PULLED);
-  const configGroupItems = items.filter(i => (i.group?.title||"").toLowerCase().includes("config"));
-  const inProgress  = inProgressItems.length;
-  const standBy     = standByItems.length;
-  const partsPulled = partsPulledItemsForHealth.length;
-  const configGroup = configGroupItems.length;
+  }).length;
+  const standBy     = items.filter(i => (i.group?.title||"").includes("Stand By")).length;
+  const partsPulled = items.filter(i => (i.group?.title||"") === PARTS_PULLED).length;
+  const configGroup = items.filter(i => (i.group?.title||"").toLowerCase().includes("config")).length;
   const totalActive = inProgress;
 
   /* Bottleneck: items with "In Progress" status missing at least one role assignee */
-  const bottleneckItems = items.filter(i =>{
+  const bottlenecks = items.filter(i =>{
     const cs = (cvText(i, COL.chassis_status)||"").toLowerCase();
     const ms = (cvText(i, COL.ms_status)||"").toLowerCase();
     const isActive = cs.includes("in progress") || ms.includes("in progress");
@@ -5164,8 +5001,7 @@ function renderAdminDash(items, sbTimers = [], sbKits = [], sbUpdates = [], allo
     const chassisBlank = parsePeople(i, COL.chassis_who).length === 0;
     const msBlank      = parsePeople(i, COL.ms_who).length === 0;
     return chassisBlank || msBlank;
-  });
-  const bottlenecks = bottleneckItems.length;
+  }).length;
 
   /* ── PER-PERSON STATS ── */
   const weekStats = {}; /* name → { weekDone, todayDone, totalTimeMs, activeItems[] } */
@@ -5336,14 +5172,38 @@ function renderAdminDash(items, sbTimers = [], sbKits = [], sbUpdates = [], allo
     <div style="font-size:10px;color:var(--muted)">${items.length} total items</div>
   </div>
   <div class="health-grid">
-    ${adminExpandableCard("health-card", `<div class="admin-expand-head"><div class="health-val" style="color:var(--green)">${inProgress}</div><div class="health-lbl">In Progress</div><div class="health-sub">Building Queue</div></div>`, adminProjectRows(inProgressItems, "No active in-progress builds."))}
-    ${adminExpandableCard("health-card", `<div class="admin-expand-head"><div class="health-val" style="color:var(--accent2)">${standBy}</div><div class="health-lbl">Stand By</div><div class="health-sub">Pending role assign</div></div>`, adminProjectRows(standByItems, "No Stand By projects."))}
-    ${adminExpandableCard("health-card", `<div class="admin-expand-head"><div class="health-val" style="color:var(--yellow)">${partsPulled}</div><div class="health-lbl">Parts Pulled</div><div class="health-sub">Ready to grab</div></div>`, adminProjectRows(partsPulledItemsForHealth, "No Parts Pulled projects."))}
-    ${adminExpandableCard("health-card", `<div class="admin-expand-head"><div class="health-val" style="color:${bottlenecks>0?'var(--red)':'var(--green)'}">${bottlenecks}</div><div class="health-lbl">Bottlenecks</div><div class="health-sub">Missing an assignee</div></div>`, adminProjectRows(bottleneckItems, "No bottlenecks right now."))}
+    <div class="health-card">
+      <div class="health-val" style="color:var(--green)">${inProgress}</div>
+      <div class="health-lbl">In Progress</div>
+      <div class="health-sub">Building Queue</div>
+    </div>
+    <div class="health-card">
+      <div class="health-val" style="color:var(--accent2)">${standBy}</div>
+      <div class="health-lbl">Stand By</div>
+      <div class="health-sub">Pending role assign</div>
+    </div>
+    <div class="health-card">
+      <div class="health-val" style="color:var(--yellow)">${partsPulled}</div>
+      <div class="health-lbl">Parts Pulled</div>
+      <div class="health-sub">Ready to grab</div>
+    </div>
+    <div class="health-card">
+      <div class="health-val" style="color:${bottlenecks>0?'var(--red)':'var(--green)'}">${bottlenecks}</div>
+      <div class="health-lbl">Bottlenecks</div>
+      <div class="health-sub">Missing an assignee</div>
+    </div>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px">
-    ${adminExpandableCard("health-card", `<div class="admin-expand-head"><div class="health-val" style="color:var(--muted)">${configGroup}</div><div class="health-lbl">Configuration</div><div class="health-sub">Completed builds</div></div>`, adminProjectRows(configGroupItems, "No configuration projects found."))}
-    ${adminExpandableCard("health-card", `<div class="admin-expand-head"><div class="health-val" style="color:var(--text)">${totalActive}</div><div class="health-lbl">Active Builds</div><div class="health-sub">In both queues</div></div>`, adminProjectRows(inProgressItems, "No active builds."))}
+    <div class="health-card">
+      <div class="health-val" style="color:var(--muted)">${configGroup}</div>
+      <div class="health-lbl">Configuration</div>
+      <div class="health-sub">Completed builds</div>
+    </div>
+    <div class="health-card">
+      <div class="health-val" style="color:var(--text)">${totalActive}</div>
+      <div class="health-lbl">Active Builds</div>
+      <div class="health-sub">In both queues</div>
+    </div>
   </div>`;
 
   /* Leaderboard */
@@ -5360,33 +5220,21 @@ function renderAdminDash(items, sbTimers = [], sbKits = [], sbUpdates = [], allo
     const barW = Math.round((st.weekDone/WEEKLY_GOAL)*100);
     const timeLabel = st.totalTimeMs>0 ? fmtMsForMonday(st.totalTimeMs) : "—";
     const doneColor = st.weekDone>=WEEKLY_GOAL?"var(--green)":st.weekDone>0?"var(--yellow)":"var(--muted2)";
-    const detailRows = st.activeItems.length
-      ? `<div class="admin-detail-list">${st.activeItems.map(p => `<div class="admin-detail-row">
-          <div class="admin-detail-main">
-            <div class="admin-detail-title">${escHtml(p.name)}</div>
-            <div class="admin-detail-sub">Current assigned build</div>
-          </div>
-          <span class="admin-detail-pill">${p.pct}%</span>
-        </div>`).join("")}</div>`
-      : `<div class="admin-detail-sub">No active builds assigned right now.</div>`;
-    html += `<details class="lb-row admin-expand-card" style="display:block;padding:0">
-      <summary style="display:flex;align-items:center;gap:11px;padding:11px 13px">
-        <div class="lb-rank ${rankCls}">${rankLabel}</div>
-        <div class="lb-av" style="background:${m.color}25;color:${m.color}">${m.initials}</div>
-        <div class="lb-info">
-          <div class="lb-name">${m.name}</div>
-          <div class="lb-role">${m.role===MS_ROLE?"Monitor Stand":"Chassis Builder"} · Today: ${formatUnits(st.todayDone)} units</div>
-          <div class="lb-bar-wrap">
-            <div class="lb-bar-track"><div class="lb-bar-fill" style="width:${Math.min(100,barW)}%;background:${m.color}"></div></div>
-          </div>
+    html += `<div class="lb-row">
+      <div class="lb-rank ${rankCls}">${rankLabel}</div>
+      <div class="lb-av" style="background:${m.color}25;color:${m.color}">${m.initials}</div>
+      <div class="lb-info">
+        <div class="lb-name">${m.name}</div>
+        <div class="lb-role">${m.role===MS_ROLE?"Monitor Stand":"Chassis Builder"} · Today: ${formatUnits(st.todayDone)} units</div>
+        <div class="lb-bar-wrap">
+          <div class="lb-bar-track"><div class="lb-bar-fill" style="width:${Math.min(100,barW)}%;background:${m.color}"></div></div>
         </div>
-        <div class="lb-stats">
-          <div class="lb-done" style="color:${doneColor}">${formatUnits(st.weekDone)}<span style="font-size:10px;font-weight:500;color:var(--muted2)">/${WEEKLY_GOAL}</span></div>
-          <div class="lb-time">⏱ ${timeLabel}</div>
-        </div>
-      </summary>
-      <div class="admin-expand-body">${detailRows}</div>
-    </details>`;
+      </div>
+      <div class="lb-stats">
+        <div class="lb-done" style="color:${doneColor}">${formatUnits(st.weekDone)}<span style="font-size:10px;font-weight:500;color:var(--muted2)">/${WEEKLY_GOAL}</span></div>
+        <div class="lb-time">⏱ ${timeLabel}</div>
+      </div>
+    </div>`;
   });
   html += `</div>`;
 
@@ -5456,48 +5304,41 @@ function renderAdminDash(items, sbTimers = [], sbKits = [], sbUpdates = [], allo
          </div>`
       : "";
 
-    html += `<details class="team-card admin-expand-card" style="padding:0">
-      <summary>
-        <div class="admin-expand-head">
-          <div class="tc-header">
-            <div class="tc-av" style="background:${m.color}25;color:${m.color}">${m.initials}</div>
-            <div>
-              <div class="tc-name">${m.name}</div>
-              <div class="tc-role">${m.role===MS_ROLE?"Monitor Stand Builder":"Chassis Builder"}</div>
-            </div>
-          </div>
-          <div class="tc-stats">
-            <div class="tc-stat">
-              <div class="tc-stat-val" style="color:${doneColor}">${formatUnits(st.weekDone)}</div>
-              <div class="tc-stat-lbl">This Week</div>
-            </div>
-            <div class="tc-stat">
-              <div class="tc-stat-val" style="color:${st.todayDone>0?'var(--green)':'var(--muted2)'}">${formatUnits(st.todayDone)}</div>
-              <div class="tc-stat-lbl">Today</div>
-            </div>
-            <div class="tc-stat">
-              <div class="tc-stat-val" id="admin-sb-timer-${m.name.replace(/\s+/g,'-')}" style="color:var(--accent2);font-size:14px">${(() => {
-                const sbT = sbTimers.find(t => t.user_name === m.name);
-                if (sbT && sbT.state === 'running') {
-                  const livems = (sbT.duration_ms||0) + (Date.now() - new Date(sbT.updated_at).getTime());
-                  return fmtMs(livems);
-                }
-                return timeLabel;
-              })()}</div>
-              <div class="tc-stat-lbl">${(() => {
-                const sbT = sbTimers.find(t => t.user_name === m.name);
-                return sbT?.state === 'running' ? '🟢 Live Timer' : sbT?.state === 'paused' ? '⏸ Paused' : 'Time Logged';
-              })()}</div>
-            </div>
-          </div>
-          <div class="admin-expand-hint">Tap for details</div>
+    html += `<div class="team-card">
+      <div class="tc-header">
+        <div class="tc-av" style="background:${m.color}25;color:${m.color}">${m.initials}</div>
+        <div>
+          <div class="tc-name">${m.name}</div>
+          <div class="tc-role">${m.role===MS_ROLE?"Monitor Stand Builder":"Chassis Builder"}</div>
         </div>
-      </summary>
-      <div class="admin-expand-body">
-        <div class="tc-proj-list">${projRows}</div>${timeSection}
-        <button class="add-time-btn" data-member="${m.name.replace(/"/g,'&quot;')}" data-coltype="${colType}" onclick="openAddTimeModalFromBtn(this,event)" style="margin-top:8px">+ Add Time</button>
       </div>
-    </details>`;
+      <div class="tc-stats">
+        <div class="tc-stat">
+          <div class="tc-stat-val" style="color:${doneColor}">${formatUnits(st.weekDone)}</div>
+          <div class="tc-stat-lbl">This Week</div>
+        </div>
+        <div class="tc-stat">
+          <div class="tc-stat-val" style="color:${st.todayDone>0?'var(--green)':'var(--muted2)'}">${formatUnits(st.todayDone)}</div>
+          <div class="tc-stat-lbl">Today</div>
+        </div>
+        <div class="tc-stat">
+          <div class="tc-stat-val" id="admin-sb-timer-${m.name.replace(/\s+/g,'-')}" style="color:var(--accent2);font-size:14px">${(() => {
+            const sbT = sbTimers.find(t => t.user_name === m.name);
+            if (sbT && sbT.state === 'running') {
+              const livems = (sbT.duration_ms||0) + (Date.now() - new Date(sbT.updated_at).getTime());
+              return fmtMs(livems);
+            }
+            return timeLabel;
+          })()}</div>
+          <div class="tc-stat-lbl">${(() => {
+            const sbT = sbTimers.find(t => t.user_name === m.name);
+            return sbT?.state === 'running' ? '🟢 Live Timer' : sbT?.state === 'paused' ? '⏸ Paused' : 'Time Logged';
+          })()}</div>
+        </div>
+      </div>
+      <div class="tc-proj-list">${projRows}</div>${timeSection}
+      <button class="add-time-btn" data-member="${m.name.replace(/"/g,'&quot;')}" data-coltype="${colType}" onclick="openAddTimeModalFromBtn(this,event)" style="margin-top:8px">+ Add Time</button>
+    </div>`;
   });
 
   html += `</div>`;
@@ -5544,38 +5385,33 @@ function renderAdminDash(items, sbTimers = [], sbKits = [], sbUpdates = [], allo
         </div>`;
       }).join("") : `<div style="font-size:11px;color:var(--muted2);padding:6px 0">No kits recorded yet.</div>`;
 
-      html += `<details class="team-card admin-expand-card" style="margin-bottom:11px;padding:0">
-        <summary>
-          <div class="admin-expand-head">
-            <div class="tc-header">
-              <div class="tc-av" style="background:${m.color}25;color:${m.color}">${m.initials}</div>
-              <div>
-                <div class="tc-name">${m.name}</div>
-                <div class="tc-role">Kitter</div>
-              </div>
-            </div>
-            <div class="tc-stats">
-              <div class="tc-stat">
-                <div class="tc-stat-val" style="color:var(--green)">${kitsThisWeek}</div>
-                <div class="tc-stat-lbl">This Week</div>
-              </div>
-              <div class="tc-stat">
-                <div class="tc-stat-val">${kitsToday}</div>
-                <div class="tc-stat-lbl">Today</div>
-              </div>
-              <div class="tc-stat">
-                <div class="tc-stat-val" style="color:var(--accent2)">${boardKitsTotal}</div>
-                <div class="tc-stat-lbl">Total Kitted</div>
-              </div>
-            </div>
-            <div class="admin-expand-hint">Tap for details</div>
+      html += `<div class="team-card" style="margin-bottom:11px">
+        <div class="tc-header">
+          <div class="tc-av" style="background:${m.color}25;color:${m.color}">${m.initials}</div>
+          <div>
+            <div class="tc-name">${m.name}</div>
+            <div class="tc-role">Kitter</div>
           </div>
-        </summary>
-        <div class="admin-expand-body">
+        </div>
+        <div class="tc-stats">
+          <div class="tc-stat">
+            <div class="tc-stat-val" style="color:var(--green)">${kitsThisWeek}</div>
+            <div class="tc-stat-lbl">This Week</div>
+          </div>
+          <div class="tc-stat">
+            <div class="tc-stat-val">${kitsToday}</div>
+            <div class="tc-stat-lbl">Today</div>
+          </div>
+          <div class="tc-stat">
+            <div class="tc-stat-val" style="color:var(--accent2)">${boardKitsTotal}</div>
+            <div class="tc-stat-lbl">Total Kitted</div>
+          </div>
+        </div>
+        <div style="margin-top:10px">
           <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted2);margin-bottom:4px">Kit History</div>
           ${histHtml}
         </div>
-      </details>`;
+      </div>`;
     });
   }
 
