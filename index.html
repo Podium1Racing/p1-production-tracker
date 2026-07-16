@@ -4907,6 +4907,7 @@ function renderLaborChip(entry, dateStr) {
   return `<div class="labor-chip ${line}" onclick="openAdminScheduleEditor({dateStr:'${dateStr}',entryId:'${entry.id}'})">
     <span class="labor-chip-hours">${scheduleTypeCountsCapacity(entry.type) ? `${Number(entry.hours || 0)}h` : ""}</span>
     <div class="labor-chip-name">${escHtml(adminDisplayPersonName(entry.person))}</div>
+    ${(entry.note || "").trim() ? `<div style="font-size:9px;color:#fff;margin-top:3px;line-height:1.25">${escHtml(entry.note)}</div>` : ""}
   </div>`;
 }
 function renderAdminLaborCalendar(items = [], timerHistory = []) {
