@@ -1133,6 +1133,9 @@ input.photo-file-inp { display:none; }
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
         Pick Lists
       </button>
+      <button class="admin-refresh" onclick="openDefaultHoursEditor()" style="border-color:rgba(16,185,129,0.4);color:var(--green)">
+        Weekly Schedule
+      </button>
       <button class="admin-refresh" id="admin-desktop-toggle" onclick="toggleAdminDesktopMode()">
         Desktop View
       </button>
@@ -1594,6 +1597,7 @@ const COL = {
   pick_list      : null,
   work_order_num : null,
   install_staff  : null,
+  install_date   : null,
 };
 
 /* Column title keywords for runtime discovery (case-insensitive) */
@@ -1611,6 +1615,7 @@ const COL_DISCOVER = {
   pick_list      : ["pick list"],
   work_order_num : ["work order #", "work order#", "work order number", "wo#", "wo number"],
   install_staff  : ["install staff", "installer", "install crew"],
+  install_date   : ["install date", "installation date", "scheduled install", "install scheduled"],
 };
 
 const MS_ROLE = "ms", CHASSIS_ROLE = "chassis", KIT_ROLE = "kit", FLOAT_ROLE = "float";
@@ -4586,6 +4591,22 @@ function sameShipDate(item, dateStr) {
   return d && ymd(d) === dateStr;
 }
 
+function parseInstallDate(item) {
+  if (!COL.install_date) return null;
+  const col = cv(item, COL.install_date);
+  if (!col) return null;
+  let dateStr = col.text || "";
+  if (!dateStr) {
+    try { dateStr = JSON.parse(col.value||"{}").date || ""; } catch(e) {}
+  }
+  if (!dateStr) return null;
+  return new Date(dateStr + "T12:00:00");
+}
+
+function effectiveInstallDate(item) {
+  return parseInstallDate(item) || parseShipDate(item);
+}
+
 function adminLiveTimerRows(sbTimers = []) {
   const timers = (sbTimers || []).filter(t => t.state === "running" || t.state === "paused");
   if (!timers.length) {
@@ -4967,6 +4988,36 @@ function adminScheduleCapacity(items = [], timerHistory = []) {
   const chassisUnits = roundUnits(weekItems.reduce((sum, i) => sum + getUnitWeight(i, "chassis"), 0));
   return { msHours, chassisHours, avgMs, avgChassis, msCapacity: avgMs ? roundUnits(msHours / avgMs) : 0, chassisCapacity: avgChassis ? roundUnits(chassisHours / avgChassis) : 0, msUnits, chassisUnits };
 }
+function adminWeeklyDemand(items = [], timerHistory = []) {
+  const weekSet = new Set(adminWeekDates().map(ymd));
+  const due = (items || []).filter(i => {
+    const d = parseShipDate(i);
+    return d && weekSet.has(ymd(d));
+  });
+  const avgMs = adminAvgHoursForType(timerHistory, "ms") || 8;
+  const avgChassis = adminAvgHoursForType(timerHistory, "chassis") || 8;
+  const msUnits = roundUnits(due.reduce((sum, i) => sum + getUnitWeight(i, "ms"), 0));
+  const chassisUnits = roundUnits(due.reduce((sum, i) => sum + getUnitWeight(i, "chassis"), 0));
+  return {
+    due,
+    orders: due.length,
+    msUnits,
+    chassisUnits,
+    msHoursNeeded: roundUnits(msUnits * avgMs),
+    chassisHoursNeeded: roundUnits(chassisUnits * avgChassis),
+    avgMs,
+    avgChassis,
+  };
+}
+function unassignedInstallItems(items = []) {
+  const today = todayStr();
+  return (items || [])
+    .filter(i => {
+      const d = parseInstallDate(i);
+      return d && ymd(d) >= today && !parsePeople(i, COL.install_staff).length;
+    })
+    .sort((a,b) => parseInstallDate(a) - parseInstallDate(b));
+}
 function adminAvgHoursForType(timerHistory = [], type) {
   const arr = (timerHistory || [])
     .filter(t => t.col_type === type && Number(t.duration_ms || 0) > 60000)
@@ -4996,6 +5047,8 @@ function renderAdminLaborCalendar(items = [], timerHistory = []) {
   const installExtensions = loadAdminInstallExtensions();
   const installNotes = loadAdminInstallNotes();
   const dates = adminLaborDates();
+  const demand = adminWeeklyDemand(items, timerHistory);
+  const missingInstallStaff = unassignedInstallItems(items).slice(0, 8);
   const lines = [
     { key:"chassis", label:"Chassis" },
     { key:"ms", label:"Monitor Stand" },
@@ -5024,7 +5077,7 @@ function renderAdminLaborCalendar(items = [], timerHistory = []) {
   });
   (items || []).forEach(item => {
     const staff = parsePeople(item, COL.install_staff).map(p => adminDisplayPersonName(p.name)).filter(Boolean);
-    const ship = parseShipDate(item);
+    const ship = effectiveInstallDate(item);
     if (!staff.length || !ship) return;
     const days = Math.max(1, Number(installExtensions[item.id] || 1));
     for (let idx = 0; idx < days; idx++) {
@@ -5071,11 +5124,17 @@ function renderAdminLaborCalendar(items = [], timerHistory = []) {
   }).join("");
   const upcomingInstalls = renderUpcomingInstalls(items, dates);
   return `<div class="admin-capacity-grid" style="margin-bottom:10px">
-    <div class="admin-capacity-card"><div class="admin-capacity-val">7</div><div class="admin-capacity-lbl">Calendar Days</div></div>
-    <div class="admin-capacity-card"><div class="admin-capacity-val">${TEAM.filter(m=>m.role!==KIT_ROLE).length}</div><div class="admin-capacity-lbl">Active People</div></div>
+    <div class="admin-capacity-card"><div class="admin-capacity-val">${demand.orders}</div><div class="admin-capacity-lbl">Orders Due This Week</div></div>
+    <div class="admin-capacity-card"><div class="admin-capacity-val" style="color:var(--yellow)">${formatUnits(demand.chassisHoursNeeded)}</div><div class="admin-capacity-lbl">Chassis Hrs Needed</div></div>
+    <div class="admin-capacity-card"><div class="admin-capacity-val" style="color:var(--accent2)">${formatUnits(demand.msHoursNeeded)}</div><div class="admin-capacity-lbl">MS Hrs Needed</div></div>
+    <div class="admin-capacity-card"><div class="admin-capacity-val" style="color:${missingInstallStaff.length ? "var(--red)" : "var(--green)"}">${missingInstallStaff.length}</div><div class="admin-capacity-lbl">Install Dates Missing Staff</div></div>
     <div class="admin-capacity-card"><div class="admin-capacity-val" style="color:var(--yellow)">${adminScheduleCapacity(items,timerHistory).chassisHours}</div><div class="admin-capacity-lbl">Chassis Hrs</div></div>
     <div class="admin-capacity-card"><div class="admin-capacity-val" style="color:var(--accent2)">${adminScheduleCapacity(items,timerHistory).msHours}</div><div class="admin-capacity-lbl">MS Hrs</div></div>
   </div>
+  ${missingInstallStaff.length ? `<div class="stream-alert" style="border-left-color:var(--red);margin-bottom:12px">
+    <div class="stream-alert-title">Install date needs staff assigned</div>
+    <div class="stream-alert-sub">${missingInstallStaff.map(i => `${compactProjectLabel(i)} · ${fmtShipDate(parseInstallDate(i))}`).map(escHtml).join("<br>")}</div>
+  </div>` : ""}
   <div class="labor-calendar"><div class="labor-grid">${header}${body}</div></div>
   <div class="labor-pool">
     <div class="admin-command-title" style="margin-bottom:8px">Available Labor Pool <span class="admin-command-sub">Compact weekly view</span><button class="labor-default-btn" onclick="openDefaultHoursEditor()">Edit Default Hours</button></div>
@@ -5095,10 +5154,11 @@ function matchingManualInstallNote(entries = [], person = "") {
 function renderUpcomingInstalls(items = [], visibleDates = []) {
   const installNotes = loadAdminInstallNotes();
   const visible = new Set((visibleDates || []).map(ymd));
+  const today = todayStr();
   const installs = (items || [])
-    .filter(i => parseShipDate(i) && parsePeople(i, COL.install_staff).length)
-    .sort((a,b) => parseShipDate(a) - parseShipDate(b))
-    .filter(i => !visible.has(ymd(parseShipDate(i))))
+    .filter(i => effectiveInstallDate(i) && ymd(effectiveInstallDate(i)) >= today && parsePeople(i, COL.install_staff).length)
+    .sort((a,b) => effectiveInstallDate(a) - effectiveInstallDate(b))
+    .filter(i => !visible.has(ymd(effectiveInstallDate(i))))
     .slice(0, 12);
   if (!installs.length) return `<div class="admin-command-card" style="margin-top:14px"><div class="admin-command-title">Upcoming Installs</div><div class="admin-mini-meta">No upcoming installs outside this week.</div></div>`;
   return `<div class="admin-command-card" style="margin-top:14px">
@@ -5108,7 +5168,7 @@ function renderUpcomingInstalls(items = [], visibleDates = []) {
         const p = adminProjectLine(i);
         return `<div class="upcoming-install-card" onclick="openAdminInstallEditor('${i.id}')">
           <div class="admin-mini-title">${escHtml(p.label)}</div>
-          <div class="admin-mini-meta">${escHtml(p.ship)} · ${escHtml(p.wo)}<br>${p.installStaff.map(escHtml).join(", ")}${installNotes[i.id] ? `<br><span style="color:#fff">${escHtml(installNotes[i.id])}</span>` : ""}</div>
+          <div class="admin-mini-meta">${escHtml(fmtShipDate(effectiveInstallDate(i)))} · ${escHtml(p.wo)}<br>${p.installStaff.map(escHtml).join(", ")}${installNotes[i.id] ? `<br><span style="color:#fff">${escHtml(installNotes[i.id])}</span>` : ""}</div>
         </div>`;
       }).join("")}
     </div>
@@ -5118,7 +5178,10 @@ function renderAdminWeeklySchedule(items = [], timerHistory = []) {
   if (adminDesktopModeOn()) return renderAdminLaborCalendar(items, timerHistory);
   const data = loadAdminSchedule();
   const installExtensions = loadAdminInstallExtensions();
+  const installNotes = loadAdminInstallNotes();
   const capacity = adminScheduleCapacity(items, timerHistory);
+  const demand = adminWeeklyDemand(items, timerHistory);
+  const missingInstallStaff = unassignedInstallItems(items).slice(0, 8);
   const rosterGroups = [
     { title: "Chassis", members: TEAM.filter(m => m.role === CHASSIS_ROLE) },
     { title: "Monitor Stands", members: TEAM.filter(m => m.role === MS_ROLE) },
@@ -5139,7 +5202,7 @@ function renderAdminWeeklySchedule(items = [], timerHistory = []) {
   const days = adminWeekDates().map(d => {
     const ds = ymd(d);
     const installs = (items || []).filter(i => {
-      const ship = parseShipDate(i);
+      const ship = effectiveInstallDate(i);
       if (!ship || !parsePeople(i, COL.install_staff).length) return false;
       const start = ymd(ship);
       const installDays = Math.max(1, Number(installExtensions[i.id] || 1));
@@ -5178,11 +5241,19 @@ function renderAdminWeeklySchedule(items = [], timerHistory = []) {
     </div>`;
   }).join("");
   return `<div class="admin-capacity-grid">
+    <div class="admin-capacity-card"><div class="admin-capacity-val">${demand.orders}</div><div class="admin-capacity-lbl">Orders Due This Week</div></div>
+    <div class="admin-capacity-card"><div class="admin-capacity-val" style="color:var(--yellow)">${formatUnits(demand.chassisHoursNeeded)}</div><div class="admin-capacity-lbl">Chassis Hrs Needed</div></div>
+    <div class="admin-capacity-card"><div class="admin-capacity-val" style="color:var(--accent2)">${formatUnits(demand.msHoursNeeded)}</div><div class="admin-capacity-lbl">MS Hrs Needed</div></div>
+    <div class="admin-capacity-card"><div class="admin-capacity-val" style="color:${missingInstallStaff.length ? "var(--red)" : "var(--green)"}">${missingInstallStaff.length}</div><div class="admin-capacity-lbl">Install Dates Missing Staff</div></div>
     <div class="admin-capacity-card"><div class="admin-capacity-val" style="color:var(--yellow)">${capacity.chassisHours}</div><div class="admin-capacity-lbl">Chassis Hours</div></div>
     <div class="admin-capacity-card"><div class="admin-capacity-val" style="color:var(--accent2)">${capacity.msHours}</div><div class="admin-capacity-lbl">MS Hours</div></div>
     <div class="admin-capacity-card"><div class="admin-capacity-val" style="color:var(--green)">${formatUnits(capacity.chassisCapacity)}</div><div class="admin-capacity-lbl">Est Chassis Units</div></div>
     <div class="admin-capacity-card"><div class="admin-capacity-val" style="color:var(--green)">${formatUnits(capacity.msCapacity)}</div><div class="admin-capacity-lbl">Est MS Units</div></div>
   </div>
+  ${missingInstallStaff.length ? `<div class="stream-alert" style="border-left-color:var(--red);margin-bottom:12px">
+    <div class="stream-alert-title">Install date needs staff assigned</div>
+    <div class="stream-alert-sub">${missingInstallStaff.map(i => `${compactProjectLabel(i)} · ${fmtShipDate(parseInstallDate(i))}`).map(escHtml).join("<br>")}</div>
+  </div>` : ""}
   <div class="admin-mini-meta" style="margin-bottom:10px">Due this week by unit size: Chassis ${formatUnits(capacity.chassisUnits)} units · MS ${formatUnits(capacity.msUnits)} units. Drag builders onto days to plan capacity.</div>
   <div class="admin-planner">${roster}<div class="admin-schedule-grid">${days}</div></div>`;
 }
