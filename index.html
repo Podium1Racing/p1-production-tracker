@@ -702,6 +702,32 @@ input.photo-file-inp { display:none; }
 .admin-schedule-actions button { flex:1; border:none; border-radius:10px; padding:12px; font-size:12px; font-weight:900; cursor:pointer; }
 .admin-schedule-save { background:var(--accent); color:#fff; }
 .admin-schedule-cancel { background:var(--surface2); color:var(--muted); border:1px solid var(--border2) !important; }
+.labor-calendar { border:1px solid var(--border); border-radius:14px; overflow:auto; background:var(--surface2); }
+.labor-grid { display:grid; min-width:1500px; grid-template-columns:150px repeat(14, minmax(96px, 1fr)); }
+.labor-cell { border-right:1px solid var(--border); border-bottom:1px solid var(--border); min-height:92px; padding:8px; position:relative; }
+.labor-head { min-height:auto; background:rgba(255,255,255,.035); font-size:11px; font-weight:900; text-align:center; color:var(--muted); }
+.labor-head:first-child { text-align:left; }
+.labor-line-label { display:flex; align-items:center; font-size:13px; font-weight:950; color:#fff; min-height:96px; }
+.labor-line-label.chassis { background:rgba(14,116,144,.28); }
+.labor-line-label.ms { background:rgba(6,95,70,.28); }
+.labor-line-label.install { background:rgba(154,52,18,.28); }
+.labor-line-label.pto { background:rgba(127,29,29,.32); }
+.labor-total { position:absolute; top:7px; right:8px; font-size:9px; color:var(--muted); font-weight:800; }
+.labor-chip { border:1px solid rgba(255,255,255,.12); border-radius:8px; padding:6px 7px; margin:18px 0 4px; font-size:10px; font-weight:850; cursor:pointer; background:rgba(255,255,255,.04); }
+.labor-chip + .labor-chip { margin-top:5px; }
+.labor-chip.chassis { background:rgba(14,165,233,.18); border-color:rgba(14,165,233,.35); color:#dff7ff; }
+.labor-chip.ms { background:rgba(16,185,129,.16); border-color:rgba(16,185,129,.34); color:#dcfff3; }
+.labor-chip.install { background:rgba(249,115,22,.18); border-color:rgba(249,115,22,.34); color:#fff1e6; }
+.labor-chip.pto,.labor-chip.off { background:rgba(239,68,68,.16); border-color:rgba(239,68,68,.34); color:#ffe4e4; }
+.labor-chip-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.labor-chip-hours { float:right; color:#fff; opacity:.9; }
+.labor-pool { margin-top:14px; border:1px solid var(--border); border-radius:14px; overflow:auto; background:var(--surface2); }
+.labor-pool-grid { display:grid; min-width:1500px; grid-template-columns:150px repeat(14, minmax(96px, 1fr)); }
+.labor-pool-person { font-size:12px; font-weight:900; }
+.labor-pool-role { font-size:10px; color:var(--muted); margin-top:2px; }
+.labor-pool-slot { min-height:50px; padding:7px; border-right:1px solid var(--border); border-bottom:1px solid var(--border); }
+.labor-pool-btn { width:100%; border:1px solid var(--border2); background:rgba(255,255,255,.035); color:var(--muted); border-radius:8px; padding:7px; font-size:10px; font-weight:900; cursor:pointer; }
+.labor-pool-btn.available { background:rgba(16,185,129,.14); color:#dfffee; border-color:rgba(16,185,129,.35); }
 @media (max-width:900px) {
   .admin-command-grid { grid-template-columns:1fr; }
   .admin-ship-grid { grid-template-columns:1fr; }
@@ -4815,6 +4841,15 @@ function adminWeekDates() {
     return d;
   });
 }
+function adminLaborDates() {
+  const start = new Date();
+  start.setHours(12,0,0,0);
+  return Array.from({ length: 14 }, (_, idx) => {
+    const d = new Date(start);
+    d.setDate(start.getDate() + idx);
+    return d;
+  });
+}
 function roleScheduleLabel(role) {
   return role === MS_ROLE ? "MS" : role === CHASSIS_ROLE ? "Chassis" : role === KIT_ROLE ? "Kitting" : "Floater";
 }
@@ -4844,7 +4879,89 @@ function adminAvgHoursForType(timerHistory = [], type) {
     .map(t => Number(t.duration_ms || 0) / 3600000);
   return arr.length ? Math.round((arr.reduce((a,b)=>a+b,0) / arr.length) * 10) / 10 : 0;
 }
+function scheduleLineForEntry(e) {
+  if (e.type === "install") return "install";
+  if (e.type === "pto" || e.type === "off") return "pto";
+  if (e.role === MS_ROLE) return "ms";
+  if (e.role === CHASSIS_ROLE) return "chassis";
+  return "chassis";
+}
+function renderLaborChip(entry, dateStr) {
+  const line = scheduleLineForEntry(entry);
+  return `<div class="labor-chip ${line}" onclick="openAdminScheduleEditor({dateStr:'${dateStr}',entryId:'${entry.id}'})">
+    <span class="labor-chip-hours">${scheduleTypeCountsCapacity(entry.type) ? `${Number(entry.hours || 0)}h` : ""}</span>
+    <div class="labor-chip-name">${escHtml(adminDisplayPersonName(entry.person))}</div>
+  </div>`;
+}
+function renderAdminLaborCalendar(items = [], timerHistory = []) {
+  const data = loadAdminSchedule();
+  const installExtensions = loadAdminInstallExtensions();
+  const dates = adminLaborDates();
+  const lines = [
+    { key:"chassis", label:"Chassis" },
+    { key:"ms", label:"Monitor Stand" },
+    { key:"install", label:"Install" },
+    { key:"pto", label:"PTO / Off" },
+  ];
+  const entriesByDay = {};
+  dates.forEach(d => { entriesByDay[ymd(d)] = data[ymd(d)] || []; });
+  (items || []).forEach(item => {
+    const staff = parsePeople(item, COL.install_staff).map(p => adminDisplayPersonName(p.name)).filter(Boolean);
+    const ship = parseShipDate(item);
+    if (!staff.length || !ship) return;
+    const days = Math.max(1, Number(installExtensions[item.id] || 1));
+    for (let idx = 0; idx < days; idx++) {
+      const d = new Date(ship); d.setDate(ship.getDate() + idx);
+      const ds = ymd(d);
+      if (!entriesByDay[ds]) continue;
+      staff.forEach(person => entriesByDay[ds].push({
+        id: `install-${item.id}-${person}`,
+        person,
+        type: "install",
+        role: "install",
+        hours: 0,
+        note: compactProjectLabel(item),
+        _mondayInstall: true,
+        _itemId: item.id,
+      }));
+    }
+  });
+  const header = `<div class="labor-cell labor-head">Line</div>${dates.map(d => `<div class="labor-cell labor-head">${escHtml(d.toLocaleDateString("en-US",{weekday:"short"}))}<br><span style="color:#fff">${escHtml(d.toLocaleDateString("en-US",{month:"numeric",day:"numeric"}))}</span></div>`).join("")}`;
+  const body = lines.map(line => {
+    const cells = dates.map(d => {
+      const ds = ymd(d);
+      const entries = (entriesByDay[ds] || []).filter(e => scheduleLineForEntry(e) === line.key);
+      const total = entries.reduce((s,e) => s + (scheduleTypeCountsCapacity(e.type) ? Number(e.hours || 0) : 0), 0);
+      return `<div class="labor-cell" ondragover="adminDragOverDay(event)" ondragleave="adminDragLeaveDay(event)" ondrop="adminDropBuilder(event,'${ds}')">
+        <div class="labor-total">${total}h</div>
+        ${entries.map(e => e._mondayInstall
+          ? `<div class="labor-chip install" onclick="openAdminInstallEditor('${e._itemId}')"><div class="labor-chip-name">${escHtml(e.person)}</div><div style="font-size:9px;color:var(--muted);margin-top:2px">${escHtml(e.note || "Install")}</div></div>`
+          : renderLaborChip(e, ds)
+        ).join("")}
+      </div>`;
+    }).join("");
+    return `<div class="labor-cell labor-line-label ${line.key}">${escHtml(line.label)}</div>${cells}`;
+  }).join("");
+  const poolHeader = `<div class="labor-pool-slot"><div class="admin-command-title" style="margin:0">Available Labor Pool</div><div class="admin-mini-meta">Click + to schedule</div></div>${dates.map(d => `<div class="labor-pool-slot" style="font-size:10px;font-weight:850;color:var(--muted);text-align:center">${escHtml(d.toLocaleDateString("en-US",{weekday:"short",month:"numeric",day:"numeric"}))}</div>`).join("")}`;
+  const poolRows = TEAM.filter(m => m.role !== KIT_ROLE).map(m => {
+    const slots = dates.map(d => {
+      const ds = ymd(d);
+      const scheduled = (entriesByDay[ds] || []).some(e => adminDisplayPersonName(e.person) === m.name);
+      return `<div class="labor-pool-slot"><button class="labor-pool-btn ${scheduled ? "" : "available"}" onclick="openAdminScheduleEditor({dateStr:'${ds}',person:'${escHtml(m.name)}',role:'${m.role}'})">${scheduled ? "Scheduled" : "8h"} +</button></div>`;
+    }).join("");
+    return `<div class="labor-pool-slot"><div class="labor-pool-person">${escHtml(m.name)}</div><div class="labor-pool-role">${escHtml(roleScheduleLabel(m.role))}</div></div>${slots}`;
+  }).join("");
+  return `<div class="admin-capacity-grid" style="margin-bottom:10px">
+    <div class="admin-capacity-card"><div class="admin-capacity-val">14</div><div class="admin-capacity-lbl">Calendar Days</div></div>
+    <div class="admin-capacity-card"><div class="admin-capacity-val">${TEAM.filter(m=>m.role!==KIT_ROLE).length}</div><div class="admin-capacity-lbl">Active People</div></div>
+    <div class="admin-capacity-card"><div class="admin-capacity-val" style="color:var(--yellow)">${adminScheduleCapacity(items,timerHistory).chassisHours}</div><div class="admin-capacity-lbl">Chassis Hrs</div></div>
+    <div class="admin-capacity-card"><div class="admin-capacity-val" style="color:var(--accent2)">${adminScheduleCapacity(items,timerHistory).msHours}</div><div class="admin-capacity-lbl">MS Hrs</div></div>
+  </div>
+  <div class="labor-calendar"><div class="labor-grid">${header}${body}</div></div>
+  <div class="labor-pool"><div class="labor-pool-grid">${poolHeader}${poolRows}</div></div>`;
+}
 function renderAdminWeeklySchedule(items = [], timerHistory = []) {
+  if (adminDesktopModeOn()) return renderAdminLaborCalendar(items, timerHistory);
   const data = loadAdminSchedule();
   const installExtensions = loadAdminInstallExtensions();
   const capacity = adminScheduleCapacity(items, timerHistory);
