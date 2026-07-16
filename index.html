@@ -638,6 +638,37 @@ input.photo-file-inp { display:none; }
 .stream-alert { background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--yellow); border-radius:var(--radius-sm); padding:11px 12px; margin-bottom:8px; }
 .stream-alert-title { font-size:12px; font-weight:800; margin-bottom:3px; }
 .stream-alert-sub { font-size:11px; color:var(--muted); line-height:1.4; }
+.admin-command-grid { display:grid; grid-template-columns:1.15fr .85fr; gap:14px; margin-bottom:18px; }
+.admin-command-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px; overflow:hidden; }
+.admin-command-title { font-size:13px; font-weight:850; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.admin-command-sub { font-size:10px; color:var(--muted2); text-transform:uppercase; letter-spacing:.08em; font-weight:800; }
+.admin-ship-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.admin-ship-bucket { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px; }
+.admin-ship-head { font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.09em; color:var(--muted2); margin-bottom:8px; display:flex; justify-content:space-between; }
+.admin-mini-list { display:flex; flex-direction:column; gap:7px; }
+.admin-mini-row { background:rgba(255,255,255,.025); border:1px solid var(--border); border-radius:9px; padding:8px 9px; }
+.admin-mini-title { font-size:12px; font-weight:800; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.admin-mini-meta { font-size:10px; color:var(--muted); margin-top:3px; line-height:1.35; }
+.admin-live-row { display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center; padding:10px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--surface2); margin-bottom:8px; }
+.admin-live-dot { width:10px; height:10px; border-radius:999px; background:var(--green); box-shadow:0 0 14px rgba(16,185,129,.7); }
+.admin-live-dot.paused { background:var(--yellow); box-shadow:0 0 14px rgba(245,158,11,.6); }
+.admin-live-name { font-size:13px; font-weight:850; }
+.admin-live-project { font-size:11px; color:var(--muted); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.admin-live-time { font-size:15px; font-weight:900; font-variant-numeric:tabular-nums; color:var(--green); text-align:right; }
+.admin-live-time.paused { color:var(--yellow); }
+.admin-live-state { font-size:9px; color:var(--muted2); text-transform:uppercase; letter-spacing:.08em; text-align:right; margin-top:2px; }
+.admin-schedule-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; }
+.admin-day-card { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:9px; min-height:118px; }
+.admin-day-head { font-size:11px; font-weight:900; margin-bottom:7px; display:flex; justify-content:space-between; gap:6px; }
+.admin-day-add { border:1px solid var(--border2); background:none; color:var(--muted); border-radius:7px; font-size:10px; font-weight:800; padding:4px 6px; cursor:pointer; }
+.admin-sched-entry { border-left:2px solid var(--accent); background:rgba(224,32,32,.08); padding:6px 7px; border-radius:7px; margin-bottom:6px; cursor:pointer; }
+.admin-sched-person { font-size:11px; font-weight:850; }
+.admin-sched-note { font-size:10px; color:var(--muted); margin-top:2px; line-height:1.3; }
+@media (max-width:900px) {
+  .admin-command-grid { grid-template-columns:1fr; }
+  .admin-ship-grid { grid-template-columns:1fr; }
+  .admin-schedule-grid { grid-template-columns:1fr; }
+}
 .bottom-nav { position:fixed; left:10px; right:10px; bottom:calc(10px + env(safe-area-inset-bottom)); z-index:60; display:none; background:rgba(18,18,18,.88); border:1px solid var(--border); border-radius:18px; backdrop-filter:blur(16px); box-shadow:0 14px 40px rgba(0,0,0,.34); padding:6px; gap:4px; }
 .bottom-nav-btn { flex:1; border:none; background:none; color:var(--muted); border-radius:13px; padding:7px 4px 6px; font-size:9px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer; }
 .bottom-nav-btn.active { background:rgba(224,32,32,.16); color:#fff; }
@@ -1398,6 +1429,13 @@ async function sbGetAllTimers() {
   }) || [];
 }
 
+async function sbGetTimerHistory(limit = 1000) {
+  return await sbFetch(`timer_sessions?state=eq.ended&order=ended_at.desc&limit=${limit}`, {
+    method: "GET",
+    headers: { "Prefer": "return=representation" },
+  }) || [];
+}
+
 /* ── Admin: read kit completions ────────────────────────────── */
 async function sbGetKitCompletions(sinceDateStr) {
   const filter = sinceDateStr ? `&date_str=gte.${sinceDateStr}` : "";
@@ -1480,6 +1518,7 @@ const COL = {
   ms_size        : null,
   pick_list      : null,
   work_order_num : null,
+  install_staff  : null,
 };
 
 /* Column title keywords for runtime discovery (case-insensitive) */
@@ -1496,6 +1535,7 @@ const COL_DISCOVER = {
   ms_size        : ["monitor stand size"],
   pick_list      : ["pick list"],
   work_order_num : ["work order #", "work order#", "work order number", "wo#", "wo number"],
+  install_staff  : ["install staff", "installer", "install crew"],
 };
 
 const MS_ROLE = "ms", CHASSIS_ROLE = "chassis", KIT_ROLE = "kit", FLOAT_ROLE = "float";
@@ -4398,6 +4438,224 @@ function isAllocationOpenForAdmin(item, allocationSummaryByWo = {}) {
   return state.allocated < state.total;
 }
 
+function adminDisplayPersonName(name) {
+  const raw = String(name || "").trim();
+  if (!raw) return "";
+  const lower = raw.toLowerCase();
+  if (lower === "nathanjaarons@gmail.com") return "Nate Aarons";
+  return raw;
+}
+
+function adminProjectLine(item) {
+  const wo = getWoNumberFromItem(item);
+  const ship = parseShipDate(item);
+  const installStaff = parsePeople(item, COL.install_staff).map(p => adminDisplayPersonName(p.name)).filter(Boolean);
+  return {
+    label: compactProjectLabel(item),
+    wo: wo || "No WO",
+    group: item.group?.title || "No group",
+    ship: ship ? fmtShipDate(ship) : "No ship date",
+    installStaff,
+  };
+}
+
+function adminMiniProjectRows(items = [], empty = "Nothing here yet.", limit = 8) {
+  const rows = (items || []).slice(0, limit).map(item => {
+    const p = adminProjectLine(item);
+    return `<div class="admin-mini-row">
+      <div class="admin-mini-title">${escHtml(p.label)}</div>
+      <div class="admin-mini-meta">${escHtml(p.wo)} · ${escHtml(p.group)}${p.installStaff.length ? `<br>Install: ${p.installStaff.map(escHtml).join(", ")}` : ""}</div>
+    </div>`;
+  }).join("");
+  const more = (items || []).length > limit ? `<div class="admin-mini-meta">+ ${(items || []).length - limit} more</div>` : "";
+  return `<div class="admin-mini-list">${rows || `<div class="admin-mini-meta">${escHtml(empty)}</div>`}${more}</div>`;
+}
+
+function startOfWeekDate(base = new Date()) {
+  const d = new Date(base);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  d.setHours(12,0,0,0);
+  return d;
+}
+
+function ymd(date) {
+  return date.toISOString().slice(0,10);
+}
+
+function dateOffsetYmd(offset) {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return ymd(d);
+}
+
+function sameShipDate(item, dateStr) {
+  const d = parseShipDate(item);
+  return d && ymd(d) === dateStr;
+}
+
+function adminLiveTimerRows(sbTimers = []) {
+  const timers = (sbTimers || []).filter(t => t.state === "running" || t.state === "paused");
+  if (!timers.length) {
+    return `<div class="admin-mini-meta">No one has a live or paused production timer right now.</div>`;
+  }
+  return timers.map(t => {
+    const isPaused = t.state === "paused";
+    const liveMs = t.state === "running"
+      ? (t.duration_ms || 0) + (Date.now() - new Date(t.updated_at).getTime())
+      : (t.duration_ms || 0);
+    const pausedToday = isPaused ? liveMs : 0;
+    return `<div class="admin-live-row">
+      <div class="admin-live-dot ${isPaused ? "paused" : ""}"></div>
+      <div style="min-width:0">
+        <div class="admin-live-name">${escHtml(adminDisplayPersonName(t.user_name))}</div>
+        <div class="admin-live-project">${escHtml(t.item_name || t.item_id || "No project")} · ${escHtml((t.col_type || "build").toUpperCase())}</div>
+        ${isPaused ? `<div class="admin-mini-meta">Paused today: ${escHtml(fmtMs(pausedToday))}</div>` : ""}
+      </div>
+      <div>
+        <div class="admin-live-time ${isPaused ? "paused" : ""}" id="admin-sb-timer-${String(t.user_name || "").replace(/\s+/g,"-")}">${escHtml(fmtMs(liveMs))}</div>
+        <div class="admin-live-state">${isPaused ? "Paused" : "Running"}</div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function adminAverageBuildRows(timerHistory = [], sbUpdates = []) {
+  const ended = (timerHistory || []).filter(t => Number(t.duration_ms || 0) > 60000);
+  const byType = {};
+  ended.forEach(t => {
+    const key = t.col_type || "build";
+    if (!byType[key]) byType[key] = [];
+    byType[key].push(Number(t.duration_ms || 0));
+  });
+  const typeRows = Object.entries(byType).map(([type, arr]) => `<div class="admin-mini-row">
+    <div class="admin-mini-title">${escHtml(type === "ms" ? "Monitor Stand" : type === "chassis" ? "Chassis" : type.toUpperCase())}</div>
+    <div class="admin-mini-meta">${arr.length} completed timer${arr.length===1?"":"s"}</div>
+    <div class="admin-live-time" style="font-size:13px;text-align:left;margin-top:5px">${escHtml(fmtMs(avgArr(arr)))}</div>
+  </div>`).join("");
+
+  const byUser = {};
+  ended.forEach(t => {
+    const key = adminDisplayPersonName(t.user_name || "Unknown");
+    if (!byUser[key]) byUser[key] = [];
+    byUser[key].push(Number(t.duration_ms || 0));
+  });
+  const userRows = Object.entries(byUser)
+    .sort((a,b) => avgArr(a[1]) - avgArr(b[1]))
+    .slice(0,8)
+    .map(([user, arr]) => `<div class="admin-mini-row">
+      <div class="admin-mini-title">${escHtml(user)}</div>
+      <div class="admin-mini-meta">${arr.length} completed build timer${arr.length===1?"":"s"} · Avg ${escHtml(fmtMs(avgArr(arr)))}</div>
+    </div>`).join("");
+
+  return `<div class="admin-ship-grid">
+    <div>${typeRows || `<div class="admin-mini-meta">No completed timer history yet.</div>`}</div>
+    <div>${userRows || `<div class="admin-mini-meta">No builder averages yet.</div>`}</div>
+  </div>`;
+}
+
+const ADMIN_SCHEDULE_KEY = "pt_admin_week_schedule";
+function loadAdminSchedule() {
+  try { return JSON.parse(localStorage.getItem(ADMIN_SCHEDULE_KEY) || "{}"); } catch(e) { return {}; }
+}
+function saveAdminSchedule(data) {
+  localStorage.setItem(ADMIN_SCHEDULE_KEY, JSON.stringify(data || {}));
+}
+function addAdminScheduleEntry(dateStr) {
+  const person = prompt("Who will be here or on install?");
+  if (!person) return;
+  const note = prompt("Schedule note / install name / hours?");
+  const data = loadAdminSchedule();
+  if (!data[dateStr]) data[dateStr] = [];
+  data[dateStr].push({ person: person.trim(), note: (note || "").trim(), id: Date.now() });
+  saveAdminSchedule(data);
+  if (window._adminItems) {
+    if (isDesktop()) renderAdminDesktop(window._adminItems, window._sbTimers || [], window._sbKits || [], window._sbBuildUpdates || [], window._adminAllocationSummary || {}, window._sbTimerHistory || []);
+    else renderAdminDash(window._adminItems, window._sbTimers || [], window._sbKits || [], window._sbBuildUpdates || [], window._adminAllocationSummary || {}, window._sbTimerHistory || []);
+  }
+}
+function removeAdminScheduleEntry(dateStr, id) {
+  if (!confirm("Remove this schedule entry?")) return;
+  const data = loadAdminSchedule();
+  data[dateStr] = (data[dateStr] || []).filter(e => String(e.id) !== String(id));
+  saveAdminSchedule(data);
+  if (window._adminItems) {
+    if (isDesktop()) renderAdminDesktop(window._adminItems, window._sbTimers || [], window._sbKits || [], window._sbBuildUpdates || [], window._adminAllocationSummary || {}, window._sbTimerHistory || []);
+    else renderAdminDash(window._adminItems, window._sbTimers || [], window._sbKits || [], window._sbBuildUpdates || [], window._adminAllocationSummary || {}, window._sbTimerHistory || []);
+  }
+}
+function renderAdminWeeklySchedule(items = []) {
+  const data = loadAdminSchedule();
+  const weekStart = startOfWeekDate();
+  const days = Array.from({ length: 5 }, (_, idx) => {
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + idx);
+    const ds = ymd(d);
+    const installs = (items || []).filter(i => sameShipDate(i, ds) && parsePeople(i, COL.install_staff).length);
+    const manual = data[ds] || [];
+    return `<div class="admin-day-card">
+      <div class="admin-day-head">
+        <span>${escHtml(d.toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"}))}</span>
+        <button class="admin-day-add" onclick="addAdminScheduleEntry('${ds}')">+</button>
+      </div>
+      ${manual.map(e => `<div class="admin-sched-entry" onclick="removeAdminScheduleEntry('${ds}','${e.id}')">
+        <div class="admin-sched-person">${escHtml(adminDisplayPersonName(e.person))}</div>
+        <div class="admin-sched-note">${escHtml(e.note || "Scheduled")}</div>
+      </div>`).join("")}
+      ${installs.map(i => {
+        const p = adminProjectLine(i);
+        return `<div class="admin-sched-entry" style="border-left-color:var(--accent2);background:rgba(99,102,241,.1)">
+          <div class="admin-sched-person">${p.installStaff.map(escHtml).join(", ")}</div>
+          <div class="admin-sched-note">${escHtml(p.label)} · ${escHtml(p.wo)}</div>
+        </div>`;
+      }).join("")}
+      ${!manual.length && !installs.length ? `<div class="admin-mini-meta">No schedule entered.</div>` : ""}
+    </div>`;
+  }).join("");
+  return `<div class="admin-schedule-grid">${days}</div>`;
+}
+
+function renderAdminCommandCenter(items, sbTimers = [], sbUpdates = [], timerHistory = []) {
+  const today = dateOffsetYmd(0);
+  const tomorrow = dateOffsetYmd(1);
+  const dueToday = (items || []).filter(i => sameShipDate(i, today)).sort(compareScores);
+  const dueTomorrow = (items || []).filter(i => sameShipDate(i, tomorrow)).sort(compareScores);
+  return `<div style="margin-bottom:12px">
+    <div style="font-size:18px;font-weight:900">Production Command Center</div>
+    <div class="admin-command-sub">Morning meeting view · live shop status</div>
+  </div>
+  <div class="admin-command-grid">
+    <div class="admin-command-card">
+      <div class="admin-command-title">Shipping Focus <span class="admin-command-sub">Today / Tomorrow</span></div>
+      <div class="admin-ship-grid">
+        <div class="admin-ship-bucket">
+          <div class="admin-ship-head"><span>Due Today</span><span>${dueToday.length}</span></div>
+          ${adminMiniProjectRows(dueToday, "No orders due today.")}
+        </div>
+        <div class="admin-ship-bucket">
+          <div class="admin-ship-head"><span>Due Tomorrow</span><span>${dueTomorrow.length}</span></div>
+          ${adminMiniProjectRows(dueTomorrow, "No orders due tomorrow.")}
+        </div>
+      </div>
+    </div>
+    <div class="admin-command-card">
+      <div class="admin-command-title">Live Builder Timers <span class="admin-command-sub">Running / Paused only</span></div>
+      ${adminLiveTimerRows(sbTimers)}
+    </div>
+  </div>
+  <div class="admin-command-grid">
+    <div class="admin-command-card">
+      <div class="admin-command-title">Average Build Times <span class="admin-command-sub">Completed timers</span></div>
+      ${adminAverageBuildRows(timerHistory, sbUpdates)}
+    </div>
+    <div class="admin-command-card">
+      <div class="admin-command-title">Weekly Schedule <span class="admin-command-sub">Builders + installs</span></div>
+      ${renderAdminWeeklySchedule(items)}
+    </div>
+  </div>`;
+}
+
 function renderAdminStreamlineWidgets(items, sbTimers = [], sbKits = [], sbUpdates = [], allocationSummaryByWo = {}) {
   const today = todayStr();
   const isOpenWorkflowItem = (item) => {
@@ -4612,7 +4870,7 @@ async function loadAdminData() {
       d.setDate(d.getDate() - (isDesktop() ? 30 : 7));
       return d.toISOString().slice(0,10);
     })();
-    const [boardRes, sbTimers, sbKits, sbUpdates, sbPickItems] = await Promise.all([
+    const [boardRes, sbTimers, sbTimerHistory, sbKits, sbUpdates, sbPickItems] = await Promise.all([
       mondayQuery(`{
         boards(ids:[${BOARD_ID}]) {
           columns { id title type }
@@ -4626,6 +4884,7 @@ async function loadAdminData() {
         }
       }`),
       sbGetAllTimers(),
+      sbGetTimerHistory(),
       sbGetKitCompletions(kitSince),
       sbFetch("build_updates?order=created_at.desc&limit=500",{method:"GET",headers:{"Prefer":"return=representation"}}),
       sbFetch("picklist_items?select=wo_number,allocated&limit=5000",{method:"GET",headers:{"Prefer":"return=representation"}}),
@@ -4636,10 +4895,12 @@ async function loadAdminData() {
     const allocationSummaryByWo = buildAllocationSummaryByWo(sbPickItems || []);
     await hydrateKitHistoryBoardItems(sbKits, items);
     window._sbBuildUpdates = sbUpdates || [];
+    window._adminAllocationSummary = allocationSummaryByWo;
+    window._sbTimerHistory = sbTimerHistory || [];
     if (isDesktop()) {
-      renderAdminDesktop(items, sbTimers, sbKits, sbUpdates || [], allocationSummaryByWo);
+      renderAdminDesktop(items, sbTimers, sbKits, sbUpdates || [], allocationSummaryByWo, sbTimerHistory || []);
     } else {
-      renderAdminDash(items, sbTimers, sbKits, sbUpdates || [], allocationSummaryByWo);
+      renderAdminDash(items, sbTimers, sbKits, sbUpdates || [], allocationSummaryByWo, sbTimerHistory || []);
     }
     /* Subscribe to real-time timer updates */
     sbSubscribeAdminRealtime((record) => {
@@ -4662,11 +4923,13 @@ function getDateRange(range) {
   return start.toISOString().slice(0,10);
 }
 
-function renderAdminDesktop(items, sbTimers, sbKits, sbUpdates, allocationSummaryByWo = {}) {
+function renderAdminDesktop(items, sbTimers, sbKits, sbUpdates, allocationSummaryByWo = {}, sbTimerHistory = []) {
   window._adminItems    = items;
   window._sbTimers      = sbTimers;
   window._sbKits        = sbKits;
   window._sbBuildUpdates = sbUpdates;
+  window._sbTimerHistory = sbTimerHistory;
+  window._adminAllocationSummary = allocationSummaryByWo;
 
   const content  = document.getElementById("admin-content");
   const range    = _adminDateRange;
@@ -4785,6 +5048,7 @@ function renderAdminDesktop(items, sbTimers, sbKits, sbUpdates, allocationSummar
       <button class="seg-btn ${range==="month"?"active":""}" onclick="setAdminRange('month')">This Month</button>
     </div>
   </div>
+  ${renderAdminCommandCenter(items, sbTimers, sbUpdates, sbTimerHistory)}
   ${renderAdminStreamlineWidgets(items, sbTimers, sbKits, sbUpdates, allocationSummaryByWo)}
 
   <!-- Board Health KPIs -->
@@ -4972,10 +5236,13 @@ function setAdminRange(r) {
   loadAdminData();
 }
 
-function renderAdminDash(items, sbTimers = [], sbKits = [], sbUpdates = [], allocationSummaryByWo = {}) {
+function renderAdminDash(items, sbTimers = [], sbKits = [], sbUpdates = [], allocationSummaryByWo = {}, sbTimerHistory = []) {
   window._adminItems = items; /* store for time log item name lookup */
   window._sbTimers   = sbTimers;
   window._sbKits     = sbKits;
+  window._sbBuildUpdates = sbUpdates;
+  window._sbTimerHistory = sbTimerHistory;
+  window._adminAllocationSummary = allocationSummaryByWo;
   const content = document.getElementById("admin-content");
   const deltas  = loadDeltas();
   const timers  = loadTimers();
@@ -5163,7 +5430,8 @@ function renderAdminDash(items, sbTimers = [], sbKits = [], sbUpdates = [], allo
   const maxWeekDone = Math.max(1, ...ranked.map(m => weekStats[m.name].weekDone));
 
   /* ── BUILD HTML ── */
-  let html = renderAdminStreamlineWidgets(items, sbTimers, sbKits, sbUpdates, allocationSummaryByWo);
+  let html = renderAdminCommandCenter(items, sbTimers, sbUpdates, sbTimerHistory);
+  html += renderAdminStreamlineWidgets(items, sbTimers, sbKits, sbUpdates, allocationSummaryByWo);
 
   /* Board Health */
   html += `
@@ -9264,7 +9532,11 @@ function updateAdminTimerDisplay(record) {
     ? (record.duration_ms||0) + (Date.now() - new Date(record.updated_at).getTime())
     : (record.duration_ms||0);
   el.textContent = fmtMs(ms);
-  el.className = "tc-stat-val " + (record.state === "running" ? "admin-timer-running" : "admin-timer-paused");
+  if (el.classList.contains("admin-live-time")) {
+    el.classList.toggle("paused", record.state !== "running");
+  } else {
+    el.className = "tc-stat-val " + (record.state === "running" ? "admin-timer-running" : "admin-timer-paused");
+  }
 }
 
 async function checkForUpdates() {
