@@ -736,6 +736,11 @@ input.photo-file-inp { display:none; }
 .labor-default-head { font-size:9px; color:var(--muted2); text-transform:uppercase; letter-spacing:.08em; font-weight:850; text-align:center; }
 .upcoming-install-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:8px; margin-top:10px; }
 .upcoming-install-card { background:var(--surface2); border:1px solid var(--border); border-left:3px solid var(--accent2); border-radius:10px; padding:9px 10px; }
+.admin-calendar-modal { position:fixed; inset:0; z-index:1200; background:var(--bg); display:flex; flex-direction:column; }
+.admin-calendar-modal-head { background:var(--surface); border-bottom:1px solid var(--border); padding:14px 18px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.admin-calendar-modal-title { font-size:17px; font-weight:950; }
+.admin-calendar-modal-sub { font-size:11px; color:var(--muted); margin-top:2px; }
+.admin-calendar-modal-body { flex:1; overflow:auto; padding:18px; }
 @media (max-width:900px) {
   .admin-command-grid { grid-template-columns:1fr; }
   .admin-ship-grid { grid-template-columns:1fr; }
@@ -5356,12 +5361,6 @@ function renderAdminCommandCenter(items, sbTimers = [], sbUpdates = [], timerHis
       <div class="admin-command-title">Average Build Times <span class="admin-command-sub">Completed timers</span></div>
       ${adminAverageBuildRows(timerHistory, sbUpdates)}
     </div>
-  </div>
-  <div class="admin-command-grid">
-    <div class="admin-command-card" id="admin-weekly-calendar-section" style="grid-column:1 / -1">
-      <div class="admin-command-title">Weekly Schedule <span class="admin-command-sub">Builders + installs</span></div>
-      ${renderAdminWeeklySchedule(items, timerHistory)}
-    </div>
   </div>`;
 }
 
@@ -5582,15 +5581,24 @@ function toggleAdminDesktopMode() {
   if (window._adminItems) loadAdminData();
 }
 function openWeeklyScheduleCalendar() {
-  if (!adminDesktopModeOn()) {
-    localStorage.setItem("pt_admin_desktop_mode", "1");
-    applyAdminDesktopMode();
-    loadAdminData().then(() => {
-      document.getElementById("admin-weekly-calendar-section")?.scrollIntoView({ behavior:"smooth", block:"start" });
-    });
-    return;
-  }
-  document.getElementById("admin-weekly-calendar-section")?.scrollIntoView({ behavior:"smooth", block:"start" });
+  const items = window._adminItems || [];
+  const timerHistory = window._sbTimerHistory || [];
+  const modal = document.createElement("div");
+  modal.id = "admin-weekly-calendar-modal";
+  modal.className = "admin-calendar-modal";
+  modal.innerHTML = `<div class="admin-calendar-modal-head">
+    <div>
+      <div class="admin-calendar-modal-title">Weekly Schedule</div>
+      <div class="admin-calendar-modal-sub">Labor calendar, weekly capacity, installs, PTO, and default-hour exceptions.</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="admin-refresh" onclick="openDefaultHoursEditor()">Default Hours</button>
+      <button class="switch-btn" onclick="document.getElementById('admin-weekly-calendar-modal')?.remove()">Close</button>
+    </div>
+  </div>
+  <div class="admin-calendar-modal-body">${renderAdminLaborCalendar(items, timerHistory)}</div>`;
+  document.getElementById("admin-weekly-calendar-modal")?.remove();
+  document.body.appendChild(modal);
 }
 function isDesktop() {
   return adminDesktopModeOn() || (window.innerWidth >= 900 && !('ontouchstart' in window) && navigator.maxTouchPoints === 0);
