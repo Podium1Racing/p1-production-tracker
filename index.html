@@ -728,6 +728,10 @@ input.photo-file-inp { display:none; }
 .labor-pool-slot { min-height:50px; padding:8px; border:1px solid var(--border); border-radius:10px; background:rgba(255,255,255,.025); }
 .labor-pool-btn { width:100%; border:1px solid var(--border2); background:rgba(255,255,255,.035); color:var(--muted); border-radius:8px; padding:7px; font-size:10px; font-weight:900; cursor:pointer; }
 .labor-pool-btn.available { background:rgba(16,185,129,.14); color:#dfffee; border-color:rgba(16,185,129,.35); }
+.labor-default-btn { border:1px solid var(--border2); background:rgba(255,255,255,.04); color:var(--muted); border-radius:8px; padding:6px 8px; font-size:10px; font-weight:900; cursor:pointer; }
+.labor-default-row { display:grid; grid-template-columns:1fr repeat(5,64px); gap:7px; align-items:center; width:100%; margin-top:8px; }
+.labor-default-row input { width:100%; background:var(--surface2); border:1px solid var(--border2); border-radius:8px; color:var(--text); padding:7px 6px; font-size:12px; box-sizing:border-box; }
+.labor-default-head { font-size:9px; color:var(--muted2); text-transform:uppercase; letter-spacing:.08em; font-weight:850; text-align:center; }
 .upcoming-install-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:8px; margin-top:10px; }
 .upcoming-install-card { background:var(--surface2); border:1px solid var(--border); border-left:3px solid var(--accent2); border-radius:10px; padding:9px 10px; }
 @media (max-width:900px) {
@@ -4645,6 +4649,7 @@ function adminAverageBuildRows(timerHistory = [], sbUpdates = []) {
 const ADMIN_SCHEDULE_KEY = "pt_admin_week_schedule";
 const ADMIN_INSTALL_EXT_KEY = "pt_admin_install_extensions";
 const ADMIN_INSTALL_NOTES_KEY = "pt_admin_install_notes";
+const ADMIN_DEFAULT_HOURS_KEY = "pt_admin_default_hours";
 let _adminShipTab = "today";
 let _adminDraggedBuilder = null;
 let _adminScheduleDraft = null;
@@ -4665,6 +4670,68 @@ function loadAdminInstallNotes() {
 }
 function saveAdminInstallNotes(data) {
   localStorage.setItem(ADMIN_INSTALL_NOTES_KEY, JSON.stringify(data || {}));
+}
+function defaultHoursForMember(member) {
+  const saved = loadAdminDefaultHours()[member.name];
+  if (saved) return saved;
+  return { mon:8, tue:8, wed:8, thu:8, fri:8 };
+}
+function loadAdminDefaultHours() {
+  try { return JSON.parse(localStorage.getItem(ADMIN_DEFAULT_HOURS_KEY) || "{}"); } catch(e) { return {}; }
+}
+function saveAdminDefaultHours(data) {
+  localStorage.setItem(ADMIN_DEFAULT_HOURS_KEY, JSON.stringify(data || {}));
+}
+function dayKeyFromDate(date) {
+  return ["sun","mon","tue","wed","thu","fri","sat"][date.getDay()];
+}
+function defaultHoursForDate(member, date) {
+  return Number(defaultHoursForMember(member)[dayKeyFromDate(date)] || 0);
+}
+function openDefaultHoursEditor() {
+  const data = loadAdminDefaultHours();
+  const modal = document.createElement("div");
+  modal.id = "admin-default-hours-modal";
+  modal.className = "settings-modal";
+  const rows = TEAM.filter(m => m.role !== KIT_ROLE).map(m => {
+    const h = data[m.name] || defaultHoursForMember(m);
+    return `<div class="labor-default-row" data-name="${escHtml(m.name)}">
+      <div>
+        <div class="labor-pool-person">${escHtml(m.name)}</div>
+        <div class="labor-pool-role">${escHtml(roleScheduleLabel(m.role))}</div>
+      </div>
+      ${["mon","tue","wed","thu","fri"].map(k => `<input data-day="${k}" type="number" min="0" step="0.5" value="${Number(h[k] || 0)}">`).join("")}
+    </div>`;
+  }).join("");
+  modal.innerHTML = `<div class="settings-modal-box" style="max-width:760px;align-items:stretch">
+    <div class="settings-modal-title">Default Weekly Hours</div>
+    <div class="settings-modal-sub">Set each person's normal schedule. Weekly exceptions like installs/PTO still override this on the labor calendar.</div>
+    <div class="labor-default-row" style="margin-top:0">
+      <div></div>
+      ${["Mon","Tue","Wed","Thu","Fri"].map(d => `<div class="labor-default-head">${d}</div>`).join("")}
+    </div>
+    <div style="max-height:60vh;overflow:auto;padding-right:4px">${rows}</div>
+    <div class="admin-schedule-actions">
+      <button class="admin-schedule-cancel" onclick="document.getElementById('admin-default-hours-modal')?.remove()">Cancel</button>
+      <button class="admin-schedule-save" onclick="saveDefaultHoursEditor()">Save Defaults</button>
+    </div>
+  </div>`;
+  modal.addEventListener("click", ev => { if (ev.target === modal) modal.remove(); });
+  document.getElementById("admin-default-hours-modal")?.remove();
+  document.body.appendChild(modal);
+}
+function saveDefaultHoursEditor() {
+  const next = {};
+  document.querySelectorAll("#admin-default-hours-modal .labor-default-row[data-name]").forEach(row => {
+    const name = row.getAttribute("data-name");
+    next[name] = {};
+    row.querySelectorAll("input[data-day]").forEach(inp => {
+      next[name][inp.getAttribute("data-day")] = Math.max(0, Number(inp.value || 0));
+    });
+  });
+  saveAdminDefaultHours(next);
+  document.getElementById("admin-default-hours-modal")?.remove();
+  refreshAdminViewFromCache();
 }
 function chooseAdminScheduleType(personName) {
   return "build";
@@ -4871,7 +4938,18 @@ function roleScheduleLabel(role) {
 }
 function adminScheduleCapacity(items = [], timerHistory = []) {
   const data = loadAdminSchedule();
+  const dates = adminLaborDates();
   let msHours = 0, chassisHours = 0;
+  TEAM.filter(m => m.role !== KIT_ROLE).forEach(m => {
+    dates.forEach(d => {
+      const ds = ymd(d);
+      const exceptions = data[ds] || [];
+      if (exceptions.some(e => adminDisplayPersonName(e.person) === m.name)) return;
+      const h = defaultHoursForDate(m, d);
+      if (m.role === MS_ROLE) msHours += h;
+      if (m.role === CHASSIS_ROLE) chassisHours += h;
+    });
+  });
   Object.values(data).flat().forEach(e => {
     if (!scheduleTypeCountsCapacity(e.type)) return;
     const h = Number(e.hours || 0);
@@ -4904,7 +4982,10 @@ function scheduleLineForEntry(e) {
 }
 function renderLaborChip(entry, dateStr) {
   const line = scheduleLineForEntry(entry);
-  return `<div class="labor-chip ${line}" onclick="openAdminScheduleEditor({dateStr:'${dateStr}',entryId:'${entry.id}'})">
+  const click = entry._defaultSchedule
+    ? `openAdminScheduleEditor({dateStr:'${dateStr}',person:'${escHtml(entry.person)}',role:'${entry.role}'})`
+    : `openAdminScheduleEditor({dateStr:'${dateStr}',entryId:'${entry.id}'})`;
+  return `<div class="labor-chip ${line}" onclick="${click}">
     <span class="labor-chip-hours">${scheduleTypeCountsCapacity(entry.type) ? `${Number(entry.hours || 0)}h` : ""}</span>
     <div class="labor-chip-name">${escHtml(adminDisplayPersonName(entry.person))}</div>
     ${(entry.note || "").trim() ? `<div style="font-size:9px;color:#fff;margin-top:3px;line-height:1.25">${escHtml(entry.note)}</div>` : ""}
@@ -4923,6 +5004,24 @@ function renderAdminLaborCalendar(items = [], timerHistory = []) {
   ];
   const entriesByDay = {};
   dates.forEach(d => { entriesByDay[ymd(d)] = data[ymd(d)] || []; });
+  TEAM.filter(m => m.role !== KIT_ROLE).forEach(m => {
+    dates.forEach(d => {
+      const ds = ymd(d);
+      const hasException = (entriesByDay[ds] || []).some(e => adminDisplayPersonName(e.person) === m.name);
+      if (hasException) return;
+      const hours = defaultHoursForDate(m, d);
+      if (!hours) return;
+      entriesByDay[ds].push({
+        id: `default-${m.name}-${ds}`,
+        person: m.name,
+        type: "build",
+        role: m.role,
+        hours,
+        note: "Default schedule",
+        _defaultSchedule: true,
+      });
+    });
+  });
   (items || []).forEach(item => {
     const staff = parsePeople(item, COL.install_staff).map(p => adminDisplayPersonName(p.name)).filter(Boolean);
     const ship = parseShipDate(item);
@@ -4963,9 +5062,10 @@ function renderAdminLaborCalendar(items = [], timerHistory = []) {
   }).join("");
   const poolRows = TEAM.filter(m => m.role !== KIT_ROLE).map(m => {
     const scheduledDays = dates.filter(d => (entriesByDay[ymd(d)] || []).some(e => adminDisplayPersonName(e.person) === m.name)).length;
+    const weeklyDefault = adminWeekDates().reduce((sum,d) => sum + defaultHoursForDate(m,d), 0);
     return `<div class="labor-pool-slot">
       <div class="labor-pool-person">${escHtml(m.name)}</div>
-      <div class="labor-pool-role">${escHtml(roleScheduleLabel(m.role))} · ${scheduledDays}/${dates.length} days scheduled</div>
+      <div class="labor-pool-role">${escHtml(roleScheduleLabel(m.role))} · ${weeklyDefault}h default · ${scheduledDays}/${dates.length} days shown</div>
       <button class="labor-pool-btn available" onclick="openAdminScheduleEditor({dateStr:'${ymd(dates[0])}',person:'${escHtml(m.name)}',role:'${m.role}'})" style="margin-top:7px">Schedule</button>
     </div>`;
   }).join("");
@@ -4978,7 +5078,7 @@ function renderAdminLaborCalendar(items = [], timerHistory = []) {
   </div>
   <div class="labor-calendar"><div class="labor-grid">${header}${body}</div></div>
   <div class="labor-pool">
-    <div class="admin-command-title" style="margin-bottom:8px">Available Labor Pool <span class="admin-command-sub">Compact weekly view</span></div>
+    <div class="admin-command-title" style="margin-bottom:8px">Available Labor Pool <span class="admin-command-sub">Compact weekly view</span><button class="labor-default-btn" onclick="openDefaultHoursEditor()">Edit Default Hours</button></div>
     <div class="labor-pool-grid">${poolRows}</div>
   </div>
   ${upcomingInstalls}`;
@@ -10276,6 +10376,14 @@ try {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           </div>
           <span class="srow-label">Manage Team Members</span>
+          <svg class="srow-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+        <div style="height:1px;background:var(--border);margin:0 14px;"></div>
+        <button class="srow" id="settings-weekly-schedules" onclick="openDefaultHoursEditor()">
+          <div class="srow-icon" style="background:rgba(16,185,129,0.15);color:#10b981;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          </div>
+          <span class="srow-label">Weekly Schedules</span>
           <svg class="srow-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
         </button>
         <div style="height:1px;background:var(--border);margin:0 14px;"></div>
