@@ -581,9 +581,11 @@ input.photo-file-inp { display:none; }
 .admin-sub   { font-size:11px; color:var(--muted); }
 .admin-content { flex:1; padding:14px; overflow-y:auto; padding-bottom:36px; }
 #screen-admin.admin-desktop-mode .admin-content { max-width:1680px; width:100%; margin:0 auto; padding:22px 28px 44px; box-sizing:border-box; }
-#screen-admin.admin-desktop-mode .admin-command-grid { grid-template-columns:1.15fr .85fr; }
-#screen-admin.admin-desktop-mode .admin-planner { grid-template-columns:280px 1fr; }
-#screen-admin.admin-desktop-mode .admin-schedule-grid { grid-template-columns:repeat(5,minmax(230px,1fr)); }
+#screen-admin.admin-desktop-mode .admin-command-grid { grid-template-columns:1fr 1fr; }
+#screen-admin.admin-desktop-mode .admin-command-grid.admin-command-top { grid-template-columns:1.35fr .85fr .9fr; align-items:start; }
+#screen-admin.admin-desktop-mode .admin-command-top .admin-command-card { min-height:360px; }
+#screen-admin.admin-desktop-mode .admin-planner { grid-template-columns:320px 1fr; }
+#screen-admin.admin-desktop-mode .admin-schedule-grid { grid-template-columns:repeat(5,minmax(260px,1fr)); }
 #screen-admin.admin-desktop-mode .admin-day-card { min-height:360px; }
 .health-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
 .health-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); padding:13px 14px; }
@@ -691,6 +693,15 @@ input.photo-file-inp { display:none; }
 .admin-capacity-lbl { font-size:9px; color:var(--muted2); text-transform:uppercase; letter-spacing:.08em; font-weight:850; margin-top:4px; }
 .admin-install-controls { display:flex; gap:5px; margin-top:6px; }
 .admin-install-btn { border:1px solid var(--border2); background:rgba(255,255,255,.04); color:var(--muted); border-radius:6px; padding:2px 6px; font-size:10px; font-weight:850; cursor:pointer; }
+.admin-schedule-modal-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; width:100%; margin-top:10px; }
+.admin-schedule-field { display:flex; flex-direction:column; gap:5px; }
+.admin-schedule-field label { font-size:10px; color:var(--muted2); text-transform:uppercase; letter-spacing:.08em; font-weight:850; }
+.admin-schedule-field input,.admin-schedule-field select { background:var(--surface2); border:1px solid var(--border2); border-radius:9px; color:var(--text); padding:9px 10px; font-size:13px; outline:none; }
+.admin-schedule-field.full { grid-column:1 / -1; }
+.admin-schedule-actions { display:flex; gap:8px; width:100%; margin-top:14px; }
+.admin-schedule-actions button { flex:1; border:none; border-radius:10px; padding:12px; font-size:12px; font-weight:900; cursor:pointer; }
+.admin-schedule-save { background:var(--accent); color:#fff; }
+.admin-schedule-cancel { background:var(--surface2); color:var(--muted); border:1px solid var(--border2) !important; }
 @media (max-width:900px) {
   .admin-command-grid { grid-template-columns:1fr; }
   .admin-ship-grid { grid-template-columns:1fr; }
@@ -4607,6 +4618,7 @@ const ADMIN_SCHEDULE_KEY = "pt_admin_week_schedule";
 const ADMIN_INSTALL_EXT_KEY = "pt_admin_install_extensions";
 let _adminShipTab = "today";
 let _adminDraggedBuilder = null;
+let _adminScheduleDraft = null;
 function loadAdminSchedule() {
   try { return JSON.parse(localStorage.getItem(ADMIN_SCHEDULE_KEY) || "{}"); } catch(e) { return {}; }
 }
@@ -4620,12 +4632,6 @@ function saveAdminInstallExtensions(data) {
   localStorage.setItem(ADMIN_INSTALL_EXT_KEY, JSON.stringify(data || {}));
 }
 function chooseAdminScheduleType(personName) {
-  const raw = prompt(`${personName} schedule type:\n1 = Building\n2 = Install\n3 = Off today\n4 = PTO\n5 = Other`, "1");
-  const v = String(raw || "1").trim().toLowerCase();
-  if (v === "2" || v.includes("install")) return "install";
-  if (v === "3" || v.includes("off")) return "off";
-  if (v === "4" || v.includes("pto") || v.includes("vacation")) return "pto";
-  if (v === "5" || v.includes("other")) return "other";
   return "build";
 }
 function scheduleTypeLabel(type) {
@@ -4648,19 +4654,7 @@ function setAdminShipTab(tab) {
   refreshAdminViewFromCache();
 }
 function addAdminScheduleEntry(dateStr) {
-  const person = prompt("Who will be here or on install?");
-  if (!person) return;
-  const type = chooseAdminScheduleType(person);
-  const roleChoice = prompt(`${person} role for this day: MS, Chassis, Kitter, or Floater?`, "Chassis");
-  const rc = String(roleChoice || "").toLowerCase();
-  const role = rc.startsWith("m") ? MS_ROLE : rc.startsWith("k") ? KIT_ROLE : rc.startsWith("f") ? FLOAT_ROLE : CHASSIS_ROLE;
-  const hours = scheduleTypeCountsCapacity(type) ? Math.max(0, Number(prompt("How many build hours?", "8") || 8) || 8) : 0;
-  const note = prompt("Schedule note / install name?", scheduleTypeLabel(type));
-  const data = loadAdminSchedule();
-  if (!data[dateStr]) data[dateStr] = [];
-  data[dateStr].push({ person: person.trim(), note: (note || "").trim(), role, hours, type, id: Date.now() });
-  saveAdminSchedule(data);
-  refreshAdminViewFromCache();
+  openAdminScheduleEditor({ dateStr });
 }
 function removeAdminScheduleEntry(dateStr, id) {
   if (!confirm("Remove this schedule entry?")) return;
@@ -4686,27 +4680,131 @@ function adminDropBuilder(e, dateStr) {
   let payload = _adminDraggedBuilder;
   try { payload = JSON.parse(e.dataTransfer.getData("text/plain") || "null") || payload; } catch(_) {}
   if (!payload?.name) return;
-  let role = payload.role;
-  if (role === FLOAT_ROLE) {
-    const choice = prompt(`${payload.name} as MS, Chassis, or Kitter?`, "MS");
-    const c = String(choice || "").toLowerCase();
-    role = c.startsWith("k") ? KIT_ROLE : c.startsWith("c") ? CHASSIS_ROLE : MS_ROLE;
-  }
-  const type = chooseAdminScheduleType(payload.name);
-  const hoursRaw = scheduleTypeCountsCapacity(type) ? prompt("How many build hours scheduled?", "8") : "0";
-  const hours = scheduleTypeCountsCapacity(type) ? Math.max(0, Number(hoursRaw || 8) || 8) : 0;
-  const note = type === "install" ? prompt("Install name / note?", "Install") : scheduleTypeLabel(type);
+  openAdminScheduleEditor({ dateStr, person: payload.name, role: payload.role });
+}
+function openAdminScheduleEditor({ dateStr, person = "", role = CHASSIS_ROLE, entryId = null } = {}) {
+  const data = loadAdminSchedule();
+  const existing = entryId ? (data[dateStr] || []).find(e => String(e.id) === String(entryId)) : null;
+  _adminScheduleDraft = { dateStr, entryId };
+  const memberOptions = TEAM.map(m => `<option value="${escHtml(m.name)}" ${((existing?.person || person) === m.name) ? "selected" : ""}>${escHtml(m.name)}</option>`).join("");
+  const type = existing?.type || "build";
+  const useRole = existing?.role || role || CHASSIS_ROLE;
+  const modal = document.createElement("div");
+  modal.id = "admin-schedule-editor-modal";
+  modal.className = "settings-modal";
+  modal.innerHTML = `<div class="settings-modal-box" style="max-width:520px;align-items:stretch">
+    <div class="settings-modal-title">${existing ? "Edit Schedule" : "Add Schedule"}</div>
+    <div class="settings-modal-sub">${escHtml(new Date(dateStr + "T12:00:00").toLocaleDateString("en-US",{weekday:"long",month:"short",day:"numeric"}))}</div>
+    <div class="admin-schedule-modal-grid">
+      <div class="admin-schedule-field">
+        <label>Builder / Staff</label>
+        <select id="admin-sched-person">${memberOptions}<option value="${escHtml(person)}" ${person && !TEAM.find(m=>m.name===person) ? "selected" : ""}>${escHtml(person || "Other")}</option></select>
+      </div>
+      <div class="admin-schedule-field">
+        <label>Doing</label>
+        <select id="admin-sched-type">
+          <option value="build" ${type==="build"?"selected":""}>Building</option>
+          <option value="install" ${type==="install"?"selected":""}>Install</option>
+          <option value="off" ${type==="off"?"selected":""}>Off Today</option>
+          <option value="pto" ${type==="pto"?"selected":""}>PTO</option>
+          <option value="other" ${type==="other"?"selected":""}>Other</option>
+        </select>
+      </div>
+      <div class="admin-schedule-field">
+        <label>Role</label>
+        <select id="admin-sched-role">
+          <option value="${CHASSIS_ROLE}" ${useRole===CHASSIS_ROLE?"selected":""}>Chassis</option>
+          <option value="${MS_ROLE}" ${useRole===MS_ROLE?"selected":""}>MS</option>
+          <option value="${KIT_ROLE}" ${useRole===KIT_ROLE?"selected":""}>Kitting</option>
+          <option value="${FLOAT_ROLE}" ${useRole===FLOAT_ROLE?"selected":""}>Floater</option>
+        </select>
+      </div>
+      <div class="admin-schedule-field">
+        <label>Build Hours</label>
+        <input id="admin-sched-hours" type="number" min="0" step="0.5" value="${Number(existing?.hours ?? 8)}">
+      </div>
+      <div class="admin-schedule-field full">
+        <label>Note / Install Name</label>
+        <input id="admin-sched-note" value="${escHtml(existing?.note || "")}" placeholder="Install name, off reason, notes...">
+      </div>
+    </div>
+    <div class="admin-schedule-actions">
+      ${existing ? `<button class="admin-schedule-cancel" onclick="deleteAdminScheduleDraft()">Delete</button>` : ""}
+      <button class="admin-schedule-cancel" onclick="closeAdminScheduleEditor()">Cancel</button>
+      <button class="admin-schedule-save" onclick="saveAdminScheduleDraft()">Save</button>
+    </div>
+  </div>`;
+  modal.addEventListener("click", ev => { if (ev.target === modal) closeAdminScheduleEditor(); });
+  document.getElementById("admin-schedule-editor-modal")?.remove();
+  document.body.appendChild(modal);
+}
+function closeAdminScheduleEditor() {
+  document.getElementById("admin-schedule-editor-modal")?.remove();
+  _adminScheduleDraft = null;
+}
+function saveAdminScheduleDraft() {
+  if (!_adminScheduleDraft) return;
+  const { dateStr, entryId } = _adminScheduleDraft;
   const data = loadAdminSchedule();
   if (!data[dateStr]) data[dateStr] = [];
-  data[dateStr].push({ person: payload.name, role, hours, type, note, id: Date.now() });
+  const type = document.getElementById("admin-sched-type").value;
+  const entry = {
+    person: document.getElementById("admin-sched-person").value,
+    role: document.getElementById("admin-sched-role").value,
+    type,
+    hours: scheduleTypeCountsCapacity(type) ? Math.max(0, Number(document.getElementById("admin-sched-hours").value || 0)) : 0,
+    note: document.getElementById("admin-sched-note").value.trim(),
+    id: entryId || Date.now(),
+  };
+  if (entryId) data[dateStr] = data[dateStr].map(e => String(e.id) === String(entryId) ? entry : e);
+  else data[dateStr].push(entry);
   saveAdminSchedule(data);
+  closeAdminScheduleEditor();
   refreshAdminViewFromCache();
+}
+function deleteAdminScheduleDraft() {
+  if (!_adminScheduleDraft) return;
+  removeAdminScheduleEntry(_adminScheduleDraft.dateStr, _adminScheduleDraft.entryId);
+  closeAdminScheduleEditor();
 }
 function adjustAdminInstallDays(itemId, delta) {
   const data = loadAdminInstallExtensions();
   const cur = Math.max(1, Number(data[itemId] || 1));
   data[itemId] = Math.max(1, cur + delta);
   saveAdminInstallExtensions(data);
+  refreshAdminViewFromCache();
+}
+function openAdminInstallEditor(itemId) {
+  const item = (window._adminItems || []).find(i => String(i.id) === String(itemId));
+  if (!item) return;
+  const p = adminProjectLine(item);
+  const data = loadAdminInstallExtensions();
+  const days = Math.max(1, Number(data[itemId] || 1));
+  const modal = document.createElement("div");
+  modal.id = "admin-install-editor-modal";
+  modal.className = "settings-modal";
+  modal.innerHTML = `<div class="settings-modal-box" style="max-width:460px;align-items:stretch">
+    <div class="settings-modal-title">Edit Install</div>
+    <div class="settings-modal-sub">${escHtml(p.label)}<br>${escHtml(p.wo)} · ${p.installStaff.map(escHtml).join(", ")}</div>
+    <div class="admin-schedule-field">
+      <label>Install Length</label>
+      <input id="admin-install-days" type="number" min="1" step="1" value="${days}">
+    </div>
+    <div class="admin-schedule-actions">
+      <button class="admin-schedule-cancel" onclick="document.getElementById('admin-install-editor-modal')?.remove()">Cancel</button>
+      <button class="admin-schedule-save" onclick="saveAdminInstallDays('${itemId}')">Save</button>
+    </div>
+  </div>`;
+  modal.addEventListener("click", ev => { if (ev.target === modal) modal.remove(); });
+  document.getElementById("admin-install-editor-modal")?.remove();
+  document.body.appendChild(modal);
+}
+function saveAdminInstallDays(itemId) {
+  const days = Math.max(1, Number(document.getElementById("admin-install-days")?.value || 1) || 1);
+  const data = loadAdminInstallExtensions();
+  data[itemId] = days;
+  saveAdminInstallExtensions(data);
+  document.getElementById("admin-install-editor-modal")?.remove();
   refreshAdminViewFromCache();
 }
 function adminWeekDates() {
@@ -4788,19 +4886,19 @@ function renderAdminWeeklySchedule(items = [], timerHistory = []) {
         <button class="admin-day-add" onclick="addAdminScheduleEntry('${ds}')">Add</button>
       </div>
       <div class="admin-mini-meta" style="margin-bottom:7px">Chassis ${chHours}h · MS ${msHours}h</div>
-      ${manual.map(e => `<div class="admin-sched-entry ${escHtml(e.type || "build")}" onclick="removeAdminScheduleEntry('${ds}','${e.id}')">
+      ${manual.map(e => `<div class="admin-sched-entry ${escHtml(e.type || "build")}" onclick="openAdminScheduleEditor({dateStr:'${ds}',entryId:'${e.id}'})">
         <div class="admin-sched-person">${escHtml(adminDisplayPersonName(e.person))}</div>
         <div class="admin-sched-note">${escHtml(scheduleTypeLabel(e.type))} · ${escHtml(roleScheduleLabel(e.role))}${scheduleTypeCountsCapacity(e.type) ? ` · ${Number(e.hours || 0)}h` : ""}${e.note ? `<br>${escHtml(e.note)}` : ""}</div>
       </div>`).join("")}
       ${installs.map(i => {
         const p = adminProjectLine(i);
         const days = Math.max(1, Number(installExtensions[i.id] || 1));
-        return `<div class="admin-sched-entry install">
+        return `<div class="admin-sched-entry install" onclick="openAdminInstallEditor('${i.id}')">
           <div class="admin-sched-person">${p.installStaff.map(escHtml).join(", ")}</div>
           <div class="admin-sched-note">${escHtml(p.label)} · ${escHtml(p.wo)} · ${days} day${days===1?"":"s"}</div>
           <div class="admin-install-controls">
-            <button class="admin-install-btn" onclick="adjustAdminInstallDays('${i.id}',1)">Extend</button>
-            <button class="admin-install-btn" onclick="adjustAdminInstallDays('${i.id}',-1)">Shorten</button>
+            <button class="admin-install-btn" onclick="event.stopPropagation();adjustAdminInstallDays('${i.id}',1)">Extend</button>
+            <button class="admin-install-btn" onclick="event.stopPropagation();adjustAdminInstallDays('${i.id}',-1)">Shorten</button>
           </div>
         </div>`;
       }).join("")}
@@ -4826,7 +4924,7 @@ function renderAdminCommandCenter(items, sbTimers = [], sbUpdates = [], timerHis
     <div style="font-size:18px;font-weight:900">Production Command Center</div>
     <div class="admin-command-sub">Morning meeting view · live shop status</div>
   </div>
-  <div class="admin-command-grid">
+  <div class="admin-command-grid admin-command-top">
     <div class="admin-command-card">
       <div class="admin-command-title">Shipping Focus <span class="admin-command-sub">Today / Tomorrow</span></div>
       ${renderAdminShippingFocus(dueToday, dueTomorrow)}
@@ -4835,12 +4933,12 @@ function renderAdminCommandCenter(items, sbTimers = [], sbUpdates = [], timerHis
       <div class="admin-command-title">Live Builder Timers <span class="admin-command-sub">Running / Paused only</span></div>
       ${adminLiveTimerRows(sbTimers)}
     </div>
-  </div>
-  <div class="admin-command-grid">
     <div class="admin-command-card">
       <div class="admin-command-title">Average Build Times <span class="admin-command-sub">Completed timers</span></div>
       ${adminAverageBuildRows(timerHistory, sbUpdates)}
     </div>
+  </div>
+  <div class="admin-command-grid">
     <div class="admin-command-card" style="grid-column:1 / -1">
       <div class="admin-command-title">Weekly Schedule <span class="admin-command-sub">Builders + installs</span></div>
       ${renderAdminWeeklySchedule(items, timerHistory)}
