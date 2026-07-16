@@ -4922,7 +4922,7 @@ function renderAdminDesktop(items, sbTimers, sbKits, sbUpdates) {
     <table class="dt-table">
       <thead><tr><th>Project</th><th>Kitter</th><th>Time</th><th>Status</th></tr></thead>
       <tbody>
-        ${uniqueKitHistoryRows(sbKits).slice(0,20).map(k => {
+        ${latestKitHistoryRows(sbKits, 20).map(k => {
           const missing = normalizeMissingItems(k.missing_items).filter(Boolean);
           const ts = new Date(k.completed_at);
           return `<tr>
@@ -5343,7 +5343,7 @@ function renderAdminDash(items, sbTimers = [], sbKits = [], sbUpdates = []) {
       const kitsToday    = sbKitsToday;
       const kitsThisWeek = sbKitsWeek;
       /* Build kit history list from Supabase */
-      const kitterHistory = uniqueKitHistoryRows(sbKits)
+      const kitterHistory = latestKitHistoryRows(sbKits, 200)
         .filter(k => k.user_name === m.name)
         .slice(0, 10); /* last 10 */
       const histHtml = kitterHistory.length ? kitterHistory.map(k => {
@@ -6222,6 +6222,12 @@ function kitHistoryProjectKey(k) {
   return `label:${label.toLowerCase().replace(/\s+/g, " ").trim()}`;
 }
 
+function latestKitHistoryRows(kits = [], limit = 20) {
+  return [...kits]
+    .sort((a, b) => new Date(b.completed_at || 0) - new Date(a.completed_at || 0))
+    .slice(0, limit);
+}
+
 function uniqueKitHistoryRows(kits = []) {
   const seen = new Set();
   return [...kits]
@@ -7015,16 +7021,17 @@ async function kitDoneConfirmed(itemId, e) {
     }
     /* Record kit completion in deltas so admin kitting stats count it */
     const kitCardName = document.getElementById("kit-card-" + itemId)?.querySelector(".kit-name")?.textContent || itemId;
+    const kitHistoryName = woNum ? `${cleanMondayName(kitCardName)} · ${woNum}` : kitCardName;
     addDelta({
       user:     currentUser.name,
       itemId,
-      itemName: kitCardName,
+      itemName: kitHistoryName,
       colType:  "kit",
       date:     todayStr(),
       ts:       new Date().toISOString(),
     });
     /* Write to Supabase so admin sees it cross-device */
-    sbRecordKitCompletion(itemId, kitCardName, missing2).catch(()=>{});
+    sbRecordKitCompletion(itemId, kitHistoryName, missing2).catch(()=>{});
 
     /* ── Sync kit allocation to pick list in Supabase ──
        Items Pete checked = allocated, unchecked = not allocated */
