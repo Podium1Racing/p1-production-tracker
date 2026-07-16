@@ -4644,6 +4644,7 @@ function adminAverageBuildRows(timerHistory = [], sbUpdates = []) {
 
 const ADMIN_SCHEDULE_KEY = "pt_admin_week_schedule";
 const ADMIN_INSTALL_EXT_KEY = "pt_admin_install_extensions";
+const ADMIN_INSTALL_NOTES_KEY = "pt_admin_install_notes";
 let _adminShipTab = "today";
 let _adminDraggedBuilder = null;
 let _adminScheduleDraft = null;
@@ -4658,6 +4659,12 @@ function loadAdminInstallExtensions() {
 }
 function saveAdminInstallExtensions(data) {
   localStorage.setItem(ADMIN_INSTALL_EXT_KEY, JSON.stringify(data || {}));
+}
+function loadAdminInstallNotes() {
+  try { return JSON.parse(localStorage.getItem(ADMIN_INSTALL_NOTES_KEY) || "{}"); } catch(e) { return {}; }
+}
+function saveAdminInstallNotes(data) {
+  localStorage.setItem(ADMIN_INSTALL_NOTES_KEY, JSON.stringify(data || {}));
 }
 function chooseAdminScheduleType(personName) {
   return "build";
@@ -4807,7 +4814,9 @@ function openAdminInstallEditor(itemId) {
   if (!item) return;
   const p = adminProjectLine(item);
   const data = loadAdminInstallExtensions();
+  const notes = loadAdminInstallNotes();
   const days = Math.max(1, Number(data[itemId] || 1));
+  const note = notes[itemId] || "";
   const modal = document.createElement("div");
   modal.id = "admin-install-editor-modal";
   modal.className = "settings-modal";
@@ -4817,6 +4826,10 @@ function openAdminInstallEditor(itemId) {
     <div class="admin-schedule-field">
       <label>Install Length</label>
       <input id="admin-install-days" type="number" min="1" step="1" value="${days}">
+    </div>
+    <div class="admin-schedule-field" style="margin-top:10px">
+      <label>Install Note</label>
+      <input id="admin-install-note" value="${escHtml(note)}" placeholder="Example: Mason out on install, customer site, travel note...">
     </div>
     <div class="admin-schedule-actions">
       <button class="admin-schedule-cancel" onclick="document.getElementById('admin-install-editor-modal')?.remove()">Cancel</button>
@@ -4832,6 +4845,9 @@ function saveAdminInstallDays(itemId) {
   const data = loadAdminInstallExtensions();
   data[itemId] = days;
   saveAdminInstallExtensions(data);
+  const notes = loadAdminInstallNotes();
+  notes[itemId] = document.getElementById("admin-install-note")?.value?.trim() || "";
+  saveAdminInstallNotes(notes);
   document.getElementById("admin-install-editor-modal")?.remove();
   refreshAdminViewFromCache();
 }
@@ -4896,6 +4912,7 @@ function renderLaborChip(entry, dateStr) {
 function renderAdminLaborCalendar(items = [], timerHistory = []) {
   const data = loadAdminSchedule();
   const installExtensions = loadAdminInstallExtensions();
+  const installNotes = loadAdminInstallNotes();
   const dates = adminLaborDates();
   const lines = [
     { key:"chassis", label:"Chassis" },
@@ -4921,6 +4938,7 @@ function renderAdminLaborCalendar(items = [], timerHistory = []) {
         role: "install",
         hours: 0,
         note: compactProjectLabel(item),
+        installNote: installNotes[item.id] || "",
         _mondayInstall: true,
         _itemId: item.id,
       }));
@@ -4935,7 +4953,7 @@ function renderAdminLaborCalendar(items = [], timerHistory = []) {
       return `<div class="labor-cell" ondragover="adminDragOverDay(event)" ondragleave="adminDragLeaveDay(event)" ondrop="adminDropBuilder(event,'${ds}')">
         <div class="labor-total">${total}h</div>
         ${entries.map(e => e._mondayInstall
-          ? `<div class="labor-chip install" onclick="openAdminInstallEditor('${e._itemId}')"><div class="labor-chip-name">${escHtml(e.person)}</div><div style="font-size:9px;color:var(--muted);margin-top:2px">${escHtml(e.note || "Install")}</div></div>`
+          ? `<div class="labor-chip install" onclick="openAdminInstallEditor('${e._itemId}')"><div class="labor-chip-name">${escHtml(e.person)}</div><div style="font-size:9px;color:var(--muted);margin-top:2px">${escHtml(e.note || "Install")}</div>${e.installNote ? `<div style="font-size:9px;color:#fff;margin-top:3px;line-height:1.25">${escHtml(e.installNote)}</div>` : ""}</div>`
           : renderLaborChip(e, ds)
         ).join("")}
       </div>`;
@@ -4965,6 +4983,7 @@ function renderAdminLaborCalendar(items = [], timerHistory = []) {
   ${upcomingInstalls}`;
 }
 function renderUpcomingInstalls(items = [], visibleDates = []) {
+  const installNotes = loadAdminInstallNotes();
   const visible = new Set((visibleDates || []).map(ymd));
   const installs = (items || [])
     .filter(i => parseShipDate(i) && parsePeople(i, COL.install_staff).length)
@@ -4979,7 +4998,7 @@ function renderUpcomingInstalls(items = [], visibleDates = []) {
         const p = adminProjectLine(i);
         return `<div class="upcoming-install-card" onclick="openAdminInstallEditor('${i.id}')">
           <div class="admin-mini-title">${escHtml(p.label)}</div>
-          <div class="admin-mini-meta">${escHtml(p.ship)} · ${escHtml(p.wo)}<br>${p.installStaff.map(escHtml).join(", ")}</div>
+          <div class="admin-mini-meta">${escHtml(p.ship)} · ${escHtml(p.wo)}<br>${p.installStaff.map(escHtml).join(", ")}${installNotes[i.id] ? `<br><span style="color:#fff">${escHtml(installNotes[i.id])}</span>` : ""}</div>
         </div>`;
       }).join("")}
     </div>
@@ -5035,9 +5054,10 @@ function renderAdminWeeklySchedule(items = [], timerHistory = []) {
       ${installs.map(i => {
         const p = adminProjectLine(i);
         const days = Math.max(1, Number(installExtensions[i.id] || 1));
+        const note = installNotes[i.id] || "";
         return `<div class="admin-sched-entry install" onclick="openAdminInstallEditor('${i.id}')">
           <div class="admin-sched-person">${p.installStaff.map(escHtml).join(", ")}</div>
-          <div class="admin-sched-note">${escHtml(p.label)} · ${escHtml(p.wo)} · ${days} day${days===1?"":"s"}</div>
+          <div class="admin-sched-note">${escHtml(p.label)} · ${escHtml(p.wo)} · ${days} day${days===1?"":"s"}${note ? `<br><span style="color:#fff">${escHtml(note)}</span>` : ""}</div>
           <div class="admin-install-controls">
             <button class="admin-install-btn" onclick="event.stopPropagation();adjustAdminInstallDays('${i.id}',1)">Extend</button>
             <button class="admin-install-btn" onclick="event.stopPropagation();adjustAdminInstallDays('${i.id}',-1)">Shorten</button>
