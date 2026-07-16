@@ -4610,6 +4610,7 @@ async function loadAdminData() {
     const board = boardRes.data.boards[0];
     discoverColumns(board.columns);
     const items = board.items_page.items;
+    await hydrateKitHistoryBoardItems(sbKits, items);
     window._sbBuildUpdates = sbUpdates || [];
     if (isDesktop()) {
       renderAdminDesktop(items, sbTimers, sbKits, sbUpdates || []);
@@ -4922,7 +4923,7 @@ function renderAdminDesktop(items, sbTimers, sbKits, sbUpdates) {
     <table class="dt-table">
       <thead><tr><th>Project</th><th>Kitter</th><th>Time</th><th>Status</th></tr></thead>
       <tbody>
-        ${latestKitHistoryRows(sbKits, 20).map(k => {
+        ${uniqueKitHistoryRows(sbKits).slice(0,20).map(k => {
           const missing = normalizeMissingItems(k.missing_items).filter(Boolean);
           const ts = new Date(k.completed_at);
           return `<tr>
@@ -5343,7 +5344,7 @@ function renderAdminDash(items, sbTimers = [], sbKits = [], sbUpdates = []) {
       const kitsToday    = sbKitsToday;
       const kitsThisWeek = sbKitsWeek;
       /* Build kit history list from Supabase */
-      const kitterHistory = latestKitHistoryRows(sbKits, 200)
+      const kitterHistory = uniqueKitHistoryRows(sbKits)
         .filter(k => k.user_name === m.name)
         .slice(0, 10); /* last 10 */
       const histHtml = kitterHistory.length ? kitterHistory.map(k => {
@@ -6191,17 +6192,44 @@ function getWoFromText(text) {
   return m ? m[1].toUpperCase() : "";
 }
 
+async function hydrateKitHistoryBoardItems(kits = [], currentItems = []) {
+  const currentIds = new Set((currentItems || []).map(item => String(item.id)));
+  const ids = [...new Set((kits || [])
+    .map(k => String(k?.item_id || "").trim())
+    .filter(id => /^\d{8,}$/.test(id) && !currentIds.has(id))
+  )].slice(0, 100);
+  window._kitHistoryItemById = window._kitHistoryItemById || {};
+  if (!ids.length) return;
+  try {
+    const res = await mondayQuery(`{
+      items(ids:[${ids.join(",")}]) {
+        id name
+        group { id title }
+        column_values { id type text value }
+      }
+    }`);
+    (res?.data?.items || []).forEach(item => {
+      window._kitHistoryItemById[String(item.id)] = item;
+    });
+  } catch(e) {
+    console.warn("Could not hydrate shipped kit history items:", e.message);
+  }
+}
+
 function findKnownBoardItemForKitCompletion(k) {
   const rows = getKnownBoardItems();
   const itemId = String(k?.item_id || "");
   const fromId = rows.find(item => String(item.id) === itemId);
   if (fromId) return fromId;
+  const fromHistory = window._kitHistoryItemById?.[itemId];
+  if (fromHistory) return fromHistory;
   const wo = getWoFromText(k?.item_id) || getWoFromText(k?.item_name);
   const fromWo = wo ? findKnownBoardItemByWo(wo) : null;
   if (fromWo) return fromWo;
   const savedName = cleanMondayName(String(k?.item_name || "").replace(/\bW\d{4,}\b/ig, "").trim()).toLowerCase();
   if (!savedName || /^\d+$/.test(savedName)) return null;
-  return rows.find(item => cleanMondayName(item?.name || "").toLowerCase() === savedName) || null;
+  const historyRows = Object.values(window._kitHistoryItemById || {});
+  return [...rows, ...historyRows].find(item => cleanMondayName(item?.name || "").toLowerCase() === savedName) || null;
 }
 
 function kitHistoryProjectLabel(k) {
