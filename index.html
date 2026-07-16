@@ -6197,7 +6197,11 @@ function findKnownBoardItemForKitCompletion(k) {
   const fromId = rows.find(item => String(item.id) === itemId);
   if (fromId) return fromId;
   const wo = getWoFromText(k?.item_id) || getWoFromText(k?.item_name);
-  return wo ? findKnownBoardItemByWo(wo) : null;
+  const fromWo = wo ? findKnownBoardItemByWo(wo) : null;
+  if (fromWo) return fromWo;
+  const savedName = cleanMondayName(String(k?.item_name || "").replace(/\bW\d{4,}\b/ig, "").trim()).toLowerCase();
+  if (!savedName || /^\d+$/.test(savedName)) return null;
+  return rows.find(item => cleanMondayName(item?.name || "").toLowerCase() === savedName) || null;
 }
 
 function kitHistoryProjectLabel(k) {
