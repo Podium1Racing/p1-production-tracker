@@ -4863,6 +4863,8 @@ function adminDropBuilder(e, dateStr, lineKey = null) {
 }
 function adjustLaborHours(dateStr, person, role, delta, entryId = null, e = null) {
   if (e) { e.stopPropagation(); e.preventDefault(); }
+  const reason = prompt(delta < 0 ? "Reason for reduced hours?" : "Reason for extra hours?", delta < 0 ? "Leaving early" : "Extra hours");
+  if (reason === null) return;
   const data = loadAdminSchedule();
   if (!data[dateStr]) data[dateStr] = [];
   let entry = entryId ? data[dateStr].find(x => String(x.id) === String(entryId)) : null;
@@ -4875,22 +4877,24 @@ function adjustLaborHours(dateStr, person, role, delta, entryId = null, e = null
       role,
       type: "build",
       hours: baseHours,
-      note: "Adjusted from default",
+      note: reason.trim() || "Adjusted from default",
     };
     data[dateStr].push(entry);
   }
   entry.hours = Math.max(0, roundUnits(Number(entry.hours || 0) + delta));
-  if (!entry.note) entry.note = "Adjusted hours";
+  entry.note = reason.trim() || entry.note || "Adjusted hours";
   saveAdminSchedule(data);
   refreshAdminViewFromCache();
 }
-function openAdminScheduleEditor({ dateStr, person = "", role = CHASSIS_ROLE, entryId = null } = {}) {
+function openAdminScheduleEditor({ dateStr, person = "", role = CHASSIS_ROLE, entryId = null, hours = null, note = "", type: requestedType = "build" } = {}) {
   const data = loadAdminSchedule();
   const existing = entryId ? (data[dateStr] || []).find(e => String(e.id) === String(entryId)) : null;
   _adminScheduleDraft = { dateStr, entryId };
   const memberOptions = TEAM.map(m => `<option value="${escHtml(m.name)}" ${((existing?.person || person) === m.name) ? "selected" : ""}>${escHtml(m.name)}</option>`).join("");
-  const type = existing?.type || "build";
+  const type = existing?.type || requestedType || "build";
   const useRole = existing?.role || role || CHASSIS_ROLE;
+  const useHours = Number(existing?.hours ?? hours ?? 8);
+  const useNote = existing?.note || note || "";
   const modal = document.createElement("div");
   modal.id = "admin-schedule-editor-modal";
   modal.className = "settings-modal";
@@ -4923,11 +4927,11 @@ function openAdminScheduleEditor({ dateStr, person = "", role = CHASSIS_ROLE, en
       </div>
       <div class="admin-schedule-field">
         <label>Build Hours</label>
-        <input id="admin-sched-hours" type="number" min="0" step="0.5" value="${Number(existing?.hours ?? 8)}">
+        <input id="admin-sched-hours" type="number" min="0" step="0.5" value="${useHours}">
       </div>
       <div class="admin-schedule-field full">
-        <label>Note / Install Name</label>
-        <input id="admin-sched-note" value="${escHtml(existing?.note || "")}" placeholder="Install name, off reason, notes...">
+        <label>Reason / Note</label>
+        <input id="admin-sched-note" value="${escHtml(useNote)}" placeholder="Sick, leaving early, extra hours, install name...">
       </div>
     </div>
     <div class="admin-schedule-actions">
@@ -5114,7 +5118,7 @@ function renderLaborChip(entry, dateStr) {
   const line = scheduleLineForEntry(entry);
   const lineLabel = line === "ms" ? "MS Builder" : line === "chassis" ? "Chassis Builder" : line === "install" ? "Install" : "PTO / Off";
   const click = entry._defaultSchedule
-    ? `openAdminScheduleEditor({dateStr:'${dateStr}',person:'${escHtml(entry.person)}',role:'${entry.role}'})`
+    ? `openAdminScheduleEditor({dateStr:'${dateStr}',person:'${escHtml(entry.person)}',role:'${entry.role}',hours:${Number(entry.hours || 0)},note:'Default schedule',type:'build'})`
     : `openAdminScheduleEditor({dateStr:'${dateStr}',entryId:'${entry.id}'})`;
   const adjustable = scheduleTypeCountsCapacity(entry.type);
   const entryRef = entry._defaultSchedule ? "null" : `'${entry.id}'`;
