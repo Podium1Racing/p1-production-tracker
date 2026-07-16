@@ -4922,11 +4922,11 @@ function renderAdminDesktop(items, sbTimers, sbKits, sbUpdates) {
     <table class="dt-table">
       <thead><tr><th>Project</th><th>Kitter</th><th>Time</th><th>Status</th></tr></thead>
       <tbody>
-        ${sbKits.slice(0,20).map(k => {
-          const missing = (k.missing_items||[]).filter(Boolean);
+        ${uniqueKitHistoryRows(sbKits).slice(0,20).map(k => {
+          const missing = normalizeMissingItems(k.missing_items).filter(Boolean);
           const ts = new Date(k.completed_at);
           return `<tr>
-            <td style="font-weight:600">${escHtml(k.item_name||k.item_id)}</td>
+            <td style="font-weight:600">${escHtml(kitHistoryProjectLabel(k))}</td>
             <td style="color:var(--muted)">${escHtml(k.user_name||"")}</td>
             <td style="color:var(--muted2);font-size:12px">${ts.toLocaleDateString("en-US",{month:"short",day:"numeric"})} ${ts.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"})}</td>
             <td>${missing.length
@@ -5343,17 +5343,17 @@ function renderAdminDash(items, sbTimers = [], sbKits = [], sbUpdates = []) {
       const kitsToday    = sbKitsToday;
       const kitsThisWeek = sbKitsWeek;
       /* Build kit history list from Supabase */
-      const kitterHistory = sbKits
+      const kitterHistory = uniqueKitHistoryRows(sbKits)
         .filter(k => k.user_name === m.name)
         .slice(0, 10); /* last 10 */
       const histHtml = kitterHistory.length ? kitterHistory.map(k => {
         const ts = new Date(k.completed_at);
         const timeStr = ts.toLocaleDateString("en-US",{month:"short",day:"numeric"}) + " " +
                         ts.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"});
-        const missing = (k.missing_items||[]).filter(Boolean);
+        const missing = normalizeMissingItems(k.missing_items).filter(Boolean);
         return `<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--border)">
           <div>
-            <div style="font-size:12px;font-weight:600">${escHtml(k.item_name||k.item_id)}</div>
+            <div style="font-size:12px;font-weight:600">${escHtml(kitHistoryProjectLabel(k))}</div>
             ${missing.length ? `<div style="font-size:10px;color:var(--red);margin-top:2px">Missing: ${missing.map(escHtml).join(", ")}</div>` : `<div style="font-size:10px;color:var(--green);margin-top:2px">✓ Full kit</div>`}
           </div>
           <div style="font-size:10px;color:var(--muted2);flex-shrink:0;margin-left:8px;text-align:right">${timeStr}</div>
@@ -6184,6 +6184,44 @@ const SERVICE_KEYWORDS_PL = ["installation service","install service","delivery 
 /* Strip leading number prefix from Monday item names e.g. "224310 Joe Lynch" → "Joe Lynch" */
 function cleanMondayName(name) {
   return (name || "").replace(/^\d+\s+/, "").trim();
+}
+
+function getWoFromText(text) {
+  const m = String(text || "").match(/\b(W\d{4,})\b/i);
+  return m ? m[1].toUpperCase() : "";
+}
+
+function findKnownBoardItemForKitCompletion(k) {
+  const rows = getKnownBoardItems();
+  const itemId = String(k?.item_id || "");
+  const fromId = rows.find(item => String(item.id) === itemId);
+  if (fromId) return fromId;
+  const wo = getWoFromText(k?.item_id) || getWoFromText(k?.item_name);
+  return wo ? findKnownBoardItemByWo(wo) : null;
+}
+
+function kitHistoryProjectLabel(k) {
+  const mondayItem = findKnownBoardItemForKitCompletion(k);
+  const wo = getWoFromText(k?.item_id) || getWoFromText(k?.item_name) || (mondayItem ? getWoNumberFromItem(mondayItem) : "");
+  const rawName = String(k?.item_name || "").trim();
+  const mondayName = cleanMondayName(mondayItem?.name || "");
+  const savedName = cleanMondayName(rawName.replace(/\bW\d{4,}\b/ig, "").trim());
+  const customer = mondayName || (savedName && !/^\d+$/.test(savedName) ? savedName : "");
+  if (customer && wo) return `${customer} · ${wo}`;
+  return customer || wo || rawName || String(k?.item_id || "");
+}
+
+function uniqueKitHistoryRows(kits = []) {
+  const seen = new Set();
+  return kits.filter(k => {
+    const missing = normalizeMissingItems(k.missing_items).join("|");
+    const ts = k.completed_at ? new Date(k.completed_at).getTime() : "";
+    const minute = Number.isFinite(ts) ? Math.floor(ts / 60000) : String(k.completed_at || "");
+    const key = `${k.user_name || ""}|${kitHistoryProjectLabel(k)}|${minute}|${missing}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 /* Identify leads (Thomas=MS lead, Sepan=Chassis lead) */
