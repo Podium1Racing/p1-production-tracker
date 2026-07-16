@@ -721,6 +721,8 @@ input.photo-file-inp { display:none; }
 .labor-chip.pto,.labor-chip.off { background:rgba(239,68,68,.16); border-color:rgba(239,68,68,.34); color:#ffe4e4; }
 .labor-chip-name { white-space:normal; overflow:visible; text-overflow:clip; line-height:1.25; padding-right:22px; }
 .labor-chip-hours { float:right; color:#fff; opacity:.9; }
+.labor-chip-adjust { display:flex; gap:5px; margin-top:6px; }
+.labor-chip-adjust button { width:24px; height:20px; border:none; border-radius:6px; background:rgba(0,0,0,.24); color:#fff; font-size:13px; font-weight:950; cursor:pointer; line-height:1; }
 .labor-pool { margin-top:14px; border:1px solid var(--border); border-radius:14px; background:var(--surface2); padding:12px; }
 .labor-pool-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:8px; }
 .labor-pool-person { font-size:12px; font-weight:900; }
@@ -4805,6 +4807,29 @@ function adminDropBuilder(e, dateStr) {
   if (!payload?.name) return;
   openAdminScheduleEditor({ dateStr, person: payload.name, role: payload.role });
 }
+function adjustLaborHours(dateStr, person, role, delta, entryId = null, e = null) {
+  if (e) { e.stopPropagation(); e.preventDefault(); }
+  const data = loadAdminSchedule();
+  if (!data[dateStr]) data[dateStr] = [];
+  let entry = entryId ? data[dateStr].find(x => String(x.id) === String(entryId)) : null;
+  if (!entry) {
+    const member = TEAM.find(m => m.name === person) || { name: person, role };
+    const baseHours = defaultHoursForDate(member, new Date(dateStr + "T12:00:00"));
+    entry = {
+      id: Date.now(),
+      person,
+      role,
+      type: "build",
+      hours: baseHours,
+      note: "Adjusted from default",
+    };
+    data[dateStr].push(entry);
+  }
+  entry.hours = Math.max(0, roundUnits(Number(entry.hours || 0) + delta));
+  if (!entry.note) entry.note = "Adjusted hours";
+  saveAdminSchedule(data);
+  refreshAdminViewFromCache();
+}
 function openAdminScheduleEditor({ dateStr, person = "", role = CHASSIS_ROLE, entryId = null } = {}) {
   const data = loadAdminSchedule();
   const existing = entryId ? (data[dateStr] || []).find(e => String(e.id) === String(entryId)) : null;
@@ -5036,10 +5061,16 @@ function renderLaborChip(entry, dateStr) {
   const click = entry._defaultSchedule
     ? `openAdminScheduleEditor({dateStr:'${dateStr}',person:'${escHtml(entry.person)}',role:'${entry.role}'})`
     : `openAdminScheduleEditor({dateStr:'${dateStr}',entryId:'${entry.id}'})`;
+  const adjustable = scheduleTypeCountsCapacity(entry.type);
+  const entryRef = entry._defaultSchedule ? "null" : `'${entry.id}'`;
   return `<div class="labor-chip ${line}" onclick="${click}">
     <span class="labor-chip-hours">${scheduleTypeCountsCapacity(entry.type) ? `${Number(entry.hours || 0)}h` : ""}</span>
     <div class="labor-chip-name">${escHtml(adminDisplayPersonName(entry.person))}</div>
     ${(entry.note || "").trim() ? `<div style="font-size:9px;color:#fff;margin-top:3px;line-height:1.25">${escHtml(entry.note)}</div>` : ""}
+    ${adjustable ? `<div class="labor-chip-adjust">
+      <button onclick="adjustLaborHours('${dateStr}','${escHtml(entry.person)}','${entry.role}',-1,${entryRef},event)">−</button>
+      <button onclick="adjustLaborHours('${dateStr}','${escHtml(entry.person)}','${entry.role}',1,${entryRef},event)">+</button>
+    </div>` : ""}
   </div>`;
 }
 function renderAdminLaborCalendar(items = [], timerHistory = []) {
