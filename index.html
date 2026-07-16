@@ -4378,7 +4378,27 @@ async function submitGate() {
 
 buildNameList();
 
-function renderAdminStreamlineWidgets(items, sbTimers = [], sbKits = [], sbUpdates = []) {
+function buildAllocationSummaryByWo(items = []) {
+  const summary = {};
+  (items || []).forEach(row => {
+    const wo = row?.wo_number;
+    if (!wo) return;
+    if (!summary[wo]) summary[wo] = { total: 0, allocated: 0 };
+    summary[wo].total++;
+    if (row.allocated) summary[wo].allocated++;
+  });
+  return summary;
+}
+
+function isAllocationOpenForAdmin(item, allocationSummaryByWo = {}) {
+  const wo = getWoNumberFromItem(item);
+  if (!wo) return true;
+  const state = allocationSummaryByWo[wo];
+  if (!state || !state.total) return true;
+  return state.allocated < state.total;
+}
+
+function renderAdminStreamlineWidgets(items, sbTimers = [], sbKits = [], sbUpdates = [], allocationSummaryByWo = {}) {
   const today = todayStr();
   const isOpenWorkflowItem = (item) => {
     const g = (item.group?.title || "").toLowerCase();
@@ -4401,16 +4421,18 @@ function renderAdminStreamlineWidgets(items, sbTimers = [], sbKits = [], sbUpdat
   const buildTodaySub = progressUnitsToday > 0 ? "Progress credit" : "Completed MS or Chassis";
   const kitsToday = (sbKits || []).filter(k => k.date_str === today).length;
   const running = (sbTimers || []).filter(t => t.state === "running").length;
-  const partsPulled = items.filter(i => (i.group?.title || "") === PARTS_PULLED);
-  const standBy = items.filter(i => (i.group?.title || "").includes("Stand By"));
-  const qc = items.filter(i => (i.group?.title || "").toLowerCase().includes("quality control"));
+  const allocationOpenItems = items.filter(i => isAllocationOpenForAdmin(i, allocationSummaryByWo));
+  const partsPulled = allocationOpenItems.filter(i => (i.group?.title || "") === PARTS_PULLED);
+  const standBy = allocationOpenItems.filter(i => (i.group?.title || "").includes("Stand By"));
+  const qc = allocationOpenItems.filter(i => (i.group?.title || "").toLowerCase().includes("quality control"));
   const overdue = items.filter(i => {
     const d = parseShipDate(i);
-    return d && daysUntil(d) < 0 && isOpenWorkflowItem(i);
+    return d && daysUntil(d) < 0 && isOpenWorkflowItem(i) && isAllocationOpenForAdmin(i, allocationSummaryByWo);
   }).sort(compareScores);
   const unassigned = items.filter(i => {
     const g = i.group?.title || "";
     if (!g.includes("Building") && g !== PARTS_PULLED && !g.includes("Stand By")) return false;
+    if (!isAllocationOpenForAdmin(i, allocationSummaryByWo)) return false;
     return !parsePeople(i, COL.ms_who).length && !parsePeople(i, COL.chassis_who).length;
   }).sort(compareScores);
 
@@ -4590,7 +4612,7 @@ async function loadAdminData() {
       d.setDate(d.getDate() - (isDesktop() ? 30 : 7));
       return d.toISOString().slice(0,10);
     })();
-    const [boardRes, sbTimers, sbKits, sbUpdates] = await Promise.all([
+    const [boardRes, sbTimers, sbKits, sbUpdates, sbPickItems] = await Promise.all([
       mondayQuery(`{
         boards(ids:[${BOARD_ID}]) {
           columns { id title type }
@@ -4606,16 +4628,18 @@ async function loadAdminData() {
       sbGetAllTimers(),
       sbGetKitCompletions(kitSince),
       sbFetch("build_updates?order=created_at.desc&limit=500",{method:"GET",headers:{"Prefer":"return=representation"}}),
+      sbFetch("picklist_items?select=wo_number,allocated&limit=5000",{method:"GET",headers:{"Prefer":"return=representation"}}),
     ]);
     const board = boardRes.data.boards[0];
     discoverColumns(board.columns);
     const items = board.items_page.items;
+    const allocationSummaryByWo = buildAllocationSummaryByWo(sbPickItems || []);
     await hydrateKitHistoryBoardItems(sbKits, items);
     window._sbBuildUpdates = sbUpdates || [];
     if (isDesktop()) {
-      renderAdminDesktop(items, sbTimers, sbKits, sbUpdates || []);
+      renderAdminDesktop(items, sbTimers, sbKits, sbUpdates || [], allocationSummaryByWo);
     } else {
-      renderAdminDash(items, sbTimers, sbKits, sbUpdates || []);
+      renderAdminDash(items, sbTimers, sbKits, sbUpdates || [], allocationSummaryByWo);
     }
     /* Subscribe to real-time timer updates */
     sbSubscribeAdminRealtime((record) => {
@@ -4638,7 +4662,7 @@ function getDateRange(range) {
   return start.toISOString().slice(0,10);
 }
 
-function renderAdminDesktop(items, sbTimers, sbKits, sbUpdates) {
+function renderAdminDesktop(items, sbTimers, sbKits, sbUpdates, allocationSummaryByWo = {}) {
   window._adminItems    = items;
   window._sbTimers      = sbTimers;
   window._sbKits        = sbKits;
@@ -4761,7 +4785,7 @@ function renderAdminDesktop(items, sbTimers, sbKits, sbUpdates) {
       <button class="seg-btn ${range==="month"?"active":""}" onclick="setAdminRange('month')">This Month</button>
     </div>
   </div>
-  ${renderAdminStreamlineWidgets(items, sbTimers, sbKits, sbUpdates)}
+  ${renderAdminStreamlineWidgets(items, sbTimers, sbKits, sbUpdates, allocationSummaryByWo)}
 
   <!-- Board Health KPIs -->
   <div class="dt-grid">
@@ -4948,7 +4972,7 @@ function setAdminRange(r) {
   loadAdminData();
 }
 
-function renderAdminDash(items, sbTimers = [], sbKits = [], sbUpdates = []) {
+function renderAdminDash(items, sbTimers = [], sbKits = [], sbUpdates = [], allocationSummaryByWo = {}) {
   window._adminItems = items; /* store for time log item name lookup */
   window._sbTimers   = sbTimers;
   window._sbKits     = sbKits;
@@ -5139,7 +5163,7 @@ function renderAdminDash(items, sbTimers = [], sbKits = [], sbUpdates = []) {
   const maxWeekDone = Math.max(1, ...ranked.map(m => weekStats[m.name].weekDone));
 
   /* ── BUILD HTML ── */
-  let html = renderAdminStreamlineWidgets(items, sbTimers, sbKits, sbUpdates);
+  let html = renderAdminStreamlineWidgets(items, sbTimers, sbKits, sbUpdates, allocationSummaryByWo);
 
   /* Board Health */
   html += `
