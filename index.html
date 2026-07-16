@@ -703,7 +703,7 @@ input.photo-file-inp { display:none; }
 .admin-schedule-save { background:var(--accent); color:#fff; }
 .admin-schedule-cancel { background:var(--surface2); color:var(--muted); border:1px solid var(--border2) !important; }
 .labor-calendar { border:1px solid var(--border); border-radius:14px; overflow:auto; background:var(--surface2); }
-.labor-grid { display:grid; min-width:980px; grid-template-columns:150px repeat(7, minmax(110px, 1fr)); }
+.labor-grid { display:grid; min-width:1180px; grid-template-columns:150px repeat(7, minmax(145px, 1fr)); }
 .labor-cell { border-right:1px solid var(--border); border-bottom:1px solid var(--border); min-height:92px; padding:8px; position:relative; }
 .labor-head { min-height:auto; background:rgba(255,255,255,.035); font-size:11px; font-weight:900; text-align:center; color:var(--muted); }
 .labor-head:first-child { text-align:left; }
@@ -713,13 +713,13 @@ input.photo-file-inp { display:none; }
 .labor-line-label.install { background:rgba(154,52,18,.28); }
 .labor-line-label.pto { background:rgba(127,29,29,.32); }
 .labor-total { position:absolute; top:7px; right:8px; font-size:9px; color:var(--muted); font-weight:800; }
-.labor-chip { border:1px solid rgba(255,255,255,.12); border-radius:8px; padding:6px 7px; margin:18px 0 4px; font-size:10px; font-weight:850; cursor:pointer; background:rgba(255,255,255,.04); }
+.labor-chip { border:1px solid rgba(255,255,255,.12); border-radius:8px; padding:7px 8px; margin:18px 0 4px; font-size:10px; font-weight:850; cursor:pointer; background:rgba(255,255,255,.04); }
 .labor-chip + .labor-chip { margin-top:5px; }
 .labor-chip.chassis { background:rgba(14,165,233,.18); border-color:rgba(14,165,233,.35); color:#dff7ff; }
 .labor-chip.ms { background:rgba(16,185,129,.16); border-color:rgba(16,185,129,.34); color:#dcfff3; }
 .labor-chip.install { background:rgba(249,115,22,.18); border-color:rgba(249,115,22,.34); color:#fff1e6; }
 .labor-chip.pto,.labor-chip.off { background:rgba(239,68,68,.16); border-color:rgba(239,68,68,.34); color:#ffe4e4; }
-.labor-chip-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.labor-chip-name { white-space:normal; overflow:visible; text-overflow:clip; line-height:1.25; padding-right:22px; }
 .labor-chip-hours { float:right; color:#fff; opacity:.9; }
 .labor-pool { margin-top:14px; border:1px solid var(--border); border-radius:14px; background:var(--surface2); padding:12px; }
 .labor-pool-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:8px; }
@@ -4938,7 +4938,7 @@ function renderAdminLaborCalendar(items = [], timerHistory = []) {
         role: "install",
         hours: 0,
         note: compactProjectLabel(item),
-        installNote: installNotes[item.id] || "",
+        installNote: installNotes[item.id] || matchingManualInstallNote(entriesByDay[ds], person),
         _mondayInstall: true,
         _itemId: item.id,
       }));
@@ -4981,6 +4981,15 @@ function renderAdminLaborCalendar(items = [], timerHistory = []) {
     <div class="labor-pool-grid">${poolRows}</div>
   </div>
   ${upcomingInstalls}`;
+}
+function matchingManualInstallNote(entries = [], person = "") {
+  const target = adminDisplayPersonName(person).toLowerCase();
+  const match = (entries || []).find(e =>
+    e.type === "install" &&
+    adminDisplayPersonName(e.person).toLowerCase() === target &&
+    (e.note || "").trim()
+  );
+  return match?.note || "";
 }
 function renderUpcomingInstalls(items = [], visibleDates = []) {
   const installNotes = loadAdminInstallNotes();
