@@ -1135,7 +1135,7 @@ input.photo-file-inp { display:none; }
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
         Pick Lists
       </button>
-      <button class="admin-refresh" onclick="openDefaultHoursEditor()" style="border-color:rgba(16,185,129,0.4);color:var(--green)">
+      <button class="admin-refresh" onclick="openWeeklyScheduleCalendar()" style="border-color:rgba(16,185,129,0.4);color:var(--green)">
         Weekly Schedule
       </button>
       <button class="admin-refresh" id="admin-desktop-toggle" onclick="toggleAdminDesktopMode()">
@@ -5313,7 +5313,7 @@ function renderAdminCommandCenter(items, sbTimers = [], sbUpdates = [], timerHis
     </div>
   </div>
   <div class="admin-command-grid">
-    <div class="admin-command-card" style="grid-column:1 / -1">
+    <div class="admin-command-card" id="admin-weekly-calendar-section" style="grid-column:1 / -1">
       <div class="admin-command-title">Weekly Schedule <span class="admin-command-sub">Builders + installs</span></div>
       ${renderAdminWeeklySchedule(items, timerHistory)}
     </div>
@@ -5535,6 +5535,17 @@ function toggleAdminDesktopMode() {
   localStorage.setItem("pt_admin_desktop_mode", adminDesktopModeOn() ? "0" : "1");
   applyAdminDesktopMode();
   if (window._adminItems) loadAdminData();
+}
+function openWeeklyScheduleCalendar() {
+  if (!adminDesktopModeOn()) {
+    localStorage.setItem("pt_admin_desktop_mode", "1");
+    applyAdminDesktopMode();
+    loadAdminData().then(() => {
+      document.getElementById("admin-weekly-calendar-section")?.scrollIntoView({ behavior:"smooth", block:"start" });
+    });
+    return;
+  }
+  document.getElementById("admin-weekly-calendar-section")?.scrollIntoView({ behavior:"smooth", block:"start" });
 }
 function isDesktop() {
   return adminDesktopModeOn() || (window.innerWidth >= 900 && !('ontouchstart' in window) && navigator.maxTouchPoints === 0);
