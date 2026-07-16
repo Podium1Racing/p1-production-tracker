@@ -580,6 +580,11 @@ input.photo-file-inp { display:none; }
 .admin-title { font-size:15px; font-weight:700; }
 .admin-sub   { font-size:11px; color:var(--muted); }
 .admin-content { flex:1; padding:14px; overflow-y:auto; padding-bottom:36px; }
+#screen-admin.admin-desktop-mode .admin-content { max-width:1680px; width:100%; margin:0 auto; padding:22px 28px 44px; box-sizing:border-box; }
+#screen-admin.admin-desktop-mode .admin-command-grid { grid-template-columns:1.15fr .85fr; }
+#screen-admin.admin-desktop-mode .admin-planner { grid-template-columns:280px 1fr; }
+#screen-admin.admin-desktop-mode .admin-schedule-grid { grid-template-columns:repeat(5,minmax(230px,1fr)); }
+#screen-admin.admin-desktop-mode .admin-day-card { min-height:360px; }
 .health-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
 .health-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); padding:13px 14px; }
 .health-val  { font-size:26px; font-weight:800; line-height:1; margin-bottom:4px; }
@@ -1084,6 +1089,9 @@ input.photo-file-inp { display:none; }
       <button class="admin-refresh" onclick="openPickListScreen()" style="border-color:rgba(224,32,32,0.4);color:var(--accent)">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
         Pick Lists
+      </button>
+      <button class="admin-refresh" id="admin-desktop-toggle" onclick="toggleAdminDesktopMode()">
+        Desktop View
       </button>
       <button class="switch-btn" onclick="doAdminLogout()">Exit</button>
       <button class="settings-icon-btn" onclick="openSettings()" aria-label="Settings">
@@ -2631,6 +2639,7 @@ function showScreen(id) {
   if (!next) return;
   document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
   next.classList.add("active");
+  if (id === "screen-admin") applyAdminDesktopMode();
   updateBottomNav(id);
 }
 
@@ -4795,7 +4804,7 @@ function renderAdminWeeklySchedule(items = [], timerHistory = []) {
           </div>
         </div>`;
       }).join("")}
-      ${!manual.length && !installs.length ? `<div class="admin-mini-meta">No schedule entered.</div>` : ""}
+      ${!manual.length && !installs.length ? `<div class="admin-mini-meta" style="border:1px dashed var(--border2);border-radius:10px;padding:18px 8px;text-align:center">Drag builders here<br>or click Add</div>` : ""}
     </div>`;
   }).join("");
   return `<div class="admin-capacity-grid">
@@ -5037,8 +5046,26 @@ function doAdminLogout() { doLogout(); }
 /* ═══════════════════════════════════════
    ADMIN DATA + RENDER
 ═══════════════════════════════════════ */
+function adminDesktopModeOn() {
+  return localStorage.getItem("pt_admin_desktop_mode") === "1";
+}
+function applyAdminDesktopMode() {
+  const on = adminDesktopModeOn();
+  document.getElementById("screen-admin")?.classList.toggle("admin-desktop-mode", on);
+  const btn = document.getElementById("admin-desktop-toggle");
+  if (btn) {
+    btn.textContent = on ? "Compact View" : "Desktop View";
+    btn.style.borderColor = on ? "rgba(16,185,129,.45)" : "";
+    btn.style.color = on ? "var(--green)" : "";
+  }
+}
+function toggleAdminDesktopMode() {
+  localStorage.setItem("pt_admin_desktop_mode", adminDesktopModeOn() ? "0" : "1");
+  applyAdminDesktopMode();
+  if (window._adminItems) loadAdminData();
+}
 function isDesktop() {
-  return window.innerWidth >= 900 && !('ontouchstart' in window) && navigator.maxTouchPoints === 0;
+  return adminDesktopModeOn() || (window.innerWidth >= 900 && !('ontouchstart' in window) && navigator.maxTouchPoints === 0);
 }
 
 let _adminDateRange = "week"; /* "week" or "month" */
