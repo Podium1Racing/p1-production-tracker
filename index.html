@@ -703,7 +703,7 @@ input.photo-file-inp { display:none; }
 .admin-schedule-save { background:var(--accent); color:#fff; }
 .admin-schedule-cancel { background:var(--surface2); color:var(--muted); border:1px solid var(--border2) !important; }
 .labor-calendar { border:1px solid var(--border); border-radius:14px; overflow:auto; background:var(--surface2); }
-.labor-grid { display:grid; min-width:1500px; grid-template-columns:150px repeat(14, minmax(96px, 1fr)); }
+.labor-grid { display:grid; min-width:980px; grid-template-columns:150px repeat(7, minmax(110px, 1fr)); }
 .labor-cell { border-right:1px solid var(--border); border-bottom:1px solid var(--border); min-height:92px; padding:8px; position:relative; }
 .labor-head { min-height:auto; background:rgba(255,255,255,.035); font-size:11px; font-weight:900; text-align:center; color:var(--muted); }
 .labor-head:first-child { text-align:left; }
@@ -721,13 +721,15 @@ input.photo-file-inp { display:none; }
 .labor-chip.pto,.labor-chip.off { background:rgba(239,68,68,.16); border-color:rgba(239,68,68,.34); color:#ffe4e4; }
 .labor-chip-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .labor-chip-hours { float:right; color:#fff; opacity:.9; }
-.labor-pool { margin-top:14px; border:1px solid var(--border); border-radius:14px; overflow:auto; background:var(--surface2); }
-.labor-pool-grid { display:grid; min-width:1500px; grid-template-columns:150px repeat(14, minmax(96px, 1fr)); }
+.labor-pool { margin-top:14px; border:1px solid var(--border); border-radius:14px; background:var(--surface2); padding:12px; }
+.labor-pool-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:8px; }
 .labor-pool-person { font-size:12px; font-weight:900; }
 .labor-pool-role { font-size:10px; color:var(--muted); margin-top:2px; }
-.labor-pool-slot { min-height:50px; padding:7px; border-right:1px solid var(--border); border-bottom:1px solid var(--border); }
+.labor-pool-slot { min-height:50px; padding:8px; border:1px solid var(--border); border-radius:10px; background:rgba(255,255,255,.025); }
 .labor-pool-btn { width:100%; border:1px solid var(--border2); background:rgba(255,255,255,.035); color:var(--muted); border-radius:8px; padding:7px; font-size:10px; font-weight:900; cursor:pointer; }
 .labor-pool-btn.available { background:rgba(16,185,129,.14); color:#dfffee; border-color:rgba(16,185,129,.35); }
+.upcoming-install-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:8px; margin-top:10px; }
+.upcoming-install-card { background:var(--surface2); border:1px solid var(--border); border-left:3px solid var(--accent2); border-radius:10px; padding:9px 10px; }
 @media (max-width:900px) {
   .admin-command-grid { grid-template-columns:1fr; }
   .admin-ship-grid { grid-template-columns:1fr; }
@@ -4842,13 +4844,11 @@ function adminWeekDates() {
   });
 }
 function adminLaborDates() {
-  const start = new Date();
-  start.setHours(12,0,0,0);
-  return Array.from({ length: 14 }, (_, idx) => {
-    const d = new Date(start);
-    d.setDate(start.getDate() + idx);
+  return adminWeekDates().concat([5,6].map(offset => {
+    const d = startOfWeekDate();
+    d.setDate(d.getDate() + offset);
     return d;
-  });
+  }));
 }
 function roleScheduleLabel(role) {
   return role === MS_ROLE ? "MS" : role === CHASSIS_ROLE ? "Chassis" : role === KIT_ROLE ? "Kitting" : "Floater";
@@ -4942,23 +4942,48 @@ function renderAdminLaborCalendar(items = [], timerHistory = []) {
     }).join("");
     return `<div class="labor-cell labor-line-label ${line.key}">${escHtml(line.label)}</div>${cells}`;
   }).join("");
-  const poolHeader = `<div class="labor-pool-slot"><div class="admin-command-title" style="margin:0">Available Labor Pool</div><div class="admin-mini-meta">Click + to schedule</div></div>${dates.map(d => `<div class="labor-pool-slot" style="font-size:10px;font-weight:850;color:var(--muted);text-align:center">${escHtml(d.toLocaleDateString("en-US",{weekday:"short",month:"numeric",day:"numeric"}))}</div>`).join("")}`;
   const poolRows = TEAM.filter(m => m.role !== KIT_ROLE).map(m => {
-    const slots = dates.map(d => {
-      const ds = ymd(d);
-      const scheduled = (entriesByDay[ds] || []).some(e => adminDisplayPersonName(e.person) === m.name);
-      return `<div class="labor-pool-slot"><button class="labor-pool-btn ${scheduled ? "" : "available"}" onclick="openAdminScheduleEditor({dateStr:'${ds}',person:'${escHtml(m.name)}',role:'${m.role}'})">${scheduled ? "Scheduled" : "8h"} +</button></div>`;
-    }).join("");
-    return `<div class="labor-pool-slot"><div class="labor-pool-person">${escHtml(m.name)}</div><div class="labor-pool-role">${escHtml(roleScheduleLabel(m.role))}</div></div>${slots}`;
+    const scheduledDays = dates.filter(d => (entriesByDay[ymd(d)] || []).some(e => adminDisplayPersonName(e.person) === m.name)).length;
+    return `<div class="labor-pool-slot">
+      <div class="labor-pool-person">${escHtml(m.name)}</div>
+      <div class="labor-pool-role">${escHtml(roleScheduleLabel(m.role))} · ${scheduledDays}/${dates.length} days scheduled</div>
+      <button class="labor-pool-btn available" onclick="openAdminScheduleEditor({dateStr:'${ymd(dates[0])}',person:'${escHtml(m.name)}',role:'${m.role}'})" style="margin-top:7px">Schedule</button>
+    </div>`;
   }).join("");
+  const upcomingInstalls = renderUpcomingInstalls(items, dates);
   return `<div class="admin-capacity-grid" style="margin-bottom:10px">
-    <div class="admin-capacity-card"><div class="admin-capacity-val">14</div><div class="admin-capacity-lbl">Calendar Days</div></div>
+    <div class="admin-capacity-card"><div class="admin-capacity-val">7</div><div class="admin-capacity-lbl">Calendar Days</div></div>
     <div class="admin-capacity-card"><div class="admin-capacity-val">${TEAM.filter(m=>m.role!==KIT_ROLE).length}</div><div class="admin-capacity-lbl">Active People</div></div>
     <div class="admin-capacity-card"><div class="admin-capacity-val" style="color:var(--yellow)">${adminScheduleCapacity(items,timerHistory).chassisHours}</div><div class="admin-capacity-lbl">Chassis Hrs</div></div>
     <div class="admin-capacity-card"><div class="admin-capacity-val" style="color:var(--accent2)">${adminScheduleCapacity(items,timerHistory).msHours}</div><div class="admin-capacity-lbl">MS Hrs</div></div>
   </div>
   <div class="labor-calendar"><div class="labor-grid">${header}${body}</div></div>
-  <div class="labor-pool"><div class="labor-pool-grid">${poolHeader}${poolRows}</div></div>`;
+  <div class="labor-pool">
+    <div class="admin-command-title" style="margin-bottom:8px">Available Labor Pool <span class="admin-command-sub">Compact weekly view</span></div>
+    <div class="labor-pool-grid">${poolRows}</div>
+  </div>
+  ${upcomingInstalls}`;
+}
+function renderUpcomingInstalls(items = [], visibleDates = []) {
+  const visible = new Set((visibleDates || []).map(ymd));
+  const installs = (items || [])
+    .filter(i => parseShipDate(i) && parsePeople(i, COL.install_staff).length)
+    .sort((a,b) => parseShipDate(a) - parseShipDate(b))
+    .filter(i => !visible.has(ymd(parseShipDate(i))))
+    .slice(0, 12);
+  if (!installs.length) return `<div class="admin-command-card" style="margin-top:14px"><div class="admin-command-title">Upcoming Installs</div><div class="admin-mini-meta">No upcoming installs outside this week.</div></div>`;
+  return `<div class="admin-command-card" style="margin-top:14px">
+    <div class="admin-command-title">Upcoming Installs <span class="admin-command-sub">Beyond current week</span></div>
+    <div class="upcoming-install-list">
+      ${installs.map(i => {
+        const p = adminProjectLine(i);
+        return `<div class="upcoming-install-card" onclick="openAdminInstallEditor('${i.id}')">
+          <div class="admin-mini-title">${escHtml(p.label)}</div>
+          <div class="admin-mini-meta">${escHtml(p.ship)} · ${escHtml(p.wo)}<br>${p.installStaff.map(escHtml).join(", ")}</div>
+        </div>`;
+      }).join("")}
+    </div>
+  </div>`;
 }
 function renderAdminWeeklySchedule(items = [], timerHistory = []) {
   if (adminDesktopModeOn()) return renderAdminLaborCalendar(items, timerHistory);
