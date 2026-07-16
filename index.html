@@ -675,6 +675,9 @@ input.photo-file-inp { display:none; }
 .admin-day-add { border:1px solid var(--border2); background:none; color:var(--muted); border-radius:7px; font-size:10px; font-weight:800; padding:4px 6px; cursor:pointer; }
 .admin-sched-entry { border-left:2px solid var(--accent); background:rgba(224,32,32,.08); padding:6px 7px; border-radius:7px; margin-bottom:6px; cursor:pointer; }
 .admin-sched-entry.install { border-left-color:var(--accent2); background:rgba(99,102,241,.1); cursor:default; }
+.admin-sched-entry.off { border-left-color:var(--muted2); background:rgba(148,163,184,.08); }
+.admin-sched-entry.pto { border-left-color:#14b8a6; background:rgba(20,184,166,.1); }
+.admin-sched-entry.build { border-left-color:var(--green); background:rgba(16,185,129,.08); }
 .admin-sched-person { font-size:11px; font-weight:850; }
 .admin-sched-note { font-size:10px; color:var(--muted); margin-top:2px; line-height:1.3; }
 .admin-capacity-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:12px; }
@@ -4607,6 +4610,25 @@ function loadAdminInstallExtensions() {
 function saveAdminInstallExtensions(data) {
   localStorage.setItem(ADMIN_INSTALL_EXT_KEY, JSON.stringify(data || {}));
 }
+function chooseAdminScheduleType(personName) {
+  const raw = prompt(`${personName} schedule type:\n1 = Building\n2 = Install\n3 = Off today\n4 = PTO\n5 = Other`, "1");
+  const v = String(raw || "1").trim().toLowerCase();
+  if (v === "2" || v.includes("install")) return "install";
+  if (v === "3" || v.includes("off")) return "off";
+  if (v === "4" || v.includes("pto") || v.includes("vacation")) return "pto";
+  if (v === "5" || v.includes("other")) return "other";
+  return "build";
+}
+function scheduleTypeLabel(type) {
+  return type === "install" ? "Install" :
+    type === "off" ? "Off Today" :
+    type === "pto" ? "PTO" :
+    type === "other" ? "Other" :
+    "Building";
+}
+function scheduleTypeCountsCapacity(type) {
+  return !type || type === "build";
+}
 function refreshAdminViewFromCache() {
   if (!window._adminItems) return;
   if (isDesktop()) renderAdminDesktop(window._adminItems, window._sbTimers || [], window._sbKits || [], window._sbBuildUpdates || [], window._adminAllocationSummary || {}, window._sbTimerHistory || []);
@@ -4619,10 +4641,15 @@ function setAdminShipTab(tab) {
 function addAdminScheduleEntry(dateStr) {
   const person = prompt("Who will be here or on install?");
   if (!person) return;
-  const note = prompt("Schedule note / install name / hours?");
+  const type = chooseAdminScheduleType(person);
+  const roleChoice = prompt(`${person} role for this day: MS, Chassis, Kitter, or Floater?`, "Chassis");
+  const rc = String(roleChoice || "").toLowerCase();
+  const role = rc.startsWith("m") ? MS_ROLE : rc.startsWith("k") ? KIT_ROLE : rc.startsWith("f") ? FLOAT_ROLE : CHASSIS_ROLE;
+  const hours = scheduleTypeCountsCapacity(type) ? Math.max(0, Number(prompt("How many build hours?", "8") || 8) || 8) : 0;
+  const note = prompt("Schedule note / install name?", scheduleTypeLabel(type));
   const data = loadAdminSchedule();
   if (!data[dateStr]) data[dateStr] = [];
-  data[dateStr].push({ person: person.trim(), note: (note || "").trim(), role: "chassis", hours: 8, id: Date.now() });
+  data[dateStr].push({ person: person.trim(), note: (note || "").trim(), role, hours, type, id: Date.now() });
   saveAdminSchedule(data);
   refreshAdminViewFromCache();
 }
@@ -4656,11 +4683,13 @@ function adminDropBuilder(e, dateStr) {
     const c = String(choice || "").toLowerCase();
     role = c.startsWith("k") ? KIT_ROLE : c.startsWith("c") ? CHASSIS_ROLE : MS_ROLE;
   }
-  const hoursRaw = prompt("How many hours scheduled?", "8");
-  const hours = Math.max(0, Number(hoursRaw || 8) || 8);
+  const type = chooseAdminScheduleType(payload.name);
+  const hoursRaw = scheduleTypeCountsCapacity(type) ? prompt("How many build hours scheduled?", "8") : "0";
+  const hours = scheduleTypeCountsCapacity(type) ? Math.max(0, Number(hoursRaw || 8) || 8) : 0;
+  const note = type === "install" ? prompt("Install name / note?", "Install") : scheduleTypeLabel(type);
   const data = loadAdminSchedule();
   if (!data[dateStr]) data[dateStr] = [];
-  data[dateStr].push({ person: payload.name, role, hours, note: roleLabel(role), id: Date.now() });
+  data[dateStr].push({ person: payload.name, role, hours, type, note, id: Date.now() });
   saveAdminSchedule(data);
   refreshAdminViewFromCache();
 }
@@ -4686,6 +4715,7 @@ function adminScheduleCapacity(items = [], timerHistory = []) {
   const data = loadAdminSchedule();
   let msHours = 0, chassisHours = 0;
   Object.values(data).flat().forEach(e => {
+    if (!scheduleTypeCountsCapacity(e.type)) return;
     const h = Number(e.hours || 0);
     if (e.role === MS_ROLE) msHours += h;
     if (e.role === CHASSIS_ROLE) chassisHours += h;
@@ -4741,17 +4771,17 @@ function renderAdminWeeklySchedule(items = [], timerHistory = []) {
       return dates.includes(ds);
     });
     const manual = data[ds] || [];
-    const chHours = manual.filter(e => e.role === CHASSIS_ROLE).reduce((s,e)=>s+Number(e.hours||0),0);
-    const msHours = manual.filter(e => e.role === MS_ROLE).reduce((s,e)=>s+Number(e.hours||0),0);
+    const chHours = manual.filter(e => e.role === CHASSIS_ROLE && scheduleTypeCountsCapacity(e.type)).reduce((s,e)=>s+Number(e.hours||0),0);
+    const msHours = manual.filter(e => e.role === MS_ROLE && scheduleTypeCountsCapacity(e.type)).reduce((s,e)=>s+Number(e.hours||0),0);
     return `<div class="admin-day-card" ondragover="adminDragOverDay(event)" ondragleave="adminDragLeaveDay(event)" ondrop="adminDropBuilder(event,'${ds}')">
       <div class="admin-day-head">
         <span>${escHtml(d.toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"}))}</span>
         <button class="admin-day-add" onclick="addAdminScheduleEntry('${ds}')">Add</button>
       </div>
       <div class="admin-mini-meta" style="margin-bottom:7px">Chassis ${chHours}h · MS ${msHours}h</div>
-      ${manual.map(e => `<div class="admin-sched-entry" onclick="removeAdminScheduleEntry('${ds}','${e.id}')">
+      ${manual.map(e => `<div class="admin-sched-entry ${escHtml(e.type || "build")}" onclick="removeAdminScheduleEntry('${ds}','${e.id}')">
         <div class="admin-sched-person">${escHtml(adminDisplayPersonName(e.person))}</div>
-        <div class="admin-sched-note">${escHtml(roleScheduleLabel(e.role))} · ${Number(e.hours || 0)}h</div>
+        <div class="admin-sched-note">${escHtml(scheduleTypeLabel(e.type))} · ${escHtml(roleScheduleLabel(e.role))}${scheduleTypeCountsCapacity(e.type) ? ` · ${Number(e.hours || 0)}h` : ""}${e.note ? `<br>${escHtml(e.note)}` : ""}</div>
       </div>`).join("")}
       ${installs.map(i => {
         const p = adminProjectLine(i);
