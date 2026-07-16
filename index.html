@@ -6211,17 +6211,23 @@ function kitHistoryProjectLabel(k) {
   return customer || wo || rawName || String(k?.item_id || "");
 }
 
+function kitHistoryProjectKey(k) {
+  const label = kitHistoryProjectLabel(k);
+  const wo = getWoFromText(label);
+  if (wo) return `wo:${wo}`;
+  return `label:${label.toLowerCase().replace(/\s+/g, " ").trim()}`;
+}
+
 function uniqueKitHistoryRows(kits = []) {
   const seen = new Set();
-  return kits.filter(k => {
-    const missing = normalizeMissingItems(k.missing_items).join("|");
-    const ts = k.completed_at ? new Date(k.completed_at).getTime() : "";
-    const minute = Number.isFinite(ts) ? Math.floor(ts / 60000) : String(k.completed_at || "");
-    const key = `${k.user_name || ""}|${kitHistoryProjectLabel(k)}|${minute}|${missing}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+  return [...kits]
+    .sort((a, b) => new Date(b.completed_at || 0) - new Date(a.completed_at || 0))
+    .filter(k => {
+      const key = kitHistoryProjectKey(k);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 }
 
 /* Identify leads (Thomas=MS lead, Sepan=Chassis lead) */
