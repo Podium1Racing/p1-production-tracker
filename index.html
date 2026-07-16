@@ -4792,6 +4792,18 @@ function adminDragBuilderStart(e, name, role) {
   _adminDraggedBuilder = { name, role };
   try { e.dataTransfer.setData("text/plain", JSON.stringify(_adminDraggedBuilder)); } catch(_) {}
 }
+function adminDragLaborStart(e, entry, dateStr) {
+  _adminDraggedBuilder = {
+    name: adminDisplayPersonName(entry.person),
+    role: entry.role,
+    dateStr,
+    entryId: entry._defaultSchedule ? null : entry.id,
+    hours: Number(entry.hours || 0),
+    type: entry.type || "build",
+    note: entry.note || "",
+  };
+  try { e.dataTransfer.setData("text/plain", JSON.stringify(_adminDraggedBuilder)); } catch(_) {}
+}
 function adminDragOverDay(e) {
   e.preventDefault();
   e.currentTarget.classList.add("drag-over");
@@ -4799,12 +4811,35 @@ function adminDragOverDay(e) {
 function adminDragLeaveDay(e) {
   e.currentTarget.classList.remove("drag-over");
 }
-function adminDropBuilder(e, dateStr) {
+function adminDropBuilder(e, dateStr, lineKey = null) {
   e.preventDefault();
   e.currentTarget.classList.remove("drag-over");
   let payload = _adminDraggedBuilder;
   try { payload = JSON.parse(e.dataTransfer.getData("text/plain") || "null") || payload; } catch(_) {}
   if (!payload?.name) return;
+  if (lineKey) {
+    const role = lineKey === "ms" ? MS_ROLE : lineKey === "chassis" ? CHASSIS_ROLE : payload.role;
+    const type = lineKey === "install" ? "install" : lineKey === "pto" ? "pto" : "build";
+    const data = loadAdminSchedule();
+    if (!data[dateStr]) data[dateStr] = [];
+    if (payload.entryId && payload.dateStr === dateStr) {
+      data[dateStr] = data[dateStr].map(entry => String(entry.id) === String(payload.entryId)
+        ? { ...entry, role, type, hours: scheduleTypeCountsCapacity(type) ? Number(entry.hours || payload.hours || 8) : 0, note: type === "build" ? `${roleScheduleLabel(role)} Builder` : scheduleTypeLabel(type) }
+        : entry);
+    } else {
+      data[dateStr].push({
+        id: Date.now(),
+        person: payload.name,
+        role,
+        type,
+        hours: scheduleTypeCountsCapacity(type) ? Number(payload.hours || 8) : 0,
+        note: type === "build" ? `${roleScheduleLabel(role)} Builder` : scheduleTypeLabel(type),
+      });
+    }
+    saveAdminSchedule(data);
+    refreshAdminViewFromCache();
+    return;
+  }
   openAdminScheduleEditor({ dateStr, person: payload.name, role: payload.role });
 }
 function adjustLaborHours(dateStr, person, role, delta, entryId = null, e = null) {
@@ -5058,15 +5093,25 @@ function scheduleLineForEntry(e) {
 }
 function renderLaborChip(entry, dateStr) {
   const line = scheduleLineForEntry(entry);
+  const lineLabel = line === "ms" ? "MS Builder" : line === "chassis" ? "Chassis Builder" : line === "install" ? "Install" : "PTO / Off";
   const click = entry._defaultSchedule
     ? `openAdminScheduleEditor({dateStr:'${dateStr}',person:'${escHtml(entry.person)}',role:'${entry.role}'})`
     : `openAdminScheduleEditor({dateStr:'${dateStr}',entryId:'${entry.id}'})`;
   const adjustable = scheduleTypeCountsCapacity(entry.type);
   const entryRef = entry._defaultSchedule ? "null" : `'${entry.id}'`;
-  return `<div class="labor-chip ${line}" onclick="${click}">
+  const dragPayload = encodeURIComponent(JSON.stringify({
+    person: adminDisplayPersonName(entry.person),
+    role: entry.role,
+    hours: Number(entry.hours || 0),
+    type: entry.type || "build",
+    note: entry.note || "",
+    id: entry._defaultSchedule ? null : entry.id,
+  }));
+  return `<div class="labor-chip ${line}" draggable="true" ondragstart="adminDragLaborStart(event, JSON.parse(decodeURIComponent('${dragPayload}')), '${dateStr}')" onclick="${click}">
     <span class="labor-chip-hours">${scheduleTypeCountsCapacity(entry.type) ? `${Number(entry.hours || 0)}h` : ""}</span>
     <div class="labor-chip-name">${escHtml(adminDisplayPersonName(entry.person))}</div>
-    ${(entry.note || "").trim() ? `<div style="font-size:9px;color:#fff;margin-top:3px;line-height:1.25">${escHtml(entry.note)}</div>` : ""}
+    <div style="font-size:9px;color:#fff;margin-top:3px;line-height:1.25">${escHtml(lineLabel)}</div>
+    ${(entry.note || "").trim() && entry.note !== "Default schedule" ? `<div style="font-size:9px;color:var(--muted);margin-top:2px;line-height:1.25">${escHtml(entry.note)}</div>` : ""}
     ${adjustable ? `<div class="labor-chip-adjust">
       <button onclick="adjustLaborHours('${dateStr}','${escHtml(entry.person)}','${entry.role}',-1,${entryRef},event)">−</button>
       <button onclick="adjustLaborHours('${dateStr}','${escHtml(entry.person)}','${entry.role}',1,${entryRef},event)">+</button>
@@ -5134,7 +5179,7 @@ function renderAdminLaborCalendar(items = [], timerHistory = []) {
       const ds = ymd(d);
       const entries = (entriesByDay[ds] || []).filter(e => scheduleLineForEntry(e) === line.key);
       const total = entries.reduce((s,e) => s + (scheduleTypeCountsCapacity(e.type) ? Number(e.hours || 0) : 0), 0);
-      return `<div class="labor-cell" ondragover="adminDragOverDay(event)" ondragleave="adminDragLeaveDay(event)" ondrop="adminDropBuilder(event,'${ds}')">
+      return `<div class="labor-cell" ondragover="adminDragOverDay(event)" ondragleave="adminDragLeaveDay(event)" ondrop="adminDropBuilder(event,'${ds}','${line.key}')">
         <div class="labor-total">${total}h</div>
         ${entries.map(e => e._mondayInstall
           ? `<div class="labor-chip install" onclick="openAdminInstallEditor('${e._itemId}')"><div class="labor-chip-name">${escHtml(e.person)}</div><div style="font-size:9px;color:var(--muted);margin-top:2px">${escHtml(e.note || "Install")}</div>${e.installNote ? `<div style="font-size:9px;color:#fff;margin-top:3px;line-height:1.25">${escHtml(e.installNote)}</div>` : ""}</div>`
