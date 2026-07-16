@@ -642,6 +642,10 @@ input.photo-file-inp { display:none; }
 .admin-command-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px; overflow:hidden; }
 .admin-command-title { font-size:13px; font-weight:850; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; gap:10px; }
 .admin-command-sub { font-size:10px; color:var(--muted2); text-transform:uppercase; letter-spacing:.08em; font-weight:800; }
+.admin-ship-tabs { display:flex; gap:6px; background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:4px; margin-bottom:10px; }
+.admin-ship-tab { flex:1; border:none; border-radius:9px; padding:8px 10px; background:none; color:var(--muted); font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; cursor:pointer; }
+.admin-ship-tab.active { background:rgba(224,32,32,.18); color:#fff; }
+.admin-ship-panel { max-height:320px; overflow-y:auto; padding-right:3px; }
 .admin-ship-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
 .admin-ship-bucket { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px; }
 .admin-ship-head { font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.09em; color:var(--muted2); margin-bottom:8px; display:flex; justify-content:space-between; }
@@ -657,17 +661,34 @@ input.photo-file-inp { display:none; }
 .admin-live-time { font-size:15px; font-weight:900; font-variant-numeric:tabular-nums; color:var(--green); text-align:right; }
 .admin-live-time.paused { color:var(--yellow); }
 .admin-live-state { font-size:9px; color:var(--muted2); text-transform:uppercase; letter-spacing:.08em; text-align:right; margin-top:2px; }
-.admin-schedule-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; }
-.admin-day-card { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:9px; min-height:118px; }
+.admin-planner { display:grid; grid-template-columns:230px 1fr; gap:12px; }
+.admin-roster { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px; }
+.admin-roster-section { margin-bottom:12px; }
+.admin-roster-title { font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; color:var(--muted2); margin-bottom:7px; }
+.admin-roster-chip { display:flex; align-items:center; gap:8px; border:1px solid var(--border); background:rgba(255,255,255,.025); border-radius:10px; padding:8px 9px; margin-bottom:6px; cursor:grab; }
+.admin-roster-chip:active { cursor:grabbing; }
+.admin-roster-dot { width:22px; height:22px; border-radius:999px; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:900; flex-shrink:0; }
+.admin-schedule-grid { display:grid; grid-template-columns:repeat(5,minmax(170px,1fr)); gap:8px; overflow-x:auto; padding-bottom:4px; }
+.admin-day-card { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:9px; min-height:250px; transition:border-color .15s, background .15s; }
+.admin-day-card.drag-over { border-color:var(--accent); background:rgba(224,32,32,.08); }
 .admin-day-head { font-size:11px; font-weight:900; margin-bottom:7px; display:flex; justify-content:space-between; gap:6px; }
 .admin-day-add { border:1px solid var(--border2); background:none; color:var(--muted); border-radius:7px; font-size:10px; font-weight:800; padding:4px 6px; cursor:pointer; }
 .admin-sched-entry { border-left:2px solid var(--accent); background:rgba(224,32,32,.08); padding:6px 7px; border-radius:7px; margin-bottom:6px; cursor:pointer; }
+.admin-sched-entry.install { border-left-color:var(--accent2); background:rgba(99,102,241,.1); cursor:default; }
 .admin-sched-person { font-size:11px; font-weight:850; }
 .admin-sched-note { font-size:10px; color:var(--muted); margin-top:2px; line-height:1.3; }
+.admin-capacity-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:12px; }
+.admin-capacity-card { background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:9px; }
+.admin-capacity-val { font-size:20px; font-weight:950; line-height:1; }
+.admin-capacity-lbl { font-size:9px; color:var(--muted2); text-transform:uppercase; letter-spacing:.08em; font-weight:850; margin-top:4px; }
+.admin-install-controls { display:flex; gap:5px; margin-top:6px; }
+.admin-install-btn { border:1px solid var(--border2); background:rgba(255,255,255,.04); color:var(--muted); border-radius:6px; padding:2px 6px; font-size:10px; font-weight:850; cursor:pointer; }
 @media (max-width:900px) {
   .admin-command-grid { grid-template-columns:1fr; }
   .admin-ship-grid { grid-template-columns:1fr; }
-  .admin-schedule-grid { grid-template-columns:1fr; }
+  .admin-planner { grid-template-columns:1fr; }
+  .admin-schedule-grid { grid-template-columns:repeat(5, minmax(220px, 1fr)); }
+  .admin-capacity-grid { grid-template-columns:1fr 1fr; }
 }
 .bottom-nav { position:fixed; left:10px; right:10px; bottom:calc(10px + env(safe-area-inset-bottom)); z-index:60; display:none; background:rgba(18,18,18,.88); border:1px solid var(--border); border-radius:18px; backdrop-filter:blur(16px); box-shadow:0 14px 40px rgba(0,0,0,.34); padding:6px; gap:4px; }
 .bottom-nav-btn { flex:1; border:none; background:none; color:var(--muted); border-radius:13px; padding:7px 4px 6px; font-size:9px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer; }
@@ -4471,6 +4492,19 @@ function adminMiniProjectRows(items = [], empty = "Nothing here yet.", limit = 8
   return `<div class="admin-mini-list">${rows || `<div class="admin-mini-meta">${escHtml(empty)}</div>`}${more}</div>`;
 }
 
+function renderAdminShippingFocus(dueToday = [], dueTomorrow = []) {
+  const activeItems = _adminShipTab === "tomorrow" ? dueTomorrow : dueToday;
+  const activeLabel = _adminShipTab === "tomorrow" ? "Tomorrow" : "Today";
+  return `<div class="admin-ship-tabs">
+    <button class="admin-ship-tab ${_adminShipTab === "today" ? "active" : ""}" onclick="setAdminShipTab('today')">Today <span style="opacity:.7">(${dueToday.length})</span></button>
+    <button class="admin-ship-tab ${_adminShipTab === "tomorrow" ? "active" : ""}" onclick="setAdminShipTab('tomorrow')">Tomorrow <span style="opacity:.7">(${dueTomorrow.length})</span></button>
+  </div>
+  <div class="admin-ship-bucket">
+    <div class="admin-ship-head"><span>Due ${escHtml(activeLabel)}</span><span>${activeItems.length}</span></div>
+    <div class="admin-ship-panel">${adminMiniProjectRows(activeItems, `No orders due ${activeLabel.toLowerCase()}.`, 30)}</div>
+  </div>`;
+}
+
 function startOfWeekDate(base = new Date()) {
   const d = new Date(base);
   const day = d.getDay();
@@ -4556,11 +4590,29 @@ function adminAverageBuildRows(timerHistory = [], sbUpdates = []) {
 }
 
 const ADMIN_SCHEDULE_KEY = "pt_admin_week_schedule";
+const ADMIN_INSTALL_EXT_KEY = "pt_admin_install_extensions";
+let _adminShipTab = "today";
+let _adminDraggedBuilder = null;
 function loadAdminSchedule() {
   try { return JSON.parse(localStorage.getItem(ADMIN_SCHEDULE_KEY) || "{}"); } catch(e) { return {}; }
 }
 function saveAdminSchedule(data) {
   localStorage.setItem(ADMIN_SCHEDULE_KEY, JSON.stringify(data || {}));
+}
+function loadAdminInstallExtensions() {
+  try { return JSON.parse(localStorage.getItem(ADMIN_INSTALL_EXT_KEY) || "{}"); } catch(e) { return {}; }
+}
+function saveAdminInstallExtensions(data) {
+  localStorage.setItem(ADMIN_INSTALL_EXT_KEY, JSON.stringify(data || {}));
+}
+function refreshAdminViewFromCache() {
+  if (!window._adminItems) return;
+  if (isDesktop()) renderAdminDesktop(window._adminItems, window._sbTimers || [], window._sbKits || [], window._sbBuildUpdates || [], window._adminAllocationSummary || {}, window._sbTimerHistory || []);
+  else renderAdminDash(window._adminItems, window._sbTimers || [], window._sbKits || [], window._sbBuildUpdates || [], window._adminAllocationSummary || {}, window._sbTimerHistory || []);
+}
+function setAdminShipTab(tab) {
+  _adminShipTab = tab === "tomorrow" ? "tomorrow" : "today";
+  refreshAdminViewFromCache();
 }
 function addAdminScheduleEntry(dateStr) {
   const person = prompt("Who will be here or on install?");
@@ -4568,52 +4620,160 @@ function addAdminScheduleEntry(dateStr) {
   const note = prompt("Schedule note / install name / hours?");
   const data = loadAdminSchedule();
   if (!data[dateStr]) data[dateStr] = [];
-  data[dateStr].push({ person: person.trim(), note: (note || "").trim(), id: Date.now() });
+  data[dateStr].push({ person: person.trim(), note: (note || "").trim(), role: "chassis", hours: 8, id: Date.now() });
   saveAdminSchedule(data);
-  if (window._adminItems) {
-    if (isDesktop()) renderAdminDesktop(window._adminItems, window._sbTimers || [], window._sbKits || [], window._sbBuildUpdates || [], window._adminAllocationSummary || {}, window._sbTimerHistory || []);
-    else renderAdminDash(window._adminItems, window._sbTimers || [], window._sbKits || [], window._sbBuildUpdates || [], window._adminAllocationSummary || {}, window._sbTimerHistory || []);
-  }
+  refreshAdminViewFromCache();
 }
 function removeAdminScheduleEntry(dateStr, id) {
   if (!confirm("Remove this schedule entry?")) return;
   const data = loadAdminSchedule();
   data[dateStr] = (data[dateStr] || []).filter(e => String(e.id) !== String(id));
   saveAdminSchedule(data);
-  if (window._adminItems) {
-    if (isDesktop()) renderAdminDesktop(window._adminItems, window._sbTimers || [], window._sbKits || [], window._sbBuildUpdates || [], window._adminAllocationSummary || {}, window._sbTimerHistory || []);
-    else renderAdminDash(window._adminItems, window._sbTimers || [], window._sbKits || [], window._sbBuildUpdates || [], window._adminAllocationSummary || {}, window._sbTimerHistory || []);
-  }
+  refreshAdminViewFromCache();
 }
-function renderAdminWeeklySchedule(items = []) {
+function adminDragBuilderStart(e, name, role) {
+  _adminDraggedBuilder = { name, role };
+  try { e.dataTransfer.setData("text/plain", JSON.stringify(_adminDraggedBuilder)); } catch(_) {}
+}
+function adminDragOverDay(e) {
+  e.preventDefault();
+  e.currentTarget.classList.add("drag-over");
+}
+function adminDragLeaveDay(e) {
+  e.currentTarget.classList.remove("drag-over");
+}
+function adminDropBuilder(e, dateStr) {
+  e.preventDefault();
+  e.currentTarget.classList.remove("drag-over");
+  let payload = _adminDraggedBuilder;
+  try { payload = JSON.parse(e.dataTransfer.getData("text/plain") || "null") || payload; } catch(_) {}
+  if (!payload?.name) return;
+  let role = payload.role;
+  if (role === FLOAT_ROLE) {
+    const choice = prompt(`${payload.name} as MS, Chassis, or Kitter?`, "MS");
+    const c = String(choice || "").toLowerCase();
+    role = c.startsWith("k") ? KIT_ROLE : c.startsWith("c") ? CHASSIS_ROLE : MS_ROLE;
+  }
+  const hoursRaw = prompt("How many hours scheduled?", "8");
+  const hours = Math.max(0, Number(hoursRaw || 8) || 8);
   const data = loadAdminSchedule();
+  if (!data[dateStr]) data[dateStr] = [];
+  data[dateStr].push({ person: payload.name, role, hours, note: roleLabel(role), id: Date.now() });
+  saveAdminSchedule(data);
+  refreshAdminViewFromCache();
+}
+function adjustAdminInstallDays(itemId, delta) {
+  const data = loadAdminInstallExtensions();
+  const cur = Math.max(1, Number(data[itemId] || 1));
+  data[itemId] = Math.max(1, cur + delta);
+  saveAdminInstallExtensions(data);
+  refreshAdminViewFromCache();
+}
+function adminWeekDates() {
   const weekStart = startOfWeekDate();
-  const days = Array.from({ length: 5 }, (_, idx) => {
+  return Array.from({ length: 5 }, (_, idx) => {
     const d = new Date(weekStart);
     d.setDate(weekStart.getDate() + idx);
+    return d;
+  });
+}
+function roleScheduleLabel(role) {
+  return role === MS_ROLE ? "MS" : role === CHASSIS_ROLE ? "Chassis" : role === KIT_ROLE ? "Kitting" : "Floater";
+}
+function adminScheduleCapacity(items = [], timerHistory = []) {
+  const data = loadAdminSchedule();
+  let msHours = 0, chassisHours = 0;
+  Object.values(data).flat().forEach(e => {
+    const h = Number(e.hours || 0);
+    if (e.role === MS_ROLE) msHours += h;
+    if (e.role === CHASSIS_ROLE) chassisHours += h;
+  });
+  const avgMs = adminAvgHoursForType(timerHistory, "ms");
+  const avgChassis = adminAvgHoursForType(timerHistory, "chassis");
+  const weekSet = new Set(adminWeekDates().map(ymd));
+  const weekItems = (items || []).filter(i => {
+    const d = parseShipDate(i);
+    return d && weekSet.has(ymd(d));
+  });
+  const msUnits = roundUnits(weekItems.reduce((sum, i) => sum + getUnitWeight(i, "ms"), 0));
+  const chassisUnits = roundUnits(weekItems.reduce((sum, i) => sum + getUnitWeight(i, "chassis"), 0));
+  return { msHours, chassisHours, avgMs, avgChassis, msCapacity: avgMs ? roundUnits(msHours / avgMs) : 0, chassisCapacity: avgChassis ? roundUnits(chassisHours / avgChassis) : 0, msUnits, chassisUnits };
+}
+function adminAvgHoursForType(timerHistory = [], type) {
+  const arr = (timerHistory || [])
+    .filter(t => t.col_type === type && Number(t.duration_ms || 0) > 60000)
+    .map(t => Number(t.duration_ms || 0) / 3600000);
+  return arr.length ? Math.round((arr.reduce((a,b)=>a+b,0) / arr.length) * 10) / 10 : 0;
+}
+function renderAdminWeeklySchedule(items = [], timerHistory = []) {
+  const data = loadAdminSchedule();
+  const installExtensions = loadAdminInstallExtensions();
+  const capacity = adminScheduleCapacity(items, timerHistory);
+  const rosterGroups = [
+    { title: "Chassis", members: TEAM.filter(m => m.role === CHASSIS_ROLE) },
+    { title: "Monitor Stands", members: TEAM.filter(m => m.role === MS_ROLE) },
+    { title: "Floaters", members: TEAM.filter(m => m.role === FLOAT_ROLE) },
+  ];
+  const roster = `<div class="admin-roster">
+    ${rosterGroups.map(g => `<div class="admin-roster-section">
+      <div class="admin-roster-title">${escHtml(g.title)}</div>
+      ${g.members.length ? g.members.map(m => `<div class="admin-roster-chip" draggable="true" ondragstart="adminDragBuilderStart(event,'${escHtml(m.name)}','${m.role}')">
+        <div class="admin-roster-dot" style="background:${m.color}25;color:${m.color}">${escHtml(m.initials)}</div>
+        <div>
+          <div class="admin-sched-person">${escHtml(m.name)}</div>
+          <div class="admin-sched-note">${escHtml(roleScheduleLabel(m.role))}</div>
+        </div>
+      </div>`).join("") : `<div class="admin-mini-meta">No one assigned.</div>`}
+    </div>`).join("")}
+  </div>`;
+  const days = adminWeekDates().map(d => {
     const ds = ymd(d);
-    const installs = (items || []).filter(i => sameShipDate(i, ds) && parsePeople(i, COL.install_staff).length);
+    const installs = (items || []).filter(i => {
+      const ship = parseShipDate(i);
+      if (!ship || !parsePeople(i, COL.install_staff).length) return false;
+      const start = ymd(ship);
+      const installDays = Math.max(1, Number(installExtensions[i.id] || 1));
+      const dates = Array.from({ length: installDays }, (_, idx) => {
+        const dd = new Date(ship); dd.setDate(ship.getDate() + idx); return ymd(dd);
+      });
+      return dates.includes(ds);
+    });
     const manual = data[ds] || [];
-    return `<div class="admin-day-card">
+    const chHours = manual.filter(e => e.role === CHASSIS_ROLE).reduce((s,e)=>s+Number(e.hours||0),0);
+    const msHours = manual.filter(e => e.role === MS_ROLE).reduce((s,e)=>s+Number(e.hours||0),0);
+    return `<div class="admin-day-card" ondragover="adminDragOverDay(event)" ondragleave="adminDragLeaveDay(event)" ondrop="adminDropBuilder(event,'${ds}')">
       <div class="admin-day-head">
         <span>${escHtml(d.toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"}))}</span>
-        <button class="admin-day-add" onclick="addAdminScheduleEntry('${ds}')">+</button>
+        <button class="admin-day-add" onclick="addAdminScheduleEntry('${ds}')">Add</button>
       </div>
+      <div class="admin-mini-meta" style="margin-bottom:7px">Chassis ${chHours}h · MS ${msHours}h</div>
       ${manual.map(e => `<div class="admin-sched-entry" onclick="removeAdminScheduleEntry('${ds}','${e.id}')">
         <div class="admin-sched-person">${escHtml(adminDisplayPersonName(e.person))}</div>
-        <div class="admin-sched-note">${escHtml(e.note || "Scheduled")}</div>
+        <div class="admin-sched-note">${escHtml(roleScheduleLabel(e.role))} · ${Number(e.hours || 0)}h</div>
       </div>`).join("")}
       ${installs.map(i => {
         const p = adminProjectLine(i);
-        return `<div class="admin-sched-entry" style="border-left-color:var(--accent2);background:rgba(99,102,241,.1)">
+        const days = Math.max(1, Number(installExtensions[i.id] || 1));
+        return `<div class="admin-sched-entry install">
           <div class="admin-sched-person">${p.installStaff.map(escHtml).join(", ")}</div>
-          <div class="admin-sched-note">${escHtml(p.label)} · ${escHtml(p.wo)}</div>
+          <div class="admin-sched-note">${escHtml(p.label)} · ${escHtml(p.wo)} · ${days} day${days===1?"":"s"}</div>
+          <div class="admin-install-controls">
+            <button class="admin-install-btn" onclick="adjustAdminInstallDays('${i.id}',1)">Extend</button>
+            <button class="admin-install-btn" onclick="adjustAdminInstallDays('${i.id}',-1)">Shorten</button>
+          </div>
         </div>`;
       }).join("")}
       ${!manual.length && !installs.length ? `<div class="admin-mini-meta">No schedule entered.</div>` : ""}
     </div>`;
   }).join("");
-  return `<div class="admin-schedule-grid">${days}</div>`;
+  return `<div class="admin-capacity-grid">
+    <div class="admin-capacity-card"><div class="admin-capacity-val" style="color:var(--yellow)">${capacity.chassisHours}</div><div class="admin-capacity-lbl">Chassis Hours</div></div>
+    <div class="admin-capacity-card"><div class="admin-capacity-val" style="color:var(--accent2)">${capacity.msHours}</div><div class="admin-capacity-lbl">MS Hours</div></div>
+    <div class="admin-capacity-card"><div class="admin-capacity-val" style="color:var(--green)">${formatUnits(capacity.chassisCapacity)}</div><div class="admin-capacity-lbl">Est Chassis Units</div></div>
+    <div class="admin-capacity-card"><div class="admin-capacity-val" style="color:var(--green)">${formatUnits(capacity.msCapacity)}</div><div class="admin-capacity-lbl">Est MS Units</div></div>
+  </div>
+  <div class="admin-mini-meta" style="margin-bottom:10px">Due this week by unit size: Chassis ${formatUnits(capacity.chassisUnits)} units · MS ${formatUnits(capacity.msUnits)} units. Drag builders onto days to plan capacity.</div>
+  <div class="admin-planner">${roster}<div class="admin-schedule-grid">${days}</div></div>`;
 }
 
 function renderAdminCommandCenter(items, sbTimers = [], sbUpdates = [], timerHistory = []) {
@@ -4628,16 +4788,7 @@ function renderAdminCommandCenter(items, sbTimers = [], sbUpdates = [], timerHis
   <div class="admin-command-grid">
     <div class="admin-command-card">
       <div class="admin-command-title">Shipping Focus <span class="admin-command-sub">Today / Tomorrow</span></div>
-      <div class="admin-ship-grid">
-        <div class="admin-ship-bucket">
-          <div class="admin-ship-head"><span>Due Today</span><span>${dueToday.length}</span></div>
-          ${adminMiniProjectRows(dueToday, "No orders due today.")}
-        </div>
-        <div class="admin-ship-bucket">
-          <div class="admin-ship-head"><span>Due Tomorrow</span><span>${dueTomorrow.length}</span></div>
-          ${adminMiniProjectRows(dueTomorrow, "No orders due tomorrow.")}
-        </div>
-      </div>
+      ${renderAdminShippingFocus(dueToday, dueTomorrow)}
     </div>
     <div class="admin-command-card">
       <div class="admin-command-title">Live Builder Timers <span class="admin-command-sub">Running / Paused only</span></div>
@@ -4649,9 +4800,9 @@ function renderAdminCommandCenter(items, sbTimers = [], sbUpdates = [], timerHis
       <div class="admin-command-title">Average Build Times <span class="admin-command-sub">Completed timers</span></div>
       ${adminAverageBuildRows(timerHistory, sbUpdates)}
     </div>
-    <div class="admin-command-card">
+    <div class="admin-command-card" style="grid-column:1 / -1">
       <div class="admin-command-title">Weekly Schedule <span class="admin-command-sub">Builders + installs</span></div>
-      ${renderAdminWeeklySchedule(items)}
+      ${renderAdminWeeklySchedule(items, timerHistory)}
     </div>
   </div>`;
 }
