@@ -72,7 +72,7 @@ button, input, select, textarea { font-family:inherit; }
 @keyframes softPop { 0% { transform:scale(.92); } 70% { transform:scale(1.06); } 100% { transform:scale(1); } }
 
 /* LOGIN */
-#screen-login { align-items:center; justify-content:center; padding:2rem 1.25rem; position:relative; }
+#screen-login { align-items:center; justify-content:flex-start; padding:2rem 1.25rem calc(108px + env(safe-area-inset-bottom)); position:relative; overflow-y:auto; box-sizing:border-box; }
 #screen-login::before { content:''; position:fixed; top:0; left:0; right:0; height:3px; background:var(--accent); z-index:100; }
 .login-logo { width:80px; height:80px; background:#fff; border-radius:10px; display:flex; align-items:center; justify-content:center; margin-bottom:1.5rem; box-shadow:0 4px 24px rgba(224,32,32,0.3); overflow:hidden; padding:5px; }
 .login-logo img { width:100%; height:100%; object-fit:contain; display:block; }
@@ -503,6 +503,30 @@ input.photo-file-inp { display:none; }
 .chip-over    { background:rgba(245,158,11,0.25); color:#fbbf24; border:1px solid rgba(245,158,11,0.4); }
 .chip-grab    { background:rgba(16,185,129,0.15); color:var(--green); }
 .hist-note { font-size:11px; color:var(--muted); margin-top:6px; font-style:italic; }
+.shared-queue-wrap,.message-board-wrap { display:flex; flex-direction:column; gap:12px; }
+.shared-queue-card,.message-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px; }
+.shared-queue-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+.shared-queue-title { font-size:14px; font-weight:800; }
+.shared-queue-sub { font-size:11px; color:var(--muted); margin-top:2px; }
+.shared-queue-list { display:flex; flex-direction:column; gap:8px; }
+.shared-queue-item { background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:10px 11px; }
+.shared-queue-item-top { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+.shared-queue-item-name { font-size:13px; font-weight:700; line-height:1.3; }
+.shared-queue-item-meta { font-size:10px; color:var(--muted); margin-top:3px; line-height:1.35; }
+.queue-stage-pill { font-size:9px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; padding:4px 8px; border-radius:999px; white-space:nowrap; }
+.message-compose { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px; }
+.message-compose-head { font-size:13px; font-weight:800; margin-bottom:8px; }
+.message-compose-sub { font-size:11px; color:var(--muted); margin-bottom:10px; line-height:1.4; }
+.message-textarea { width:100%; min-height:92px; box-sizing:border-box; background:var(--surface2); border:1px solid var(--border2); border-radius:12px; padding:12px; color:var(--text); font-size:14px; resize:vertical; outline:none; }
+.message-actions { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:10px; }
+.message-post-btn { border:none; background:var(--accent); color:#fff; border-radius:10px; padding:10px 14px; font-size:12px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; cursor:pointer; }
+.message-post-btn:disabled { opacity:.45; cursor:not-allowed; }
+.message-readonly { font-size:11px; color:var(--muted); }
+.message-card-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
+.message-card-name { font-size:13px; font-weight:800; }
+.message-card-time { font-size:10px; color:var(--muted); white-space:nowrap; }
+.message-card-body { font-size:13px; line-height:1.45; white-space:pre-wrap; }
+.message-card-tag { display:inline-flex; margin-top:8px; font-size:10px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; padding:4px 8px; border-radius:999px; background:rgba(224,32,32,.12); color:var(--accent); }
 
 /* COMPLETED BUILDS */
 .completed-section { margin-top:24px; }
@@ -995,10 +1019,9 @@ input.photo-file-inp { display:none; }
 
 <!-- LOGIN / NAME SELECT SCREEN -->
 <div id="screen-login" class="screen" style="position:relative">
-  <!-- Updates button top right -->
-  <button onclick="showBuildUpdates()" style="position:absolute;top:16px;right:16px;background:none;border:none;color:var(--muted2);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px;z-index:10">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-    <span style="font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase">Updates</span>
+  <button class="admin-login-btn" id="admin-login-btn" onclick="showAdminLogin()" style="position:absolute;top:16px;right:16px;width:auto;max-width:none;margin-top:0;padding:10px 12px;z-index:10">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    Admin View
   </button>
 
   <div class="login-logo" style="background:#fff;padding:5px;overflow:hidden;">
@@ -1050,18 +1073,6 @@ input.photo-file-inp { display:none; }
     <button class="auth-back-btn" onclick="authBack()" style="margin-top:14px">&#8592; Back</button>
   </div>
 
-  <button class="admin-login-btn" id="admin-login-btn" onclick="showAdminLogin()">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-    Admin View
-  </button>
-  <button id="login-signout-btn" onclick="signOutCompletely()" style="display:none;background:none;border:none;color:var(--red);cursor:pointer;font-size:12px;font-weight:600;margin-top:6px;padding:6px;display:flex;align-items:center;gap:5px">
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-    Sign Out
-  </button>
-  <button onclick="openLoginSettings()" style="background:none;border:none;color:var(--muted2);cursor:pointer;display:flex;align-items:center;gap:6px;font-size:12px;margin-top:8px;padding:6px;">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-    Appearance
-  </button>
 </div>
 
 <!-- ADMIN LOGIN SCREEN -->
@@ -1276,13 +1287,24 @@ input.photo-file-inp { display:none; }
 
 <div id="screen-history" class="screen">
   <div class="hist-header">
-    <button class="back-btn" onclick="showScreen('screen-dash')">
+    <button class="back-btn" onclick="returnToHomeScreen()">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>
       Back
     </button>
-    <div class="hist-title" id="hist-title">My Update History</div>
+    <div class="hist-title" id="hist-title">Team Messages</div>
   </div>
   <div class="hist-content" id="hist-content"></div>
+</div>
+
+<div id="screen-queue" class="screen">
+  <div class="hist-header">
+    <button class="back-btn" onclick="returnToHomeScreen()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>
+      Back
+    </button>
+    <div class="hist-title" id="queue-title">Production Queue</div>
+  </div>
+  <div class="hist-content" id="queue-content"></div>
 </div>
 
 <!-- KITTING SCREEN (Pete) -->
@@ -1432,6 +1454,110 @@ async function sbFetch(path, options = {}) {
     const text = await r.text();
     return text ? JSON.parse(text) : null;
   } catch(e) { console.warn("Supabase fetch failed:", e.message); return null; }
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = atob(base64);
+  return Uint8Array.from([...raw].map(ch => ch.charCodeAt(0)));
+}
+
+async function registerPushWorker() {
+  if (!("serviceWorker" in navigator)) return null;
+  try {
+    _swRegistration = await navigator.serviceWorker.register("/sw.js");
+    return _swRegistration;
+  } catch (e) {
+    console.warn("Service worker registration failed:", e.message);
+    return null;
+  }
+}
+
+async function getPushPublicKey() {
+  if (_pushPublicKey) return _pushPublicKey;
+  try {
+    const r = await fetch("/api/push?action=public-key", { cache: "no-store" });
+    const data = await r.json();
+    _pushPublicKey = data?.publicKey || "";
+  } catch (e) {
+    console.warn("Push public key load failed:", e.message);
+  }
+  return _pushPublicKey;
+}
+
+function pushNotificationsSupported() {
+  return !!(window.isSecureContext && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window);
+}
+
+async function syncPushSubscriptionForCurrentUser(forceSubscribe = false) {
+  if (!pushNotificationsSupported()) return false;
+  const reg = _swRegistration || await registerPushWorker();
+  if (!reg) return false;
+  const publicKey = await getPushPublicKey();
+  if (!publicKey) return false;
+  let sub = await reg.pushManager.getSubscription();
+  if (!sub && forceSubscribe) {
+    const perm = await Notification.requestPermission();
+    if (perm !== "granted") return false;
+    sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(publicKey),
+    });
+  }
+  if (!sub) return false;
+  await fetch("/api/push", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action: "subscribe",
+      userName: currentUser?.name || null,
+      subscription: sub.toJSON(),
+    }),
+  });
+  return true;
+}
+
+async function enableMessageNotifications() {
+  if (!currentUser) {
+    showToast("Sign into your name first.", "err");
+    return;
+  }
+  const ok = await syncPushSubscriptionForCurrentUser(true);
+  if (ok) {
+    showToast("Message alerts enabled.", "ok");
+    await renderHistory();
+  } else {
+    showToast("Could not enable alerts on this device.", "err");
+  }
+}
+
+async function syncPushForActiveSession(forceSubscribe = false) {
+  if (!currentUser) return false;
+  return syncPushSubscriptionForCurrentUser(forceSubscribe).catch(() => false);
+}
+
+function handleInitialHashRoute() {
+  const hash = String(location.hash || "").replace(/^#/, "").toLowerCase();
+  if (hash === "messages") {
+    showHistory().catch(() => {});
+    return true;
+  }
+  if (hash === "queue") {
+    showSharedQueue().catch(() => {});
+    return true;
+  }
+  return false;
+}
+
+async function clearMessageBadge() {
+  try {
+    if ("clearAppBadge" in navigator) await navigator.clearAppBadge();
+  } catch (_) {}
+  try {
+    const reg = _swRegistration || await navigator.serviceWorker.getRegistration();
+    reg?.active?.postMessage({ type: "CLEAR_BADGE" });
+  } catch (_) {}
 }
 
 /* ── Timer sync ─────────────────────────────────────────────── */
@@ -1638,6 +1764,8 @@ const TEAM = [
 let currentUser = null;
 let boardItems  = [];
 let boardCols   = [];   /* full column list from API — used for discovery */
+let _swRegistration = null;
+let _pushPublicKey = "";
 
 /* ═══════════════════════════════════════
    COLUMN DISCOVERY
@@ -2389,10 +2517,18 @@ function buildNameList() {
   const list = document.getElementById("name-list"); list.innerHTML = "";
   [{label:"Monitor Stand Builders",role:MS_ROLE},{label:"Chassis Builders",role:CHASSIS_ROLE},{label:"Kitting",role:KIT_ROLE}].forEach(({label,role})=>{
     const lbl = document.createElement("div"); lbl.className = "divider-label"; lbl.textContent = label; list.appendChild(lbl);
-    TEAM.filter(m=>role === KIT_ROLE ? (m.role === KIT_ROLE || m.role === FLOAT_ROLE) : m.role === role).forEach(m=>{
+    TEAM.filter(m => {
+      if (role === MS_ROLE) return m.role === MS_ROLE || m.role === FLOAT_ROLE;
+      if (role === KIT_ROLE) return m.role === KIT_ROLE;
+      return m.role === role;
+    }).forEach(m=>{
       const isFloater = m.role === FLOAT_ROLE;
+      const isLeadMember = m.name === "Thomas Persichina" || m.name === "Sepan Ali";
+      const leadPill = isLeadMember
+        ? `<span class="role-tag" style="margin-left:6px;background:rgba(16,185,129,.14);color:var(--green)">Lead</span>`
+        : "";
       const btn = document.createElement("button"); btn.className = "name-btn";
-      btn.innerHTML = `<div class="av" style="background:${m.color}25;color:${m.color}">${m.initials}</div>${m.name}<span class="role-tag ${roleTagClass(isFloater ? FLOAT_ROLE : role)}">${isFloater ? "Choose Role" : roleLoginLabel(role)}</span>`;
+      btn.innerHTML = `<div class="av" style="background:${m.color}25;color:${m.color}">${m.initials}</div>${m.name}${leadPill}<span class="role-tag ${roleTagClass(isFloater ? FLOAT_ROLE : role)}">${isFloater ? "Choose Role" : roleLoginLabel(role)}</span>`;
       btn.onclick = () => isFloater ? openFloaterRoleChoice(m) : selectUser(m);
       list.appendChild(btn);
     });
@@ -2504,6 +2640,7 @@ async function processLoginPin() {
 async function loginSuccess() {
   currentUser = pendingUser;
   localStorage.setItem("pt_user", JSON.stringify(currentUser));
+  syncPushForActiveSession(false);
   showLoginLoading(showDash);
 }
 
@@ -2557,6 +2694,7 @@ async function processAdminPin() {
   }
   currentUser = { name:ADMIN_NAME, initials:"EM", color:"#6366f1", role:"admin" };
   localStorage.setItem("pt_user", JSON.stringify(currentUser));
+  syncPushForActiveSession(false);
   showLoginLoading(() => {
     showScreen("screen-admin");
     document.getElementById("admin-date").textContent = new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
@@ -2612,6 +2750,7 @@ async function processSetupPin() {
     if (setupUser._isAdmin) {
       currentUser = { name:ADMIN_NAME, initials:"EM", color:"#6366f1", role:"admin" };
       localStorage.setItem("pt_user", JSON.stringify(currentUser));
+      syncPushForActiveSession(false);
       showLoginLoading(() => {
         showScreen("screen-admin");
         document.getElementById("admin-date").textContent = new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
@@ -2620,6 +2759,7 @@ async function processSetupPin() {
     } else {
       currentUser = setupUser;
       localStorage.setItem("pt_user", JSON.stringify(currentUser));
+      syncPushForActiveSession(false);
       showLoginLoading(showDash);
     }
   }
@@ -2699,17 +2839,24 @@ function showScreen(id) {
 function updateBottomNav(activeId) {
   const nav = document.getElementById("bottom-nav");
   if (!nav) return;
-  const loggedIn = !!currentUser;
-  nav.style.display = loggedIn ? "" : "none";
+  const gatePassed = localStorage.getItem("pt_gate_passed") === "1";
+  const showOnBuilderSelection = !currentUser && gatePassed && activeId === "screen-login";
+  const showOnAuthenticatedScreens = !!currentUser;
+  nav.style.display = (showOnBuilderSelection || showOnAuthenticatedScreens) ? "flex" : "none";
   ["bn-home","bn-queue","bn-history","bn-updates","bn-settings"].forEach(id => document.getElementById(id)?.classList.remove("active"));
+  if (activeId === "screen-login") document.getElementById("bn-home")?.classList.add("active");
   if (activeId === "screen-dash" || activeId === "screen-kit" || activeId === "screen-admin") document.getElementById("bn-home")?.classList.add("active");
-  if (activeId === "screen-picklist" || activeId === "screen-pete-kitted") document.getElementById("bn-queue")?.classList.add("active");
+  if (activeId === "screen-picklist" || activeId === "screen-pete-kitted" || activeId === "screen-queue") document.getElementById("bn-queue")?.classList.add("active");
   if (activeId === "screen-history") document.getElementById("bn-history")?.classList.add("active");
   if (activeId === "screen-updates") document.getElementById("bn-updates")?.classList.add("active");
 }
 
-function bottomNavHome() {
-  if (!currentUser) return;
+function returnToHomeScreen() {
+  if (!currentUser) {
+    authBack();
+    showScreen(localStorage.getItem("pt_gate_passed") === "1" ? "screen-login" : "screen-gate");
+    return;
+  }
   if (currentUser.role === "admin") {
     showScreen("screen-admin");
     loadAdminData();
@@ -2720,17 +2867,48 @@ function bottomNavHome() {
   }
 }
 
-function bottomNavQueue() {
-  if (!currentUser) return;
-  if (currentUser.role === KIT_ROLE) openPeteKittedPickLists();
-  else openPickListScreen();
+async function loadSharedBoardItems(force = false) {
+  const cached = !force ? loadBoardCache() : null;
+  if (cached?.items?.length) {
+    discoverColumns(cached.columns || []);
+    boardItems = cached.items;
+    return cached.items;
+  }
+  const [metaRes, itemsRes] = await Promise.all([
+    mondayQuery(`{ boards(ids:[${BOARD_ID}]) { columns { id title type settings_str } subscribers { id name } } }`),
+    mondayQuery(`{ boards(ids:[${BOARD_ID}]) { items_page(limit:200) { items { id name group { id title } column_values { id type text value ... on StatusValue { updated_at } } } } } }`)
+  ]);
+  const board = metaRes.data.boards[0];
+  const items = itemsRes.data.boards[0].items_page.items;
+  discoverColumns(board.columns || []);
+  boardItems = items;
+  saveBoardCache({ columns: board.columns || [], subscribers: board.subscribers || [], items });
+  return items;
 }
 
-function bottomNavHistory() {
-  if (!currentUser) return;
-  if (currentUser.role === KIT_ROLE) openPeteKittedPickLists();
-  else if (currentUser.role === "admin") openPickListScreen();
-  else showHistory();
+function bottomNavHome() {
+  if (!currentUser) {
+    returnToHomeScreen();
+    return;
+  }
+  returnToHomeScreen();
+}
+
+async function bottomNavQueue() {
+  await showSharedQueue();
+}
+
+async function bottomNavHistory() {
+  await showHistory();
+}
+function updatePhotoSrc(photoBase64, photoMime) {
+  if (!photoBase64) return "";
+  if (typeof photoBase64 === "string" && photoBase64.startsWith("data:")) return photoBase64;
+  return `data:${photoMime || "image/jpeg"};base64,${photoBase64}`;
+}
+function openContextSettings() {
+  if (currentUser) openSettings();
+  else openLoginSettings();
 }
 
 function showDash() {
@@ -2885,27 +3063,194 @@ async function grabBuildAs(itemId, memberName) {
   }
 }
 
-function showHistory() {
-  showScreen("screen-history");
-  document.getElementById("hist-title").textContent=currentUser.name.split(" ")[0]+"'s History";
-  renderHistory();
+const TEAM_MESSAGES_KEY = "pt_team_messages_local";
+
+function loadLocalTeamMessages() {
+  try { return JSON.parse(localStorage.getItem(TEAM_MESSAGES_KEY) || "[]"); } catch(e) { return []; }
 }
-function renderHistory() {
-  const content=document.getElementById("hist-content");
-  const deltas=loadDeltas().filter(d=>d.user===currentUser.name).sort((a,b)=>b.ts.localeCompare(a.ts));
-  if(!deltas.length){ content.innerHTML=`<div class="empty-state">No update history yet.<br><small>Save your first update to see it here.</small></div>`; return; }
-  const byWeek={};
-  deltas.forEach(d=>{ const wk=getWeekKey(d.date); if(!byWeek[wk]) byWeek[wk]=[]; byWeek[wk].push(d); });
-  const thisWeek=currentWeekKey(); let html="";
-  Object.keys(byWeek).sort((a,b)=>b.localeCompare(a)).forEach(wk=>{
-    html+=`<div class="hist-week-head">${wk===thisWeek?"This Week":"Week of "+fmtDate(byWeek[wk][0].date)}</div>`;
-    byWeek[wk].forEach(d=>{
-      if(d.colType==="grab"){ html+=`<div class="hist-entry"><div class="hist-entry-top"><div class="hist-proj">${escHtml(d.itemName)}</div><div class="hist-time">${fmtTs(d.ts)}</div></div><div class="hist-delta-row"><span class="hist-chip chip-grab">Self-assigned from Parts Pulled</span></div></div>`; return; }
-      const isOver=d.overCredit>0, cc=d.colType==="chassis"?"chip-chassis":"chip-ms", tl=d.colType==="chassis"?"Chassis":"MS";
-      html+=`<div class="hist-entry"><div class="hist-entry-top"><div class="hist-proj">${escHtml(d.itemName)}</div><div class="hist-time">${fmtTs(d.ts)}</div></div><div class="hist-delta-row"><span class="hist-chip ${cc}">${tl}: ${d.prevPct}% → ${d.newPct}%</span><span class="hist-chip ${isOver?'chip-over':cc}">${d.delta>=0?"+":""}${d.delta}%</span>${isOver?`<span class="hist-chip chip-over">+${d.overCredit}% over 100</span>`:""}</div>${d.note?`<div class="hist-note">"${escHtml(d.note)}"</div>`:""}</div>`;
-    });
+function saveLocalTeamMessages(rows) {
+  try { localStorage.setItem(TEAM_MESSAGES_KEY, JSON.stringify(rows || [])); } catch(e) {}
+}
+async function loadTeamMessages() {
+  const rows = await sbFetch("team_messages?order=created_at.desc&limit=100", {
+    method: "GET",
+    headers: { "Prefer": "return=representation" },
   });
-  content.innerHTML=html;
+  if (Array.isArray(rows)) return rows;
+  return loadLocalTeamMessages().sort((a,b) => String(b.created_at || "").localeCompare(String(a.created_at || "")));
+}
+async function postTeamMessage(text) {
+  const payload = {
+    user_name: currentUser?.name || "Unknown",
+    message: text,
+    created_at: new Date().toISOString(),
+  };
+  const posted = await sbFetch("team_messages", {
+    method: "POST",
+    prefer: "return=representation",
+    body: JSON.stringify(payload),
+  });
+  if (Array.isArray(posted) && posted.length) return posted[0];
+  const local = loadLocalTeamMessages();
+  local.unshift(payload);
+  saveLocalTeamMessages(local.slice(0, 100));
+  return payload;
+}
+
+async function showHistory() {
+  showScreen("screen-history");
+  document.getElementById("hist-title").textContent = "Team Messages";
+  clearMessageBadge().catch(() => {});
+  await renderHistory();
+}
+async function renderHistory() {
+  const content = document.getElementById("hist-content");
+  content.innerHTML = `<div class="loading-state"><div class="spinner"></div>Loading messages…</div>`;
+  const messages = await loadTeamMessages();
+  const canPost = !!currentUser;
+  const notifSupported = pushNotificationsSupported();
+  const notifEnabled = notifSupported && Notification.permission === "granted";
+  let html = `<div class="message-board-wrap">
+    <div class="message-compose">
+      <div class="message-compose-head">Team Message Board</div>
+      <div class="message-compose-sub">Use this for build notes, bug reports, or anything the team should see. Messages are only posted under a signed-in name.</div>
+      <div class="message-actions" style="margin-top:0;margin-bottom:10px">
+        <div class="message-readonly">${!notifSupported ? "Phone alerts are not supported on this device/browser." : notifEnabled ? "Message alerts are enabled on this device." : "Enable phone alerts for new team messages."}</div>
+        ${notifSupported ? `<button id="message-alert-btn" class="message-post-btn" onclick="enableMessageNotifications()" ${canPost && !notifEnabled ? "" : "disabled"}>${notifEnabled ? "Alerts On" : canPost ? "Enable Alerts" : "Login to Enable"}</button>` : ""}
+      </div>
+      <textarea id="team-message-input" class="message-textarea" placeholder="${canPost ? "Type your message for the team…" : "Sign into your name to post a message."}" ${canPost ? "" : "disabled"}></textarea>
+      <div class="message-actions">
+        <div class="message-readonly">${canPost ? `Posting as ${escHtml(currentUser.name)}` : "Read-only until someone logs in."}</div>
+        <button id="team-message-post-btn" class="message-post-btn" onclick="submitTeamMessage()" ${canPost ? "" : "disabled"}>Post Message</button>
+      </div>
+    </div>`;
+  if (!messages.length) {
+    html += `<div class="empty-state">No team messages yet.<br><small>Build updates, bug notes, and general shop messages will show up here.</small></div>`;
+  } else {
+    html += messages.map(msg => `<div class="message-card">
+      <div class="message-card-head">
+        <div class="message-card-name">${escHtml(msg.user_name || "Team")}</div>
+        <div class="message-card-time">${escHtml(fmtTs(msg.created_at || new Date().toISOString()))}</div>
+      </div>
+      <div class="message-card-body">${escHtml(msg.message || "")}</div>
+      <div class="message-card-tag">Team Message</div>
+    </div>`).join("");
+  }
+  html += `</div>`;
+  content.innerHTML = html;
+}
+async function submitTeamMessage() {
+  if (!currentUser) {
+    showToast("Sign into your name before posting.", "err");
+    return;
+  }
+  const input = document.getElementById("team-message-input");
+  const text = (input?.value || "").trim();
+  if (!text) {
+    showToast("Type a message first.", "err");
+    return;
+  }
+  const btn = document.getElementById("team-message-post-btn");
+  if (btn) { btn.disabled = true; btn.textContent = "Posting…"; }
+  try {
+    await postTeamMessage(text);
+    fetch("/api/push", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "notify-message", senderName: currentUser.name }),
+    }).catch(() => {});
+    if (input) input.value = "";
+    showToast("Message posted.", "ok");
+    await renderHistory();
+  } catch(err) {
+    showToast("Could not post message.", "err");
+  }
+}
+
+function queueStageStyle(key) {
+  return key === "kitting" ? "background:rgba(224,32,32,.14);color:var(--accent)" :
+    key === "building" ? "background:rgba(245,158,11,.14);color:#fbbf24" :
+    key === "config" ? "background:rgba(99,102,241,.14);color:#818cf8" :
+    "background:rgba(16,185,129,.14);color:var(--green)";
+}
+function summarizeQueueMeta(item, label) {
+  const shipDate = parseShipDate(item);
+  const ship = shipDate ? `Ship ${fmtShipDate(shipDate)}` : "Ship date unknown";
+  const group = item.group?.title || "No group";
+  return `${ship} · ${group}${label ? ` · ${label}` : ""}`;
+}
+function sharedQueueSections(items) {
+  const kitting = items
+    .filter(i => {
+      const grp = i.group?.title || "";
+      return grp === KIT_SOURCE_GROUP || (NEED_KITTED_GROUPS.includes(grp) && !!getNeedKittedSide(i));
+    })
+    .sort(compareScores)
+    .slice(0, 4)
+    .map(i => ({ item: i, meta: summarizeQueueMeta(i, getNeedKittedSide(i) ? `${getNeedKittedSide(i).toUpperCase()} side` : "Full kit") }));
+  const building = items
+    .filter(i => {
+      const grp = i.group?.title || "";
+      return grp === PARTS_PULLED || grp.includes("Building Queue") || grp.includes("Stand By");
+    })
+    .sort(compareScores)
+    .slice(0, 4)
+    .map(i => ({ item: i, meta: summarizeQueueMeta(i, "Needs build movement") }));
+  const config = items
+    .filter(i => (i.group?.title || "").toLowerCase().includes("config"))
+    .sort(compareScores)
+    .slice(0, 4)
+    .map(i => ({ item: i, meta: summarizeQueueMeta(i, "Configuration") }));
+  const qc = items
+    .filter(i => (i.group?.title || "").toLowerCase().includes("quality control"))
+    .sort(compareScores)
+    .slice(0, 4)
+    .map(i => ({ item: i, meta: summarizeQueueMeta(i, "QC review") }));
+  return [
+    { key: "kitting", title: "Need Kitted", sub: "Next kits waiting on Pete", rows: kitting },
+    { key: "building", title: "Need Built", sub: "Orders moving through build", rows: building },
+    { key: "config", title: "Need Configured", sub: "Projects sitting in configuration", rows: config },
+    { key: "qc", title: "Need QC", sub: "Projects waiting on final QC", rows: qc },
+  ];
+}
+async function showSharedQueue() {
+  showScreen("screen-queue");
+  const content = document.getElementById("queue-content");
+  content.innerHTML = `<div class="loading-state"><div class="spinner"></div>Loading production queue…</div>`;
+  try {
+    const items = await loadSharedBoardItems();
+    const sections = sharedQueueSections(items || []);
+    let html = `<div class="shared-queue-wrap">`;
+    sections.forEach(section => {
+      html += `<div class="shared-queue-card">
+        <div class="shared-queue-head">
+          <div>
+            <div class="shared-queue-title">${escHtml(section.title)}</div>
+            <div class="shared-queue-sub">${escHtml(section.sub)}</div>
+          </div>
+          <div class="queue-stage-pill" style="${queueStageStyle(section.key)}">${section.rows.length} shown</div>
+        </div>`;
+      if (!section.rows.length) {
+        html += `<div class="empty-state" style="padding:18px 0">Nothing here right now.</div>`;
+      } else {
+        html += `<div class="shared-queue-list">` + section.rows.map(({ item, meta }) => `
+          <div class="shared-queue-item">
+            <div class="shared-queue-item-top">
+              <div style="flex:1;min-width:0">
+                <div class="shared-queue-item-name">${escHtml(compactProjectLabel(item))}</div>
+                <div class="shared-queue-item-meta">${escHtml(meta)}</div>
+              </div>
+              <div class="queue-stage-pill" style="${queueStageStyle(section.key)}">${escHtml(section.title.replace("Need ", ""))}</div>
+            </div>
+          </div>`).join("") + `</div>`;
+      }
+      html += `</div>`;
+    });
+    html += `</div>`;
+    content.innerHTML = html;
+  } catch(err) {
+    content.innerHTML = `<div class="empty-state">Could not load queue.<br><small>${escHtml(err.message || "Please try again.")}</small></div>`;
+  }
 }
 
 /* ═══════════════════════════════════════
@@ -10101,7 +10446,7 @@ function renderHomeUpdates() {
           </div>
           <div class="update-card-time">${timeStr}</div>
         </div>
-        ${u.photo_base64 ? `<img class="update-card-photo" src="data:${u.photo_mime||"image/jpeg"};base64,${u.photo_base64}"
+        ${u.photo_base64 ? `<img class="update-card-photo" src="${updatePhotoSrc(u.photo_base64, u.photo_mime)}"
           onclick="openLightbox(this.src,'${escHtml(u.item_name||"")} — ${escHtml(u.user_name||"")} ${timeStr}')"
           alt="Build photo" loading="lazy">` : ""}
         <div class="update-card-body">
@@ -10209,8 +10554,8 @@ function renderBuildUpdates() {
           </div>
           <div class="update-card-time">${timeStr}</div>
         </div>
-        ${u.photo_base64 ? `<img class="update-card-photo" src="data:${u.photo_mime||'image/jpeg'};base64,${u.photo_base64}"
-          onclick="openLightbox('data:${u.photo_mime||'image/jpeg'};base64,${u.photo_base64}','${escHtml(u.item_name||'')} — ${escHtml(u.user_name||'')} ${timeStr}')"
+        ${u.photo_base64 ? `<img class="update-card-photo" src="${updatePhotoSrc(u.photo_base64, u.photo_mime)}"
+          onclick="openLightbox('${updatePhotoSrc(u.photo_base64, u.photo_mime)}','${escHtml(u.item_name||'')} — ${escHtml(u.user_name||'')} ${timeStr}')"
           alt="Build photo" loading="lazy">` : ""}
         <div class="update-card-body">
           <div class="update-pct-badge">
@@ -10375,6 +10720,7 @@ syncTeamFromSupabase().then(changed => {
   if (changed) buildNameList();
 }).catch(()=>{});
 syncPinsFromSupabase().catch(()=>{});
+registerPushWorker().catch(()=>{});
 try {
   const saved=localStorage.getItem("pt_user");
   if(saved && localStorage.getItem("pt_gate_passed")==="1"){
@@ -10383,6 +10729,7 @@ try {
     currentUser = storedMember && storedMember.role === FLOAT_ROLE && [MS_ROLE, CHASSIS_ROLE, KIT_ROLE].includes(u.role)
       ? { ...storedMember, role: u.role, baseRole: FLOAT_ROLE }
       : storedMember || u;
+    syncPushForActiveSession(false);
     if(currentUser.role==="admin"){showScreen("screen-admin");document.getElementById("admin-date").textContent=new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});loadAdminData();}
     else { showDash(); }
   } else if (saved) {
@@ -10393,6 +10740,9 @@ try {
   /* Pre-load build updates in background for splash screen */
   sbFetch("build_updates?order=created_at.desc&limit=100",{method:"GET",headers:{"Prefer":"return=representation"}}).then(d=>{ if(d) _allBuildUpdates=d; }).catch(()=>{});
 } catch(e) { localStorage.removeItem("pt_user"); }
+updateBottomNav(document.querySelector(".screen.active")?.id || "screen-gate");
+handleInitialHashRoute();
+window.addEventListener("hashchange", handleInitialHashRoute);
 </script>
 
 <!-- PETE KITTED PICK LISTS SCREEN -->
@@ -10653,7 +11003,7 @@ try {
   </div>
 </div>
 
-<nav class="bottom-nav" id="bottom-nav" aria-label="Quick navigation">
+<nav class="bottom-nav" id="bottom-nav" aria-label="Quick navigation" style="display:none">
   <button class="bottom-nav-btn" id="bn-home" onclick="bottomNavHome()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
     Home
@@ -10664,13 +11014,13 @@ try {
   </button>
   <button class="bottom-nav-btn" id="bn-history" onclick="bottomNavHistory()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-    History
+    Messages
   </button>
   <button class="bottom-nav-btn" id="bn-updates" onclick="showBuildUpdates()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
     Updates
   </button>
-  <button class="bottom-nav-btn" id="bn-settings" onclick="openSettings()">
+  <button class="bottom-nav-btn" id="bn-settings" onclick="openContextSettings()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33"/></svg>
     Settings
   </button>
