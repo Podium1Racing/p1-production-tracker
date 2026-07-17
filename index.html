@@ -2699,9 +2699,12 @@ function showScreen(id) {
 function updateBottomNav(activeId) {
   const nav = document.getElementById("bottom-nav");
   if (!nav) return;
-  const loggedIn = !!currentUser;
-  nav.style.display = loggedIn ? "" : "none";
+  const gatePassed = localStorage.getItem("pt_gate_passed") === "1";
+  const showOnBuilderSelection = !currentUser && gatePassed && activeId === "screen-login";
+  const showOnAuthenticatedScreens = !!currentUser;
+  nav.style.display = (showOnBuilderSelection || showOnAuthenticatedScreens) ? "flex" : "none";
   ["bn-home","bn-queue","bn-history","bn-updates","bn-settings"].forEach(id => document.getElementById(id)?.classList.remove("active"));
+  if (activeId === "screen-login") document.getElementById("bn-home")?.classList.add("active");
   if (activeId === "screen-dash" || activeId === "screen-kit" || activeId === "screen-admin") document.getElementById("bn-home")?.classList.add("active");
   if (activeId === "screen-picklist" || activeId === "screen-pete-kitted") document.getElementById("bn-queue")?.classList.add("active");
   if (activeId === "screen-history") document.getElementById("bn-history")?.classList.add("active");
@@ -2709,7 +2712,10 @@ function updateBottomNav(activeId) {
 }
 
 function bottomNavHome() {
-  if (!currentUser) return;
+  if (!currentUser) {
+    if (localStorage.getItem("pt_gate_passed") === "1") showScreen("screen-login");
+    return;
+  }
   if (currentUser.role === "admin") {
     showScreen("screen-admin");
     loadAdminData();
@@ -2731,6 +2737,11 @@ function bottomNavHistory() {
   if (currentUser.role === KIT_ROLE) openPeteKittedPickLists();
   else if (currentUser.role === "admin") openPickListScreen();
   else showHistory();
+}
+function updatePhotoSrc(photoBase64, photoMime) {
+  if (!photoBase64) return "";
+  if (typeof photoBase64 === "string" && photoBase64.startsWith("data:")) return photoBase64;
+  return `data:${photoMime || "image/jpeg"};base64,${photoBase64}`;
 }
 
 function showDash() {
@@ -10101,7 +10112,7 @@ function renderHomeUpdates() {
           </div>
           <div class="update-card-time">${timeStr}</div>
         </div>
-        ${u.photo_base64 ? `<img class="update-card-photo" src="data:${u.photo_mime||"image/jpeg"};base64,${u.photo_base64}"
+        ${u.photo_base64 ? `<img class="update-card-photo" src="${updatePhotoSrc(u.photo_base64, u.photo_mime)}"
           onclick="openLightbox(this.src,'${escHtml(u.item_name||"")} — ${escHtml(u.user_name||"")} ${timeStr}')"
           alt="Build photo" loading="lazy">` : ""}
         <div class="update-card-body">
@@ -10209,8 +10220,8 @@ function renderBuildUpdates() {
           </div>
           <div class="update-card-time">${timeStr}</div>
         </div>
-        ${u.photo_base64 ? `<img class="update-card-photo" src="data:${u.photo_mime||'image/jpeg'};base64,${u.photo_base64}"
-          onclick="openLightbox('data:${u.photo_mime||'image/jpeg'};base64,${u.photo_base64}','${escHtml(u.item_name||'')} — ${escHtml(u.user_name||'')} ${timeStr}')"
+        ${u.photo_base64 ? `<img class="update-card-photo" src="${updatePhotoSrc(u.photo_base64, u.photo_mime)}"
+          onclick="openLightbox('${updatePhotoSrc(u.photo_base64, u.photo_mime)}','${escHtml(u.item_name||'')} — ${escHtml(u.user_name||'')} ${timeStr}')"
           alt="Build photo" loading="lazy">` : ""}
         <div class="update-card-body">
           <div class="update-pct-badge">
@@ -10393,6 +10404,7 @@ try {
   /* Pre-load build updates in background for splash screen */
   sbFetch("build_updates?order=created_at.desc&limit=100",{method:"GET",headers:{"Prefer":"return=representation"}}).then(d=>{ if(d) _allBuildUpdates=d; }).catch(()=>{});
 } catch(e) { localStorage.removeItem("pt_user"); }
+updateBottomNav(document.querySelector(".screen.active")?.id || "screen-gate");
 </script>
 
 <!-- PETE KITTED PICK LISTS SCREEN -->
@@ -10653,7 +10665,7 @@ try {
   </div>
 </div>
 
-<nav class="bottom-nav" id="bottom-nav" aria-label="Quick navigation">
+<nav class="bottom-nav" id="bottom-nav" aria-label="Quick navigation" style="display:none">
   <button class="bottom-nav-btn" id="bn-home" onclick="bottomNavHome()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
     Home
