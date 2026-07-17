@@ -180,6 +180,8 @@ button, input, select, textarea { font-family:inherit; }
 .pl-checkbox.checked { background:var(--green); border-color:var(--green); }
 .pl-item-label { flex:1; font-size:13px; color:var(--text); }
 .pl-item-label.allocated { text-decoration:line-through; color:var(--muted); }
+.pl-more-info-btn { background:rgba(255,255,255,0.045); border:1px solid var(--border2); color:var(--muted); border-radius:999px; padding:4px 8px; font-size:9px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; cursor:pointer; flex-shrink:0; white-space:nowrap; transition:background .15s,color .15s,border-color .15s; }
+.pl-more-info-btn:hover { background:rgba(255,255,255,0.08); color:var(--text); border-color:var(--muted); }
 .pl-item-new-badge { font-size:9px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; background:rgba(224,32,32,0.15); color:var(--accent); padding:2px 6px; border-radius:3px; flex-shrink:0; }
 .pl-dual-wrap { display:flex; flex-direction:column; gap:0; }
 .pl-dual-row { display:flex; align-items:center; gap:10px; padding:7px 14px; border-top:1px solid var(--border); }
@@ -578,6 +580,13 @@ input.photo-file-inp { display:none; }
 .admin-title { font-size:15px; font-weight:700; }
 .admin-sub   { font-size:11px; color:var(--muted); }
 .admin-content { flex:1; padding:14px; overflow-y:auto; padding-bottom:36px; }
+#screen-admin.admin-desktop-mode .admin-content { max-width:1680px; width:100%; margin:0 auto; padding:22px 28px 44px; box-sizing:border-box; }
+#screen-admin.admin-desktop-mode .admin-command-grid { grid-template-columns:1fr 1fr; }
+#screen-admin.admin-desktop-mode .admin-command-grid.admin-command-top { grid-template-columns:1.35fr .85fr .9fr; align-items:start; }
+#screen-admin.admin-desktop-mode .admin-command-top .admin-command-card { min-height:360px; }
+#screen-admin.admin-desktop-mode .admin-planner { grid-template-columns:320px 1fr; }
+#screen-admin.admin-desktop-mode .admin-schedule-grid { grid-template-columns:repeat(5,minmax(260px,1fr)); }
+#screen-admin.admin-desktop-mode .admin-day-card { min-height:360px; }
 .health-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
 .health-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); padding:13px 14px; }
 .health-val  { font-size:26px; font-weight:800; line-height:1; margin-bottom:4px; }
@@ -626,30 +635,127 @@ input.photo-file-inp { display:none; }
 .toast-undo:hover { background:rgba(255,255,255,0.2); }
 .pwa-hint { background:rgba(99,102,241,0.09); border:1px solid rgba(99,102,241,0.22); border-radius:9px; padding:9px 13px; margin-bottom:13px; font-size:11px; color:var(--accent2); line-height:1.6; }
 .no-proj { background:var(--surface); border:1px dashed var(--border2); border-radius:var(--radius); padding:24px; text-align:center; color:var(--muted); font-size:13px; line-height:1.8; }
-.page-race-transition {
-  position:fixed;
-  inset:0;
-  z-index:9999;
-  pointer-events:none;
-  opacity:0;
-  transform:translateX(-105%);
-  background-color:#050505;
-  background-image:
-    linear-gradient(45deg, rgba(224,32,32,.88) 0 10%, transparent 10% 90%, rgba(224,32,32,.88) 90% 100%),
-    linear-gradient(45deg, #fff 25%, transparent 25% 75%, #fff 75%),
-    linear-gradient(45deg, #fff 25%, transparent 25% 75%, #fff 75%);
-  background-position:0 0, 0 0, 18px 18px;
-  background-size:100% 100%, 36px 36px, 36px 36px;
-  box-shadow:0 0 50px rgba(224,32,32,.28);
+.next-action-card { background:linear-gradient(135deg,rgba(224,32,32,.14),rgba(99,102,241,.08)); border:1px solid rgba(224,32,32,.28); border-radius:var(--radius); padding:14px; margin-bottom:13px; box-shadow:0 10px 34px rgba(0,0,0,.16); }
+.next-action-kicker { font-size:9px; font-weight:900; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); margin-bottom:6px; }
+.next-action-title { font-size:16px; font-weight:850; line-height:1.25; margin-bottom:5px; }
+.next-action-sub { font-size:12px; color:var(--muted); line-height:1.45; margin-bottom:11px; }
+.next-action-meta { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:11px; }
+.next-action-btn { width:100%; border:none; border-radius:var(--radius-xs); background:var(--accent); color:#fff; padding:11px 12px; font-size:11px; font-weight:850; letter-spacing:.08em; text-transform:uppercase; cursor:pointer; }
+.stream-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
+.stream-alert { background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--yellow); border-radius:var(--radius-sm); padding:11px 12px; margin-bottom:8px; }
+.stream-alert-title { font-size:12px; font-weight:800; margin-bottom:3px; }
+.stream-alert-sub { font-size:11px; color:var(--muted); line-height:1.4; }
+.admin-command-grid { display:grid; grid-template-columns:1.15fr .85fr; gap:14px; margin-bottom:18px; }
+.admin-command-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px; overflow:hidden; }
+.admin-command-title { font-size:13px; font-weight:850; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.admin-command-sub { font-size:10px; color:var(--muted2); text-transform:uppercase; letter-spacing:.08em; font-weight:800; }
+.admin-ship-tabs { display:flex; gap:6px; background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:4px; margin-bottom:10px; }
+.admin-ship-tab { flex:1; border:none; border-radius:9px; padding:8px 10px; background:none; color:var(--muted); font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; cursor:pointer; }
+.admin-ship-tab.active { background:rgba(224,32,32,.18); color:#fff; }
+.admin-ship-panel { max-height:320px; overflow-y:auto; padding-right:3px; }
+.admin-ship-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.admin-ship-bucket { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px; }
+.admin-ship-head { font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.09em; color:var(--muted2); margin-bottom:8px; display:flex; justify-content:space-between; }
+.admin-mini-list { display:flex; flex-direction:column; gap:7px; }
+.admin-mini-row { background:rgba(255,255,255,.025); border:1px solid var(--border); border-radius:9px; padding:8px 9px; }
+.admin-mini-title { font-size:12px; font-weight:800; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.admin-mini-meta { font-size:10px; color:var(--muted); margin-top:3px; line-height:1.35; }
+.admin-live-row { display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center; padding:10px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--surface2); margin-bottom:8px; }
+.admin-live-dot { width:10px; height:10px; border-radius:999px; background:var(--green); box-shadow:0 0 14px rgba(16,185,129,.7); }
+.admin-live-dot.paused { background:var(--yellow); box-shadow:0 0 14px rgba(245,158,11,.6); }
+.admin-live-name { font-size:13px; font-weight:850; }
+.admin-live-project { font-size:11px; color:var(--muted); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.admin-live-time { font-size:15px; font-weight:900; font-variant-numeric:tabular-nums; color:var(--green); text-align:right; }
+.admin-live-time.paused { color:var(--yellow); }
+.admin-live-state { font-size:9px; color:var(--muted2); text-transform:uppercase; letter-spacing:.08em; text-align:right; margin-top:2px; }
+.admin-planner { display:grid; grid-template-columns:230px 1fr; gap:12px; }
+.admin-roster { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px; }
+.admin-roster-section { margin-bottom:12px; }
+.admin-roster-title { font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; color:var(--muted2); margin-bottom:7px; }
+.admin-roster-chip { display:flex; align-items:center; gap:8px; border:1px solid var(--border); background:rgba(255,255,255,.025); border-radius:10px; padding:8px 9px; margin-bottom:6px; cursor:grab; }
+.admin-roster-chip:active { cursor:grabbing; }
+.admin-roster-dot { width:22px; height:22px; border-radius:999px; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:900; flex-shrink:0; }
+.admin-schedule-grid { display:grid; grid-template-columns:repeat(5,minmax(170px,1fr)); gap:8px; overflow-x:auto; padding-bottom:4px; }
+.admin-day-card { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:9px; min-height:250px; transition:border-color .15s, background .15s; }
+.admin-day-card.drag-over { border-color:var(--accent); background:rgba(224,32,32,.08); }
+.admin-day-head { font-size:11px; font-weight:900; margin-bottom:7px; display:flex; justify-content:space-between; gap:6px; }
+.admin-day-add { border:1px solid var(--border2); background:none; color:var(--muted); border-radius:7px; font-size:10px; font-weight:800; padding:4px 6px; cursor:pointer; }
+.admin-sched-entry { border-left:2px solid var(--accent); background:rgba(224,32,32,.08); padding:6px 7px; border-radius:7px; margin-bottom:6px; cursor:pointer; }
+.admin-sched-entry.install { border-left-color:var(--accent2); background:rgba(99,102,241,.1); cursor:default; }
+.admin-sched-entry.off { border-left-color:var(--muted2); background:rgba(148,163,184,.08); }
+.admin-sched-entry.pto { border-left-color:#14b8a6; background:rgba(20,184,166,.1); }
+.admin-sched-entry.build { border-left-color:var(--green); background:rgba(16,185,129,.08); }
+.admin-sched-person { font-size:11px; font-weight:850; }
+.admin-sched-note { font-size:10px; color:var(--muted); margin-top:2px; line-height:1.3; }
+.admin-capacity-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:12px; }
+.admin-capacity-card { background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:9px; }
+.admin-capacity-val { font-size:20px; font-weight:950; line-height:1; }
+.admin-capacity-lbl { font-size:9px; color:var(--muted2); text-transform:uppercase; letter-spacing:.08em; font-weight:850; margin-top:4px; }
+.admin-install-controls { display:flex; gap:5px; margin-top:6px; }
+.admin-install-btn { border:1px solid var(--border2); background:rgba(255,255,255,.04); color:var(--muted); border-radius:6px; padding:2px 6px; font-size:10px; font-weight:850; cursor:pointer; }
+.admin-schedule-modal-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; width:100%; margin-top:10px; }
+.admin-schedule-field { display:flex; flex-direction:column; gap:5px; }
+.admin-schedule-field label { font-size:10px; color:var(--muted2); text-transform:uppercase; letter-spacing:.08em; font-weight:850; }
+.admin-schedule-field input,.admin-schedule-field select { background:var(--surface2); border:1px solid var(--border2); border-radius:9px; color:var(--text); padding:9px 10px; font-size:13px; outline:none; }
+.admin-schedule-field.full { grid-column:1 / -1; }
+.admin-schedule-actions { display:flex; gap:8px; width:100%; margin-top:14px; }
+.admin-schedule-actions button { flex:1; border:none; border-radius:10px; padding:12px; font-size:12px; font-weight:900; cursor:pointer; }
+.admin-schedule-save { background:var(--accent); color:#fff; }
+.admin-schedule-cancel { background:var(--surface2); color:var(--muted); border:1px solid var(--border2) !important; }
+.labor-calendar { border:1px solid var(--border); border-radius:14px; overflow:auto; background:var(--surface2); }
+.labor-grid { display:grid; min-width:1180px; grid-template-columns:150px repeat(7, minmax(145px, 1fr)); }
+.labor-cell { border-right:1px solid var(--border); border-bottom:1px solid var(--border); min-height:92px; padding:8px; position:relative; }
+.labor-head { min-height:auto; background:rgba(255,255,255,.035); font-size:11px; font-weight:900; text-align:center; color:var(--muted); }
+.labor-head:first-child { text-align:left; }
+.labor-line-label { display:flex; align-items:center; font-size:13px; font-weight:950; color:#fff; min-height:96px; }
+.labor-line-label.chassis { background:rgba(14,116,144,.28); }
+.labor-line-label.ms { background:rgba(6,95,70,.28); }
+.labor-line-label.install { background:rgba(154,52,18,.28); }
+.labor-line-label.pto { background:rgba(127,29,29,.32); }
+.labor-total { position:absolute; top:7px; right:8px; font-size:9px; color:var(--muted); font-weight:800; }
+.labor-chip { border:1px solid rgba(255,255,255,.12); border-radius:8px; padding:7px 8px; margin:18px 0 4px; font-size:10px; font-weight:850; cursor:pointer; background:rgba(255,255,255,.04); }
+.labor-chip + .labor-chip { margin-top:5px; }
+.labor-chip.chassis { background:rgba(14,165,233,.18); border-color:rgba(14,165,233,.35); color:#dff7ff; }
+.labor-chip.ms { background:rgba(16,185,129,.16); border-color:rgba(16,185,129,.34); color:#dcfff3; }
+.labor-chip.install { background:rgba(249,115,22,.18); border-color:rgba(249,115,22,.34); color:#fff1e6; }
+.labor-chip.pto,.labor-chip.off { background:rgba(239,68,68,.16); border-color:rgba(239,68,68,.34); color:#ffe4e4; }
+.labor-chip-name { white-space:normal; overflow:visible; text-overflow:clip; line-height:1.25; padding-right:22px; }
+.labor-chip-hours { float:right; color:#fff; opacity:.9; }
+.labor-chip-adjust { display:flex; gap:5px; margin-top:6px; align-items:center; }
+.labor-chip-adjust button { width:24px; height:20px; border:none; border-radius:6px; background:rgba(0,0,0,.24); color:#fff; font-size:13px; font-weight:950; cursor:pointer; line-height:1; }
+.labor-chip-reason { flex:1; min-width:0; background:rgba(0,0,0,.22); border:1px solid rgba(255,255,255,.12); border-radius:6px; color:#fff; font-size:10px; padding:4px 5px; }
+.labor-pool { margin-top:14px; border:1px solid var(--border); border-radius:14px; background:var(--surface2); padding:12px; }
+.labor-pool-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:8px; }
+.labor-pool-person { font-size:12px; font-weight:900; }
+.labor-pool-role { font-size:10px; color:var(--muted); margin-top:2px; }
+.labor-pool-slot { min-height:50px; padding:8px; border:1px solid var(--border); border-radius:10px; background:rgba(255,255,255,.025); }
+.labor-pool-btn { width:100%; border:1px solid var(--border2); background:rgba(255,255,255,.035); color:var(--muted); border-radius:8px; padding:7px; font-size:10px; font-weight:900; cursor:pointer; }
+.labor-pool-btn.available { background:rgba(16,185,129,.14); color:#dfffee; border-color:rgba(16,185,129,.35); }
+.labor-default-btn { border:1px solid var(--border2); background:rgba(255,255,255,.04); color:var(--muted); border-radius:8px; padding:6px 8px; font-size:10px; font-weight:900; cursor:pointer; }
+.labor-default-row { display:grid; grid-template-columns:1fr repeat(5,64px); gap:7px; align-items:center; width:100%; margin-top:8px; }
+.labor-default-row input { width:100%; background:var(--surface2); border:1px solid var(--border2); border-radius:8px; color:var(--text); padding:7px 6px; font-size:12px; box-sizing:border-box; }
+.labor-default-head { font-size:9px; color:var(--muted2); text-transform:uppercase; letter-spacing:.08em; font-weight:850; text-align:center; }
+.upcoming-install-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:8px; margin-top:10px; }
+.upcoming-install-card { background:var(--surface2); border:1px solid var(--border); border-left:3px solid var(--accent2); border-radius:10px; padding:9px 10px; }
+.admin-calendar-modal { position:fixed; inset:0; z-index:1200; background:var(--bg); display:flex; flex-direction:column; }
+.admin-calendar-modal-head { background:var(--surface); border-bottom:1px solid var(--border); padding:14px 18px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.admin-calendar-modal-title { font-size:17px; font-weight:950; }
+.admin-calendar-modal-sub { font-size:11px; color:var(--muted); margin-top:2px; }
+.admin-calendar-modal-body { flex:1; overflow:auto; padding:18px; }
+@media (max-width:900px) {
+  .admin-command-grid { grid-template-columns:1fr; }
+  .admin-ship-grid { grid-template-columns:1fr; }
+  .admin-planner { grid-template-columns:1fr; }
+  .admin-schedule-grid { grid-template-columns:repeat(5, minmax(220px, 1fr)); }
+  .admin-capacity-grid { grid-template-columns:1fr 1fr; }
 }
-.page-race-transition.run {
-  animation:checkeredFlagWipe .48s cubic-bezier(.76,0,.24,1) both;
-}
-@keyframes checkeredFlagWipe {
-  0%   { opacity:0;   transform:translateX(-105%) skewX(-10deg); }
-  18%  { opacity:.96; transform:translateX(-32%) skewX(-10deg); }
-  52%  { opacity:.96; transform:translateX(0) skewX(-10deg); }
-  100% { opacity:0;   transform:translateX(105%) skewX(-10deg); }
+.bottom-nav { position:fixed; left:10px; right:10px; bottom:calc(10px + env(safe-area-inset-bottom)); z-index:60; display:none; background:rgba(18,18,18,.88); border:1px solid var(--border); border-radius:18px; backdrop-filter:blur(16px); box-shadow:0 14px 40px rgba(0,0,0,.34); padding:6px; gap:4px; }
+.bottom-nav-btn { flex:1; border:none; background:none; color:var(--muted); border-radius:13px; padding:7px 4px 6px; font-size:9px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer; }
+.bottom-nav-btn.active { background:rgba(224,32,32,.16); color:#fff; }
+.bottom-nav-btn svg { width:15px; height:15px; }
+@media (max-width:720px) {
+  .bottom-nav { display:flex; }
+  .main-content,.kit-content,.admin-content,.hist-content,.team-screen-content { padding-bottom:88px !important; }
 }
 .login-loading-overlay {
   position:fixed;
@@ -856,7 +962,6 @@ input.photo-file-inp { display:none; }
 </style>
 </head>
 <body>
-<div id="page-race-transition" class="page-race-transition" aria-hidden="true"></div>
 <div id="login-loading-overlay" class="login-loading-overlay" aria-hidden="true">
   <img class="login-loading-img" src="assets/podium1-login-loading.png" alt="">
   <div class="login-loading-status">
@@ -1036,6 +1141,9 @@ input.photo-file-inp { display:none; }
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
         Pick Lists
       </button>
+      <button class="admin-refresh" id="admin-desktop-toggle" onclick="toggleAdminDesktopMode()">
+        Desktop View
+      </button>
       <button class="switch-btn" onclick="doAdminLogout()">Exit</button>
       <button class="settings-icon-btn" onclick="openSettings()" aria-label="Settings">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -1083,6 +1191,7 @@ input.photo-file-inp { display:none; }
     <div id="pwa-banner" class="pwa-hint" style="display:none">
        <strong>Save to Home Screen</strong> — tap Share → "Add to Home Screen" in Safari.
     </div>
+    <div id="dash-next-action"></div>
 
     <div class="perf-card">
       <div class="card-eyebrow">Performance Review</div>
@@ -1403,6 +1512,13 @@ async function sbGetAllTimers() {
   }) || [];
 }
 
+async function sbGetTimerHistory(limit = 1000) {
+  return await sbFetch(`timer_sessions?state=eq.ended&order=ended_at.desc&limit=${limit}`, {
+    method: "GET",
+    headers: { "Prefer": "return=representation" },
+  }) || [];
+}
+
 /* ── Admin: read kit completions ────────────────────────────── */
 async function sbGetKitCompletions(sinceDateStr) {
   const filter = sinceDateStr ? `&date_str=gte.${sinceDateStr}` : "";
@@ -1485,6 +1601,8 @@ const COL = {
   ms_size        : null,
   pick_list      : null,
   work_order_num : null,
+  install_staff  : null,
+  install_date   : null,
 };
 
 /* Column title keywords for runtime discovery (case-insensitive) */
@@ -1501,6 +1619,8 @@ const COL_DISCOVER = {
   ms_size        : ["monitor stand size"],
   pick_list      : ["pick list"],
   work_order_num : ["work order #", "work order#", "work order number", "wo#", "wo number"],
+  install_staff  : ["install staff", "installer", "install crew"],
+  install_date   : ["install date", "installation date", "scheduled install", "install scheduled"],
 };
 
 const MS_ROLE = "ms", CHASSIS_ROLE = "chassis", KIT_ROLE = "kit", FLOAT_ROLE = "float";
@@ -1691,6 +1811,28 @@ function getUnitWeight(item, colType) {
   if (!t) return 1.0;
   if (t.includes("ultimate") || t.includes("dof")) return 1.5;
   return 1.0;
+}
+
+function roundUnits(n) {
+  return Math.round((Number(n) || 0) * 10) / 10;
+}
+
+function formatUnits(n) {
+  const v = roundUnits(n);
+  return Number.isInteger(v) ? String(v) : v.toFixed(1);
+}
+
+function creditedPctFromProgress(prevPct, newPct) {
+  return Math.max(0, Math.min(100, Number(newPct) || 0) - Math.min(100, Number(prevPct) || 0));
+}
+
+function progressUnitsFromPct(item, colType, prevPct, newPct) {
+  return (creditedPctFromProgress(prevPct, newPct) / 100) * getUnitWeight(item, colType);
+}
+
+function progressUnitsFromUpdate(update, items) {
+  const item = (items || []).find(i => String(i.id) === String(update.item_id));
+  return progressUnitsFromPct(item, update.col_type, update.prev_pct, update.new_pct);
 }
 
 /* Returns weighted unit total for the current week.
@@ -2418,7 +2560,7 @@ async function processAdminPin() {
   showLoginLoading(() => {
     showScreen("screen-admin");
     document.getElementById("admin-date").textContent = new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
-    loadAdminData();
+    return loadAdminData();
   });
 }
 
@@ -2473,7 +2615,7 @@ async function processSetupPin() {
       showLoginLoading(() => {
         showScreen("screen-admin");
         document.getElementById("admin-date").textContent = new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
-        loadAdminData();
+        return loadAdminData();
       });
     } else {
       currentUser = setupUser;
@@ -2521,53 +2663,79 @@ function doLogout() {
 /* ═══════════════════════════════════════
    SCREENS
 ═══════════════════════════════════════ */
-function runRacePageTransition() {
-  if (window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) return;
-  const overlay = document.getElementById("page-race-transition");
-  if (!overlay) return;
-  overlay.classList.remove("run");
-  void overlay.offsetWidth;
-  overlay.classList.add("run");
-}
-let suppressNextRaceTransition = false;
-function showLoginLoading(nextAction) {
+async function showLoginLoading(nextAction) {
   const overlay = document.getElementById("login-loading-overlay");
   const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
 
   if (!overlay || reduced) {
-    suppressNextRaceTransition = true;
-    nextAction();
+    await Promise.resolve(nextAction());
     return;
   }
 
   overlay.classList.remove("hide");
   overlay.classList.add("show");
 
-  setTimeout(() => {
-    suppressNextRaceTransition = true;
-    nextAction();
-
+  const minimumIntro = new Promise(resolve => setTimeout(resolve, 720));
+  await minimumIntro;
+  try {
+    await Promise.resolve(nextAction());
+  } finally {
     setTimeout(() => {
       overlay.classList.add("hide");
       overlay.classList.remove("show");
       setTimeout(() => overlay.classList.remove("hide"), 780);
-    }, 520);
-  }, 720);
+    }, 260);
+  }
 }
 function showScreen(id) {
   const next = document.getElementById(id);
   if (!next) return;
-  const current = document.querySelector(".screen.active");
-  if (current && current.id !== id) {
-    if (suppressNextRaceTransition) suppressNextRaceTransition = false;
-    else runRacePageTransition();
-  }
   document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
   next.classList.add("active");
+  if (id === "screen-admin") applyAdminDesktopMode();
+  updateBottomNav(id);
 }
+
+function updateBottomNav(activeId) {
+  const nav = document.getElementById("bottom-nav");
+  if (!nav) return;
+  const loggedIn = !!currentUser;
+  nav.style.display = loggedIn ? "" : "none";
+  ["bn-home","bn-queue","bn-history","bn-updates","bn-settings"].forEach(id => document.getElementById(id)?.classList.remove("active"));
+  if (activeId === "screen-dash" || activeId === "screen-kit" || activeId === "screen-admin") document.getElementById("bn-home")?.classList.add("active");
+  if (activeId === "screen-picklist" || activeId === "screen-pete-kitted") document.getElementById("bn-queue")?.classList.add("active");
+  if (activeId === "screen-history") document.getElementById("bn-history")?.classList.add("active");
+  if (activeId === "screen-updates") document.getElementById("bn-updates")?.classList.add("active");
+}
+
+function bottomNavHome() {
+  if (!currentUser) return;
+  if (currentUser.role === "admin") {
+    showScreen("screen-admin");
+    loadAdminData();
+  } else if (currentUser.role === KIT_ROLE) {
+    showKitScreen();
+  } else {
+    showDash();
+  }
+}
+
+function bottomNavQueue() {
+  if (!currentUser) return;
+  if (currentUser.role === KIT_ROLE) openPeteKittedPickLists();
+  else openPickListScreen();
+}
+
+function bottomNavHistory() {
+  if (!currentUser) return;
+  if (currentUser.role === KIT_ROLE) openPeteKittedPickLists();
+  else if (currentUser.role === "admin") openPickListScreen();
+  else showHistory();
+}
+
 function showDash() {
   /* Pete goes to the kitting screen instead */
-  if (currentUser.role === KIT_ROLE) { showKitScreen(); startRealTimeSync(); return; }
+  if (currentUser.role === KIT_ROLE) { startRealTimeSync(); return showKitScreen(); }
   showScreen("screen-dash");
   startRealTimeSync();
   const isMS=currentUser.role===MS_ROLE;
@@ -2584,7 +2752,7 @@ function showDash() {
   const nextUpBtn = document.getElementById("next-up-btn");
   if (teamBtn)   teamBtn.style.display   = isTeamLead(currentUser) ? "flex" : "none";
   if (nextUpBtn) nextUpBtn.style.display = isLead() ? "flex" : "none";
-  loadBoard().then(()=>{ resumeActiveTimers(); updatePickListChangeDots().catch(()=>{}); });
+  return loadBoard().then(()=>{ resumeActiveTimers(); updatePickListChangeDots().catch(()=>{}); });
 }
 /* ── Lead: Next Up assign modal ── */
 function openNextUpAssign() {
@@ -2844,6 +3012,75 @@ async function loadBoard() {
 /* ═══════════════════════════════════════
    RENDER DASHBOARD
 ═══════════════════════════════════════ */
+function compactProjectLabel(item) {
+  const customer = cvText(item, COL.project);
+  return customer ? `${customer} · ${item.name}` : item.name;
+}
+
+function actionMetaPills(item, roleLabelText) {
+  const shipDate = parseShipDate(item);
+  const ship = shipDate ? `<span class="meta-pill pill-blue">${fmtShipDate(shipDate)}</span>` : "";
+  const firm = isFirm(item) ? `<span class="meta-pill pill-yellow">Firm</span>` : "";
+  const wg = isWhiteGlove(item) ? `<span class="meta-pill pill-white-glove">White Glove</span>` : "";
+  const role = roleLabelText ? `<span class="meta-pill" style="background:rgba(224,32,32,.12);color:var(--accent)">${roleLabelText}</span>` : "";
+  return `${role}${ship}${firm}${wg}`;
+}
+
+function findNextAvailableBuild(items, isMS) {
+  const role = isMS ? MS_ROLE : CHASSIS_ROLE;
+  const whoCol = isMS ? COL.ms_who : COL.chassis_who;
+  const statCol = isMS ? COL.ms_status : COL.chassis_status;
+  return items
+    .filter(i => (i.group?.title || "") === PARTS_PULLED || (i.group?.title || "").includes("Stand By"))
+    .filter(i => !parsePeople(i, whoCol).length)
+    .filter(i => {
+      const st = (cvText(i, statCol) || "").toLowerCase();
+      return !st.includes("complete");
+    })
+    .sort(compareScores)[0] || null;
+}
+
+function renderBuilderNextAction(items, myItems, isMS) {
+  const el = document.getElementById("dash-next-action");
+  if (!el) return;
+  const colType = isMS ? "ms" : "chassis";
+  const roleText = isMS ? "Monitor Stand" : "Chassis";
+  const paused = myItems.find(i => isBuildPaused(i, colType));
+  const active = myItems
+    .filter(i => !isBuildPaused(i, colType))
+    .sort((a,b) => parsePct(cvText(a, isMS ? COL.ms_pct : COL.chassis_pct)) - parsePct(cvText(b, isMS ? COL.ms_pct : COL.chassis_pct)))[0];
+  const next = paused || active || findNextAvailableBuild(items, isMS);
+
+  if (!next) {
+    el.innerHTML = `<div class="next-action-card">
+      <div class="next-action-kicker">My Next Action</div>
+      <div class="next-action-title">You’re clear right now</div>
+      <div class="next-action-sub">No active ${roleText.toLowerCase()} builds are waiting on you. Check the queue or refresh if something changed.</div>
+      <button class="next-action-btn" onclick="manualRefresh('dash')">Refresh My Work</button>
+    </div>`;
+    return;
+  }
+
+  const pct = parsePct(cvText(next, isMS ? COL.ms_pct : COL.chassis_pct));
+  const title = paused ? "Resume or update paused build" : active ? "Update your current build" : "Grab the next available build";
+  const sub = paused
+    ? `${compactProjectLabel(next)} is paused. Open it, add progress, or unpause when ready.`
+    : active
+      ? `${compactProjectLabel(next)} is at ${pct}%. This is the next thing to move forward.`
+      : `${compactProjectLabel(next)} is available in Parts Pulled / Stand By.`;
+  const btn = paused || active
+    ? `<button class="next-action-btn" onclick="openUpdateSheet('${next.id}','${colType}',event)">Open Update</button>`
+    : `<button class="next-action-btn" onclick="grabBuild('${next.id}',event)">Grab Build</button>`;
+
+  el.innerHTML = `<div class="next-action-card">
+    <div class="next-action-kicker">My Next Action</div>
+    <div class="next-action-title">${escHtml(title)}</div>
+    <div class="next-action-sub">${escHtml(sub)}</div>
+    <div class="next-action-meta">${actionMetaPills(next, roleText)}</div>
+    ${btn}
+  </div>`;
+}
+
 function renderDash(items) {
   const isMS      = currentUser.role === MS_ROLE;
   const myWhoCol  = isMS ? COL.ms_who      : COL.chassis_who;
@@ -2913,6 +3150,7 @@ function renderDash(items) {
     pausedEl.className   = "kpi-v " + (pausedCount > 0 ? "y" : "");
     document.getElementById("kpi-paused-row").style.display = pausedCount > 0 ? "" : "none";
   }
+  renderBuilderNextAction(items, myItems, isMS);
 
   const activeCount = myItems.length;
   document.getElementById("sec-title").textContent =
@@ -4268,23 +4506,1024 @@ async function submitGate() {
 
 buildNameList();
 
+function buildAllocationSummaryByWo(items = []) {
+  const summary = {};
+  (items || []).forEach(row => {
+    const wo = row?.wo_number;
+    if (!wo) return;
+    if (!summary[wo]) summary[wo] = { total: 0, allocated: 0 };
+    summary[wo].total++;
+    if (row.allocated) summary[wo].allocated++;
+  });
+  return summary;
+}
+
+function isAllocationOpenForAdmin(item, allocationSummaryByWo = {}) {
+  const wo = getWoNumberFromItem(item);
+  if (!wo) return true;
+  const state = allocationSummaryByWo[wo];
+  if (!state || !state.total) return true;
+  return state.allocated < state.total;
+}
+
+function adminDisplayPersonName(name) {
+  const raw = String(name || "").trim();
+  if (!raw) return "";
+  const lower = raw.toLowerCase();
+  if (lower === "nathanjaarons@gmail.com") return "Nate Aarons";
+  return raw;
+}
+
+function adminProjectLine(item) {
+  const wo = getWoNumberFromItem(item);
+  const ship = parseShipDate(item);
+  const installStaff = parsePeople(item, COL.install_staff).map(p => adminDisplayPersonName(p.name)).filter(Boolean);
+  return {
+    label: compactProjectLabel(item),
+    wo: wo || "No WO",
+    group: item.group?.title || "No group",
+    ship: ship ? fmtShipDate(ship) : "No ship date",
+    installStaff,
+  };
+}
+
+function adminMiniProjectRows(items = [], empty = "Nothing here yet.", limit = 8) {
+  const rows = (items || []).slice(0, limit).map(item => {
+    const p = adminProjectLine(item);
+    return `<div class="admin-mini-row">
+      <div class="admin-mini-title">${escHtml(p.label)}</div>
+      <div class="admin-mini-meta">${escHtml(p.wo)} · ${escHtml(p.group)}${p.installStaff.length ? `<br>Install: ${p.installStaff.map(escHtml).join(", ")}` : ""}</div>
+    </div>`;
+  }).join("");
+  const more = (items || []).length > limit ? `<div class="admin-mini-meta">+ ${(items || []).length - limit} more</div>` : "";
+  return `<div class="admin-mini-list">${rows || `<div class="admin-mini-meta">${escHtml(empty)}</div>`}${more}</div>`;
+}
+
+function renderAdminShippingFocus(dueToday = [], dueTomorrow = []) {
+  const activeItems = _adminShipTab === "tomorrow" ? dueTomorrow : dueToday;
+  const activeLabel = _adminShipTab === "tomorrow" ? "Tomorrow" : "Today";
+  return `<div class="admin-ship-tabs">
+    <button class="admin-ship-tab ${_adminShipTab === "today" ? "active" : ""}" onclick="setAdminShipTab('today')">Today <span style="opacity:.7">(${dueToday.length})</span></button>
+    <button class="admin-ship-tab ${_adminShipTab === "tomorrow" ? "active" : ""}" onclick="setAdminShipTab('tomorrow')">Tomorrow <span style="opacity:.7">(${dueTomorrow.length})</span></button>
+  </div>
+  <div class="admin-ship-bucket">
+    <div class="admin-ship-head"><span>Due ${escHtml(activeLabel)}</span><span>${activeItems.length}</span></div>
+    <div class="admin-ship-panel">${adminMiniProjectRows(activeItems, `No orders due ${activeLabel.toLowerCase()}.`, 30)}</div>
+  </div>`;
+}
+
+function startOfWeekDate(base = new Date()) {
+  const d = new Date(base);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  d.setHours(12,0,0,0);
+  return d;
+}
+
+function ymd(date) {
+  return date.toISOString().slice(0,10);
+}
+
+function dateOffsetYmd(offset) {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return ymd(d);
+}
+
+function sameShipDate(item, dateStr) {
+  const d = parseShipDate(item);
+  return d && ymd(d) === dateStr;
+}
+
+function parseInstallDate(item) {
+  if (!COL.install_date) return null;
+  const col = cv(item, COL.install_date);
+  if (!col) return null;
+  let dateStr = col.text || "";
+  if (!dateStr) {
+    try { dateStr = JSON.parse(col.value||"{}").date || ""; } catch(e) {}
+  }
+  if (!dateStr) return null;
+  return new Date(dateStr + "T12:00:00");
+}
+
+function effectiveInstallDate(item) {
+  return parseInstallDate(item) || parseShipDate(item);
+}
+
+function adminLiveTimerRows(sbTimers = []) {
+  const timers = (sbTimers || []).filter(t => t.state === "running" || t.state === "paused");
+  if (!timers.length) {
+    return `<div class="admin-mini-meta">No one has a live or paused production timer right now.</div>`;
+  }
+  return timers.map(t => {
+    const isPaused = t.state === "paused";
+    const liveMs = t.state === "running"
+      ? (t.duration_ms || 0) + (Date.now() - new Date(t.updated_at).getTime())
+      : (t.duration_ms || 0);
+    const pausedToday = isPaused ? liveMs : 0;
+    return `<div class="admin-live-row">
+      <div class="admin-live-dot ${isPaused ? "paused" : ""}"></div>
+      <div style="min-width:0">
+        <div class="admin-live-name">${escHtml(adminDisplayPersonName(t.user_name))}</div>
+        <div class="admin-live-project">${escHtml(t.item_name || t.item_id || "No project")} · ${escHtml((t.col_type || "build").toUpperCase())}</div>
+        ${isPaused ? `<div class="admin-mini-meta">Paused today: ${escHtml(fmtMs(pausedToday))}</div>` : ""}
+      </div>
+      <div>
+        <div class="admin-live-time ${isPaused ? "paused" : ""}" id="admin-sb-timer-${String(t.user_name || "").replace(/\s+/g,"-")}">${escHtml(fmtMs(liveMs))}</div>
+        <div class="admin-live-state">${isPaused ? "Paused" : "Running"}</div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function adminAverageBuildRows(timerHistory = [], sbUpdates = []) {
+  const ended = (timerHistory || []).filter(t => Number(t.duration_ms || 0) > 60000);
+  const byType = {};
+  ended.forEach(t => {
+    const key = t.col_type || "build";
+    if (!byType[key]) byType[key] = [];
+    byType[key].push(Number(t.duration_ms || 0));
+  });
+  const typeRows = Object.entries(byType).map(([type, arr]) => `<div class="admin-mini-row">
+    <div class="admin-mini-title">${escHtml(type === "ms" ? "Monitor Stand" : type === "chassis" ? "Chassis" : type.toUpperCase())}</div>
+    <div class="admin-mini-meta">${arr.length} completed timer${arr.length===1?"":"s"}</div>
+    <div class="admin-live-time" style="font-size:13px;text-align:left;margin-top:5px">${escHtml(fmtMs(avgArr(arr)))}</div>
+  </div>`).join("");
+
+  const byUser = {};
+  ended.forEach(t => {
+    const key = adminDisplayPersonName(t.user_name || "Unknown");
+    if (!byUser[key]) byUser[key] = [];
+    byUser[key].push(Number(t.duration_ms || 0));
+  });
+  const userRows = Object.entries(byUser)
+    .sort((a,b) => avgArr(a[1]) - avgArr(b[1]))
+    .slice(0,8)
+    .map(([user, arr]) => `<div class="admin-mini-row">
+      <div class="admin-mini-title">${escHtml(user)}</div>
+      <div class="admin-mini-meta">${arr.length} completed build timer${arr.length===1?"":"s"} · Avg ${escHtml(fmtMs(avgArr(arr)))}</div>
+    </div>`).join("");
+
+  return `<div class="admin-ship-grid">
+    <div>${typeRows || `<div class="admin-mini-meta">No completed timer history yet.</div>`}</div>
+    <div>${userRows || `<div class="admin-mini-meta">No builder averages yet.</div>`}</div>
+  </div>`;
+}
+
+const ADMIN_SCHEDULE_KEY = "pt_admin_week_schedule";
+const ADMIN_INSTALL_EXT_KEY = "pt_admin_install_extensions";
+const ADMIN_INSTALL_NOTES_KEY = "pt_admin_install_notes";
+const ADMIN_DEFAULT_HOURS_KEY = "pt_admin_default_hours";
+let _adminShipTab = "today";
+let _adminDraggedBuilder = null;
+let _adminScheduleDraft = null;
+let _expandedLaborChipKey = "";
+function loadAdminSchedule() {
+  try { return JSON.parse(localStorage.getItem(ADMIN_SCHEDULE_KEY) || "{}"); } catch(e) { return {}; }
+}
+function saveAdminSchedule(data) {
+  localStorage.setItem(ADMIN_SCHEDULE_KEY, JSON.stringify(data || {}));
+}
+function loadAdminInstallExtensions() {
+  try { return JSON.parse(localStorage.getItem(ADMIN_INSTALL_EXT_KEY) || "{}"); } catch(e) { return {}; }
+}
+function saveAdminInstallExtensions(data) {
+  localStorage.setItem(ADMIN_INSTALL_EXT_KEY, JSON.stringify(data || {}));
+}
+function loadAdminInstallNotes() {
+  try { return JSON.parse(localStorage.getItem(ADMIN_INSTALL_NOTES_KEY) || "{}"); } catch(e) { return {}; }
+}
+function saveAdminInstallNotes(data) {
+  localStorage.setItem(ADMIN_INSTALL_NOTES_KEY, JSON.stringify(data || {}));
+}
+function defaultHoursForMember(member) {
+  const saved = loadAdminDefaultHours()[member.name];
+  if (saved) return saved;
+  return { mon:8, tue:8, wed:8, thu:8, fri:8 };
+}
+function loadAdminDefaultHours() {
+  try { return JSON.parse(localStorage.getItem(ADMIN_DEFAULT_HOURS_KEY) || "{}"); } catch(e) { return {}; }
+}
+function saveAdminDefaultHours(data) {
+  localStorage.setItem(ADMIN_DEFAULT_HOURS_KEY, JSON.stringify(data || {}));
+}
+function dayKeyFromDate(date) {
+  return ["sun","mon","tue","wed","thu","fri","sat"][date.getDay()];
+}
+function defaultHoursForDate(member, date) {
+  return Number(defaultHoursForMember(member)[dayKeyFromDate(date)] || 0);
+}
+function openDefaultHoursEditor() {
+  const data = loadAdminDefaultHours();
+  const modal = document.createElement("div");
+  modal.id = "admin-default-hours-modal";
+  modal.className = "settings-modal";
+  const rows = TEAM.filter(m => m.role !== KIT_ROLE).map(m => {
+    const h = data[m.name] || defaultHoursForMember(m);
+    return `<div class="labor-default-row" data-name="${escHtml(m.name)}">
+      <div>
+        <div class="labor-pool-person">${escHtml(m.name)}</div>
+        <div class="labor-pool-role">${escHtml(roleScheduleLabel(m.role))}</div>
+        <div style="display:flex;gap:4px;margin-top:5px">
+          <button class="labor-default-btn" style="padding:3px 5px" onclick="applyDefaultHourTemplate(this,'5x8')">5×8</button>
+          <button class="labor-default-btn" style="padding:3px 5px" onclick="applyDefaultHourTemplate(this,'4x10')">4×10</button>
+        </div>
+      </div>
+      ${["mon","tue","wed","thu","fri"].map(k => `<input data-day="${k}" type="number" min="0" step="0.5" value="${Number(h[k] || 0)}">`).join("")}
+    </div>`;
+  }).join("");
+  modal.innerHTML = `<div class="settings-modal-box" style="max-width:760px;align-items:stretch">
+    <div class="settings-modal-title">Default Weekly Hours</div>
+    <div class="settings-modal-sub">Set each person's normal schedule. Weekly exceptions like installs/PTO still override this on the labor calendar.</div>
+    <div class="labor-default-row" style="margin-top:0">
+      <div></div>
+      ${["Mon","Tue","Wed","Thu","Fri"].map(d => `<div class="labor-default-head">${d}</div>`).join("")}
+    </div>
+    <div style="max-height:60vh;overflow:auto;padding-right:4px">${rows}</div>
+    <div class="admin-schedule-actions">
+      <button class="admin-schedule-cancel" onclick="document.getElementById('admin-default-hours-modal')?.remove()">Cancel</button>
+      <button class="admin-schedule-save" onclick="saveDefaultHoursEditor()">Save Defaults</button>
+    </div>
+  </div>`;
+  modal.addEventListener("click", ev => { if (ev.target === modal) modal.remove(); });
+  document.getElementById("admin-default-hours-modal")?.remove();
+  document.body.appendChild(modal);
+}
+function applyDefaultHourTemplate(btn, template) {
+  const row = btn.closest(".labor-default-row");
+  if (!row) return;
+  const values = template === "4x10"
+    ? { mon:10, tue:10, wed:10, thu:10, fri:0 }
+    : { mon:8, tue:8, wed:8, thu:8, fri:8 };
+  row.querySelectorAll("input[data-day]").forEach(inp => {
+    inp.value = values[inp.getAttribute("data-day")] ?? 0;
+  });
+}
+function saveDefaultHoursEditor() {
+  const next = {};
+  document.querySelectorAll("#admin-default-hours-modal .labor-default-row[data-name]").forEach(row => {
+    const name = row.getAttribute("data-name");
+    next[name] = {};
+    row.querySelectorAll("input[data-day]").forEach(inp => {
+      next[name][inp.getAttribute("data-day")] = Math.max(0, Number(inp.value || 0));
+    });
+  });
+  saveAdminDefaultHours(next);
+  document.getElementById("admin-default-hours-modal")?.remove();
+  refreshAdminViewFromCache();
+}
+function chooseAdminScheduleType(personName) {
+  return "build";
+}
+function scheduleTypeLabel(type) {
+  return type === "install" ? "Install" :
+    type === "off" ? "Off Today" :
+    type === "pto" ? "PTO" :
+    type === "other" ? "Other" :
+    "Building";
+}
+function scheduleTypeCountsCapacity(type) {
+  return !type || type === "build";
+}
+function refreshAdminViewFromCache() {
+  if (!window._adminItems) return;
+  if (isDesktop()) renderAdminDesktop(window._adminItems, window._sbTimers || [], window._sbKits || [], window._sbBuildUpdates || [], window._adminAllocationSummary || {}, window._sbTimerHistory || []);
+  else renderAdminDash(window._adminItems, window._sbTimers || [], window._sbKits || [], window._sbBuildUpdates || [], window._adminAllocationSummary || {}, window._sbTimerHistory || []);
+}
+function setAdminShipTab(tab) {
+  _adminShipTab = tab === "tomorrow" ? "tomorrow" : "today";
+  refreshAdminViewFromCache();
+}
+function addAdminScheduleEntry(dateStr) {
+  openAdminScheduleEditor({ dateStr });
+}
+function removeAdminScheduleEntry(dateStr, id) {
+  if (!confirm("Remove this schedule entry?")) return;
+  const data = loadAdminSchedule();
+  data[dateStr] = (data[dateStr] || []).filter(e => String(e.id) !== String(id));
+  saveAdminSchedule(data);
+  refreshAdminViewFromCache();
+}
+function adminDragBuilderStart(e, name, role) {
+  _adminDraggedBuilder = { name, role };
+  try { e.dataTransfer.setData("text/plain", JSON.stringify(_adminDraggedBuilder)); } catch(_) {}
+}
+function adminDragLaborStart(e, entry, dateStr) {
+  _adminDraggedBuilder = {
+    name: adminDisplayPersonName(entry.person),
+    role: entry.role,
+    dateStr,
+    entryId: entry._defaultSchedule ? null : entry.id,
+    hours: Number(entry.hours || 0),
+    type: entry.type || "build",
+    note: entry.note || "",
+  };
+  try { e.dataTransfer.setData("text/plain", JSON.stringify(_adminDraggedBuilder)); } catch(_) {}
+}
+function adminDragOverDay(e) {
+  e.preventDefault();
+  e.currentTarget.classList.add("drag-over");
+}
+function adminDragLeaveDay(e) {
+  e.currentTarget.classList.remove("drag-over");
+}
+function adminDropBuilder(e, dateStr, lineKey = null) {
+  e.preventDefault();
+  e.currentTarget.classList.remove("drag-over");
+  let payload = _adminDraggedBuilder;
+  try { payload = JSON.parse(e.dataTransfer.getData("text/plain") || "null") || payload; } catch(_) {}
+  if (!payload?.name) return;
+  if (lineKey) {
+    const role = lineKey === "ms" ? MS_ROLE : lineKey === "chassis" ? CHASSIS_ROLE : payload.role;
+    const type = lineKey === "install" ? "install" : lineKey === "pto" ? "pto" : "build";
+    const data = loadAdminSchedule();
+    if (!data[dateStr]) data[dateStr] = [];
+    if (payload.entryId && payload.dateStr === dateStr) {
+      data[dateStr] = data[dateStr].map(entry => String(entry.id) === String(payload.entryId)
+        ? { ...entry, role, type, hours: scheduleTypeCountsCapacity(type) ? Number(entry.hours || payload.hours || 8) : 0, note: type === "build" ? `${roleScheduleLabel(role)} Builder` : scheduleTypeLabel(type) }
+        : entry);
+    } else {
+      data[dateStr].push({
+        id: Date.now(),
+        person: payload.name,
+        role,
+        type,
+        hours: scheduleTypeCountsCapacity(type) ? Number(payload.hours || 8) : 0,
+        note: type === "build" ? `${roleScheduleLabel(role)} Builder` : scheduleTypeLabel(type),
+      });
+    }
+    saveAdminSchedule(data);
+    refreshAdminViewFromCache();
+    return;
+  }
+  openAdminScheduleEditor({ dateStr, person: payload.name, role: payload.role });
+}
+function toggleLaborChip(key, e = null) {
+  if (e) { e.stopPropagation(); e.preventDefault(); }
+  _expandedLaborChipKey = _expandedLaborChipKey === key ? "" : key;
+  refreshAdminViewFromCache();
+}
+function laborReasonValue(key) {
+  return document.getElementById(`labor-reason-${key}`)?.value || "";
+}
+function adminLaborChipKey(entry, dateStr) {
+  const raw = `${dateStr}-${entry.id || entry.person || ""}-${entry.role || ""}`;
+  return raw.replace(/[^a-zA-Z0-9_-]/g, "_");
+}
+function laborReasonOptions(selected = "") {
+  const options = ["Leaving early", "Sick", "PTO", "Extra hours", "Install help", "Other"];
+  return options.map(reason => `<option value="${escHtml(reason)}" ${reason === selected ? "selected" : ""}>${escHtml(reason)}</option>`).join("");
+}
+function adjustLaborHours(dateStr, person, role, delta, entryId = null, e = null, key = "") {
+  if (e) { e.stopPropagation(); e.preventDefault(); }
+  const reason = laborReasonValue(key) || (delta < 0 ? "Leaving early" : "Extra hours");
+  const data = loadAdminSchedule();
+  if (!data[dateStr]) data[dateStr] = [];
+  let entry = entryId ? data[dateStr].find(x => String(x.id) === String(entryId)) : null;
+  if (!entry) {
+    const member = TEAM.find(m => m.name === person) || { name: person, role };
+    const baseHours = defaultHoursForDate(member, new Date(dateStr + "T12:00:00"));
+    entry = {
+      id: Date.now(),
+      person,
+      role,
+      type: "build",
+      hours: baseHours,
+      note: reason.trim(),
+    };
+    data[dateStr].push(entry);
+  }
+  entry.hours = Math.max(0, roundUnits(Number(entry.hours || 0) + delta));
+  entry.note = reason.trim() || entry.note || "Adjusted hours";
+  saveAdminSchedule(data);
+  refreshAdminViewFromCache();
+}
+function openAdminScheduleEditor({ dateStr, person = "", role = CHASSIS_ROLE, entryId = null, hours = null, note = "", type: requestedType = "build" } = {}) {
+  const data = loadAdminSchedule();
+  const existing = entryId ? (data[dateStr] || []).find(e => String(e.id) === String(entryId)) : null;
+  _adminScheduleDraft = { dateStr, entryId };
+  const memberOptions = TEAM.map(m => `<option value="${escHtml(m.name)}" ${((existing?.person || person) === m.name) ? "selected" : ""}>${escHtml(m.name)}</option>`).join("");
+  const type = existing?.type || requestedType || "build";
+  const useRole = existing?.role || role || CHASSIS_ROLE;
+  const useHours = Number(existing?.hours ?? hours ?? 8);
+  const useNote = existing?.note || note || "";
+  const modal = document.createElement("div");
+  modal.id = "admin-schedule-editor-modal";
+  modal.className = "settings-modal";
+  modal.innerHTML = `<div class="settings-modal-box" style="max-width:520px;align-items:stretch">
+    <div class="settings-modal-title">${existing ? "Edit Schedule" : "Add Schedule"}</div>
+    <div class="settings-modal-sub">${escHtml(new Date(dateStr + "T12:00:00").toLocaleDateString("en-US",{weekday:"long",month:"short",day:"numeric"}))}</div>
+    <div class="admin-schedule-modal-grid">
+      <div class="admin-schedule-field">
+        <label>Builder / Staff</label>
+        <select id="admin-sched-person">${memberOptions}<option value="${escHtml(person)}" ${person && !TEAM.find(m=>m.name===person) ? "selected" : ""}>${escHtml(person || "Other")}</option></select>
+      </div>
+      <div class="admin-schedule-field">
+        <label>Doing</label>
+        <select id="admin-sched-type">
+          <option value="build" ${type==="build"?"selected":""}>Building</option>
+          <option value="install" ${type==="install"?"selected":""}>Install</option>
+          <option value="off" ${type==="off"?"selected":""}>Off Today</option>
+          <option value="pto" ${type==="pto"?"selected":""}>PTO</option>
+          <option value="other" ${type==="other"?"selected":""}>Other</option>
+        </select>
+      </div>
+      <div class="admin-schedule-field">
+        <label>Role</label>
+        <select id="admin-sched-role">
+          <option value="${CHASSIS_ROLE}" ${useRole===CHASSIS_ROLE?"selected":""}>Chassis</option>
+          <option value="${MS_ROLE}" ${useRole===MS_ROLE?"selected":""}>MS</option>
+          <option value="${KIT_ROLE}" ${useRole===KIT_ROLE?"selected":""}>Kitting</option>
+          <option value="${FLOAT_ROLE}" ${useRole===FLOAT_ROLE?"selected":""}>Floater</option>
+        </select>
+      </div>
+      <div class="admin-schedule-field">
+        <label>Build Hours</label>
+        <input id="admin-sched-hours" type="number" min="0" step="0.5" value="${useHours}">
+      </div>
+      <div class="admin-schedule-field full">
+        <label>Reason / Note</label>
+        <input id="admin-sched-note" value="${escHtml(useNote)}" placeholder="Sick, leaving early, extra hours, install name...">
+      </div>
+    </div>
+    <div class="admin-schedule-actions">
+      ${existing ? `<button class="admin-schedule-cancel" onclick="deleteAdminScheduleDraft()">Delete</button>` : ""}
+      <button class="admin-schedule-cancel" onclick="closeAdminScheduleEditor()">Cancel</button>
+      <button class="admin-schedule-save" onclick="saveAdminScheduleDraft()">Save</button>
+    </div>
+  </div>`;
+  modal.addEventListener("click", ev => { if (ev.target === modal) closeAdminScheduleEditor(); });
+  document.getElementById("admin-schedule-editor-modal")?.remove();
+  document.body.appendChild(modal);
+}
+function closeAdminScheduleEditor() {
+  document.getElementById("admin-schedule-editor-modal")?.remove();
+  _adminScheduleDraft = null;
+}
+function saveAdminScheduleDraft() {
+  if (!_adminScheduleDraft) return;
+  const { dateStr, entryId } = _adminScheduleDraft;
+  const data = loadAdminSchedule();
+  if (!data[dateStr]) data[dateStr] = [];
+  const type = document.getElementById("admin-sched-type").value;
+  const entry = {
+    person: document.getElementById("admin-sched-person").value,
+    role: document.getElementById("admin-sched-role").value,
+    type,
+    hours: scheduleTypeCountsCapacity(type) ? Math.max(0, Number(document.getElementById("admin-sched-hours").value || 0)) : 0,
+    note: document.getElementById("admin-sched-note").value.trim(),
+    id: entryId || Date.now(),
+  };
+  if (entryId) data[dateStr] = data[dateStr].map(e => String(e.id) === String(entryId) ? entry : e);
+  else data[dateStr].push(entry);
+  saveAdminSchedule(data);
+  closeAdminScheduleEditor();
+  refreshAdminViewFromCache();
+}
+function deleteAdminScheduleDraft() {
+  if (!_adminScheduleDraft) return;
+  removeAdminScheduleEntry(_adminScheduleDraft.dateStr, _adminScheduleDraft.entryId);
+  closeAdminScheduleEditor();
+}
+function adjustAdminInstallDays(itemId, delta) {
+  const data = loadAdminInstallExtensions();
+  const cur = Math.max(1, Number(data[itemId] || 1));
+  data[itemId] = Math.max(1, cur + delta);
+  saveAdminInstallExtensions(data);
+  refreshAdminViewFromCache();
+}
+function openAdminInstallEditor(itemId) {
+  const item = (window._adminItems || []).find(i => String(i.id) === String(itemId));
+  if (!item) return;
+  const p = adminProjectLine(item);
+  const data = loadAdminInstallExtensions();
+  const notes = loadAdminInstallNotes();
+  const days = Math.max(1, Number(data[itemId] || 1));
+  const note = notes[itemId] || "";
+  const modal = document.createElement("div");
+  modal.id = "admin-install-editor-modal";
+  modal.className = "settings-modal";
+  modal.innerHTML = `<div class="settings-modal-box" style="max-width:460px;align-items:stretch">
+    <div class="settings-modal-title">Edit Install</div>
+    <div class="settings-modal-sub">${escHtml(p.label)}<br>${escHtml(p.wo)} · ${p.installStaff.map(escHtml).join(", ")}</div>
+    <div class="admin-schedule-field">
+      <label>Install Length</label>
+      <input id="admin-install-days" type="number" min="1" step="1" value="${days}">
+    </div>
+    <div class="admin-schedule-field" style="margin-top:10px">
+      <label>Install Note</label>
+      <input id="admin-install-note" value="${escHtml(note)}" placeholder="Example: Mason out on install, customer site, travel note...">
+    </div>
+    <div class="admin-schedule-actions">
+      <button class="admin-schedule-cancel" onclick="document.getElementById('admin-install-editor-modal')?.remove()">Cancel</button>
+      <button class="admin-schedule-save" onclick="saveAdminInstallDays('${itemId}')">Save</button>
+    </div>
+  </div>`;
+  modal.addEventListener("click", ev => { if (ev.target === modal) modal.remove(); });
+  document.getElementById("admin-install-editor-modal")?.remove();
+  document.body.appendChild(modal);
+}
+function saveAdminInstallDays(itemId) {
+  const days = Math.max(1, Number(document.getElementById("admin-install-days")?.value || 1) || 1);
+  const data = loadAdminInstallExtensions();
+  data[itemId] = days;
+  saveAdminInstallExtensions(data);
+  const notes = loadAdminInstallNotes();
+  notes[itemId] = document.getElementById("admin-install-note")?.value?.trim() || "";
+  saveAdminInstallNotes(notes);
+  document.getElementById("admin-install-editor-modal")?.remove();
+  refreshAdminViewFromCache();
+}
+function adminWeekDates() {
+  const weekStart = startOfWeekDate();
+  return Array.from({ length: 5 }, (_, idx) => {
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + idx);
+    return d;
+  });
+}
+function adminLaborDates() {
+  return adminWeekDates().concat([5,6].map(offset => {
+    const d = startOfWeekDate();
+    d.setDate(d.getDate() + offset);
+    return d;
+  }));
+}
+function roleScheduleLabel(role) {
+  return role === MS_ROLE ? "MS" : role === CHASSIS_ROLE ? "Chassis" : role === KIT_ROLE ? "Kitting" : "Floater";
+}
+function adminScheduleCapacity(items = [], timerHistory = []) {
+  const data = loadAdminSchedule();
+  const dates = adminLaborDates();
+  let msHours = 0, chassisHours = 0;
+  TEAM.filter(m => m.role !== KIT_ROLE).forEach(m => {
+    dates.forEach(d => {
+      const ds = ymd(d);
+      const exceptions = data[ds] || [];
+      if (exceptions.some(e => adminDisplayPersonName(e.person) === m.name)) return;
+      const h = defaultHoursForDate(m, d);
+      if (m.role === MS_ROLE) msHours += h;
+      if (m.role === CHASSIS_ROLE) chassisHours += h;
+    });
+  });
+  Object.values(data).flat().forEach(e => {
+    if (!scheduleTypeCountsCapacity(e.type)) return;
+    const h = Number(e.hours || 0);
+    if (e.role === MS_ROLE) msHours += h;
+    if (e.role === CHASSIS_ROLE) chassisHours += h;
+  });
+  const avgMs = adminAvgHoursForType(timerHistory, "ms");
+  const avgChassis = adminAvgHoursForType(timerHistory, "chassis");
+  const weekSet = new Set(adminWeekDates().map(ymd));
+  const weekItems = (items || []).filter(i => {
+    const d = parseShipDate(i);
+    return d && weekSet.has(ymd(d));
+  });
+  const msUnits = roundUnits(weekItems.reduce((sum, i) => sum + getUnitWeight(i, "ms"), 0));
+  const chassisUnits = roundUnits(weekItems.reduce((sum, i) => sum + getUnitWeight(i, "chassis"), 0));
+  return { msHours, chassisHours, avgMs, avgChassis, msCapacity: avgMs ? roundUnits(msHours / avgMs) : 0, chassisCapacity: avgChassis ? roundUnits(chassisHours / avgChassis) : 0, msUnits, chassisUnits };
+}
+function adminWeeklyDemand(items = [], timerHistory = []) {
+  const weekSet = new Set(adminWeekDates().map(ymd));
+  const due = (items || []).filter(i => {
+    const d = parseShipDate(i);
+    return d && weekSet.has(ymd(d));
+  });
+  const avgMs = adminAvgHoursForType(timerHistory, "ms") || 8;
+  const avgChassis = adminAvgHoursForType(timerHistory, "chassis") || 8;
+  const msUnits = roundUnits(due.reduce((sum, i) => sum + getUnitWeight(i, "ms"), 0));
+  const chassisUnits = roundUnits(due.reduce((sum, i) => sum + getUnitWeight(i, "chassis"), 0));
+  return {
+    due,
+    orders: due.length,
+    msUnits,
+    chassisUnits,
+    msHoursNeeded: roundUnits(msUnits * avgMs),
+    chassisHoursNeeded: roundUnits(chassisUnits * avgChassis),
+    avgMs,
+    avgChassis,
+  };
+}
+function unassignedInstallItems(items = []) {
+  const today = todayStr();
+  return (items || [])
+    .filter(i => {
+      const d = parseInstallDate(i);
+      return d && ymd(d) >= today && !parsePeople(i, COL.install_staff).length;
+    })
+    .sort((a,b) => parseInstallDate(a) - parseInstallDate(b));
+}
+function adminAvgHoursForType(timerHistory = [], type) {
+  const arr = (timerHistory || [])
+    .filter(t => t.col_type === type && Number(t.duration_ms || 0) > 60000)
+    .map(t => Number(t.duration_ms || 0) / 3600000);
+  return arr.length ? Math.round((arr.reduce((a,b)=>a+b,0) / arr.length) * 10) / 10 : 0;
+}
+function scheduleLineForEntry(e) {
+  if (e.type === "install") return "install";
+  if (e.type === "pto" || e.type === "off") return "pto";
+  if (e.role === MS_ROLE) return "ms";
+  if (e.role === CHASSIS_ROLE) return "chassis";
+  return "chassis";
+}
+function renderLaborChip(entry, dateStr) {
+  const line = scheduleLineForEntry(entry);
+  const lineLabel = line === "ms" ? "MS Builder" : line === "chassis" ? "Chassis Builder" : line === "install" ? "Install" : "PTO / Off";
+  const chipKey = adminLaborChipKey(entry, dateStr);
+  const expanded = _expandedLaborChipKey === chipKey;
+  const click = `toggleLaborChip('${chipKey}',event)`;
+  const adjustable = scheduleTypeCountsCapacity(entry.type);
+  const entryRef = entry._defaultSchedule ? "null" : `'${entry.id}'`;
+  const selectedReason = (entry.note || "").trim() && entry.note !== "Default schedule" ? entry.note.trim() : "";
+  const dragPayload = encodeURIComponent(JSON.stringify({
+    person: adminDisplayPersonName(entry.person),
+    role: entry.role,
+    hours: Number(entry.hours || 0),
+    type: entry.type || "build",
+    note: entry.note || "",
+    id: entry._defaultSchedule ? null : entry.id,
+  }));
+  return `<div class="labor-chip ${line}" draggable="true" ondragstart="adminDragLaborStart(event, JSON.parse(decodeURIComponent('${dragPayload}')), '${dateStr}')" onclick="${click}">
+    <span class="labor-chip-hours">${scheduleTypeCountsCapacity(entry.type) ? `${Number(entry.hours || 0)}h` : ""}</span>
+    <div class="labor-chip-name">${escHtml(adminDisplayPersonName(entry.person))}</div>
+    <div style="font-size:9px;color:#fff;margin-top:3px;line-height:1.25">${escHtml(lineLabel)}</div>
+    ${(entry.note || "").trim() && entry.note !== "Default schedule" ? `<div style="font-size:9px;color:var(--muted);margin-top:2px;line-height:1.25">${escHtml(entry.note)}</div>` : ""}
+    ${adjustable && expanded ? `<div class="labor-chip-adjust">
+      <select id="labor-reason-${chipKey}" class="labor-chip-reason" onclick="event.stopPropagation()" onchange="event.stopPropagation()">
+        ${laborReasonOptions(selectedReason)}
+      </select>
+      <button title="Subtract one hour" onclick="adjustLaborHours('${dateStr}','${escHtml(entry.person)}','${entry.role}',-1,${entryRef},event,'${chipKey}')">−</button>
+      <button title="Add one hour" onclick="adjustLaborHours('${dateStr}','${escHtml(entry.person)}','${entry.role}',1,${entryRef},event,'${chipKey}')">+</button>
+    </div>` : ""}
+  </div>`;
+}
+function renderAdminLaborCalendar(items = [], timerHistory = []) {
+  const data = loadAdminSchedule();
+  const installExtensions = loadAdminInstallExtensions();
+  const installNotes = loadAdminInstallNotes();
+  const dates = adminLaborDates();
+  const demand = adminWeeklyDemand(items, timerHistory);
+  const missingInstallStaff = unassignedInstallItems(items).slice(0, 8);
+  const lines = [
+    { key:"chassis", label:"Chassis" },
+    { key:"ms", label:"Monitor Stand" },
+    { key:"install", label:"Install" },
+    { key:"pto", label:"PTO / Off" },
+  ];
+  const entriesByDay = {};
+  dates.forEach(d => { entriesByDay[ymd(d)] = data[ymd(d)] || []; });
+  TEAM.filter(m => m.role !== KIT_ROLE).forEach(m => {
+    dates.forEach(d => {
+      const ds = ymd(d);
+      const hasException = (entriesByDay[ds] || []).some(e => adminDisplayPersonName(e.person) === m.name);
+      if (hasException) return;
+      const hours = defaultHoursForDate(m, d);
+      if (!hours) return;
+      entriesByDay[ds].push({
+        id: `default-${m.name}-${ds}`,
+        person: m.name,
+        type: "build",
+        role: m.role,
+        hours,
+        note: "Default schedule",
+        _defaultSchedule: true,
+      });
+    });
+  });
+  (items || []).forEach(item => {
+    const staff = parsePeople(item, COL.install_staff).map(p => adminDisplayPersonName(p.name)).filter(Boolean);
+    const ship = effectiveInstallDate(item);
+    if (!staff.length || !ship) return;
+    const days = Math.max(1, Number(installExtensions[item.id] || 1));
+    for (let idx = 0; idx < days; idx++) {
+      const d = new Date(ship); d.setDate(ship.getDate() + idx);
+      const ds = ymd(d);
+      if (!entriesByDay[ds]) continue;
+      staff.forEach(person => entriesByDay[ds].push({
+        id: `install-${item.id}-${person}`,
+        person,
+        type: "install",
+        role: "install",
+        hours: 0,
+        note: compactProjectLabel(item),
+        installNote: installNotes[item.id] || matchingManualInstallNote(entriesByDay[ds], person),
+        _mondayInstall: true,
+        _itemId: item.id,
+      }));
+    }
+  });
+  const header = `<div class="labor-cell labor-head">Line</div>${dates.map(d => `<div class="labor-cell labor-head">${escHtml(d.toLocaleDateString("en-US",{weekday:"short"}))}<br><span style="color:#fff">${escHtml(d.toLocaleDateString("en-US",{month:"numeric",day:"numeric"}))}</span></div>`).join("")}`;
+  const body = lines.map(line => {
+    const cells = dates.map(d => {
+      const ds = ymd(d);
+      const entries = (entriesByDay[ds] || []).filter(e => scheduleLineForEntry(e) === line.key);
+      const total = entries.reduce((s,e) => s + (scheduleTypeCountsCapacity(e.type) ? Number(e.hours || 0) : 0), 0);
+      return `<div class="labor-cell" ondragover="adminDragOverDay(event)" ondragleave="adminDragLeaveDay(event)" ondrop="adminDropBuilder(event,'${ds}','${line.key}')">
+        <div class="labor-total">${total}h</div>
+        ${entries.map(e => e._mondayInstall
+          ? `<div class="labor-chip install" onclick="openAdminInstallEditor('${e._itemId}')"><div class="labor-chip-name">${escHtml(e.person)}</div><div style="font-size:9px;color:var(--muted);margin-top:2px">${escHtml(e.note || "Install")}</div>${e.installNote ? `<div style="font-size:9px;color:#fff;margin-top:3px;line-height:1.25">${escHtml(e.installNote)}</div>` : ""}</div>`
+          : renderLaborChip(e, ds)
+        ).join("")}
+      </div>`;
+    }).join("");
+    return `<div class="labor-cell labor-line-label ${line.key}">${escHtml(line.label)}</div>${cells}`;
+  }).join("");
+  const unscheduledSlots = [];
+  TEAM.filter(m => m.role !== KIT_ROLE).forEach(m => {
+    dates.forEach(d => {
+      const ds = ymd(d);
+      const defaultHours = defaultHoursForDate(m, d);
+      if (!defaultHours) return;
+      const scheduled = (entriesByDay[ds] || []).some(e => adminDisplayPersonName(e.person) === m.name);
+      if (!scheduled) unscheduledSlots.push({ member:m, date:d, hours:defaultHours });
+    });
+  });
+  const poolRows = unscheduledSlots.map(slot => `<div class="labor-pool-slot">
+    <div class="labor-pool-person">${escHtml(slot.member.name)}</div>
+    <div class="labor-pool-role">${escHtml(roleScheduleLabel(slot.member.role))} · ${escHtml(slot.date.toLocaleDateString("en-US",{weekday:"short",month:"numeric",day:"numeric"}))} · ${slot.hours}h unscheduled</div>
+    <button class="labor-pool-btn available" onclick="openAdminScheduleEditor({dateStr:'${ymd(slot.date)}',person:'${escHtml(slot.member.name)}',role:'${slot.member.role}'})" style="margin-top:7px">Schedule</button>
+  </div>`).join("");
+  const upcomingInstalls = renderUpcomingInstalls(items, dates);
+  return `<div class="admin-capacity-grid" style="margin-bottom:10px">
+    <div class="admin-capacity-card"><div class="admin-capacity-val">${demand.orders}</div><div class="admin-capacity-lbl">Orders Due This Week</div></div>
+    <div class="admin-capacity-card"><div class="admin-capacity-val" style="color:var(--yellow)">${formatUnits(demand.chassisHoursNeeded)}</div><div class="admin-capacity-lbl">Chassis Hrs Needed</div></div>
+    <div class="admin-capacity-card"><div class="admin-capacity-val" style="color:var(--accent2)">${formatUnits(demand.msHoursNeeded)}</div><div class="admin-capacity-lbl">MS Hrs Needed</div></div>
+    <div class="admin-capacity-card"><div class="admin-capacity-val" style="color:${missingInstallStaff.length ? "var(--red)" : "var(--green)"}">${missingInstallStaff.length}</div><div class="admin-capacity-lbl">Install Dates Missing Staff</div></div>
+    <div class="admin-capacity-card"><div class="admin-capacity-val" style="color:var(--yellow)">${adminScheduleCapacity(items,timerHistory).chassisHours}</div><div class="admin-capacity-lbl">Chassis Hrs</div></div>
+    <div class="admin-capacity-card"><div class="admin-capacity-val" style="color:var(--accent2)">${adminScheduleCapacity(items,timerHistory).msHours}</div><div class="admin-capacity-lbl">MS Hrs</div></div>
+  </div>
+  ${missingInstallStaff.length ? `<div class="stream-alert" style="border-left-color:var(--red);margin-bottom:12px">
+    <div class="stream-alert-title">Install date needs staff assigned</div>
+    <div class="stream-alert-sub">${missingInstallStaff.map(i => `${compactProjectLabel(i)} · ${fmtShipDate(parseInstallDate(i))}`).map(escHtml).join("<br>")}</div>
+  </div>` : ""}
+  <div class="labor-calendar"><div class="labor-grid">${header}${body}</div></div>
+  <div class="labor-pool">
+    <div class="admin-command-title" style="margin-bottom:8px">Available Labor Pool <span class="admin-command-sub">Compact weekly view</span><button class="labor-default-btn" onclick="openDefaultHoursEditor()">Edit Default Hours</button></div>
+    ${poolRows ? `<div class="labor-pool-grid">${poolRows}</div>` : `<div class="admin-mini-meta">Everyone's default hours are already scheduled for this week.</div>`}
+  </div>
+  ${upcomingInstalls}`;
+}
+function matchingManualInstallNote(entries = [], person = "") {
+  const target = adminDisplayPersonName(person).toLowerCase();
+  const match = (entries || []).find(e =>
+    e.type === "install" &&
+    adminDisplayPersonName(e.person).toLowerCase() === target &&
+    (e.note || "").trim()
+  );
+  return match?.note || "";
+}
+function renderUpcomingInstalls(items = [], visibleDates = []) {
+  const installNotes = loadAdminInstallNotes();
+  const visible = new Set((visibleDates || []).map(ymd));
+  const today = todayStr();
+  const installs = (items || [])
+    .filter(i => effectiveInstallDate(i) && ymd(effectiveInstallDate(i)) >= today && parsePeople(i, COL.install_staff).length)
+    .sort((a,b) => effectiveInstallDate(a) - effectiveInstallDate(b))
+    .filter(i => !visible.has(ymd(effectiveInstallDate(i))))
+    .slice(0, 12);
+  if (!installs.length) return `<div class="admin-command-card" style="margin-top:14px"><div class="admin-command-title">Upcoming Installs</div><div class="admin-mini-meta">No upcoming installs outside this week.</div></div>`;
+  return `<div class="admin-command-card" style="margin-top:14px">
+    <div class="admin-command-title">Upcoming Installs <span class="admin-command-sub">Beyond current week</span></div>
+    <div class="upcoming-install-list">
+      ${installs.map(i => {
+        const p = adminProjectLine(i);
+        return `<div class="upcoming-install-card" onclick="openAdminInstallEditor('${i.id}')">
+          <div class="admin-mini-title">${escHtml(p.label)}</div>
+          <div class="admin-mini-meta">${escHtml(fmtShipDate(effectiveInstallDate(i)))} · ${escHtml(p.wo)}<br>${p.installStaff.map(escHtml).join(", ")}${installNotes[i.id] ? `<br><span style="color:#fff">${escHtml(installNotes[i.id])}</span>` : ""}</div>
+        </div>`;
+      }).join("")}
+    </div>
+  </div>`;
+}
+function renderAdminWeeklySchedule(items = [], timerHistory = []) {
+  if (adminDesktopModeOn()) return renderAdminLaborCalendar(items, timerHistory);
+  const data = loadAdminSchedule();
+  const installExtensions = loadAdminInstallExtensions();
+  const installNotes = loadAdminInstallNotes();
+  const capacity = adminScheduleCapacity(items, timerHistory);
+  const demand = adminWeeklyDemand(items, timerHistory);
+  const missingInstallStaff = unassignedInstallItems(items).slice(0, 8);
+  const rosterGroups = [
+    { title: "Chassis", members: TEAM.filter(m => m.role === CHASSIS_ROLE) },
+    { title: "Monitor Stands", members: TEAM.filter(m => m.role === MS_ROLE) },
+    { title: "Floaters", members: TEAM.filter(m => m.role === FLOAT_ROLE) },
+  ];
+  const roster = `<div class="admin-roster">
+    ${rosterGroups.map(g => `<div class="admin-roster-section">
+      <div class="admin-roster-title">${escHtml(g.title)}</div>
+      ${g.members.length ? g.members.map(m => `<div class="admin-roster-chip" draggable="true" ondragstart="adminDragBuilderStart(event,'${escHtml(m.name)}','${m.role}')">
+        <div class="admin-roster-dot" style="background:${m.color}25;color:${m.color}">${escHtml(m.initials)}</div>
+        <div>
+          <div class="admin-sched-person">${escHtml(m.name)}</div>
+          <div class="admin-sched-note">${escHtml(roleScheduleLabel(m.role))}</div>
+        </div>
+      </div>`).join("") : `<div class="admin-mini-meta">No one assigned.</div>`}
+    </div>`).join("")}
+  </div>`;
+  const days = adminWeekDates().map(d => {
+    const ds = ymd(d);
+    const installs = (items || []).filter(i => {
+      const ship = effectiveInstallDate(i);
+      if (!ship || !parsePeople(i, COL.install_staff).length) return false;
+      const start = ymd(ship);
+      const installDays = Math.max(1, Number(installExtensions[i.id] || 1));
+      const dates = Array.from({ length: installDays }, (_, idx) => {
+        const dd = new Date(ship); dd.setDate(ship.getDate() + idx); return ymd(dd);
+      });
+      return dates.includes(ds);
+    });
+    const manual = data[ds] || [];
+    const chHours = manual.filter(e => e.role === CHASSIS_ROLE && scheduleTypeCountsCapacity(e.type)).reduce((s,e)=>s+Number(e.hours||0),0);
+    const msHours = manual.filter(e => e.role === MS_ROLE && scheduleTypeCountsCapacity(e.type)).reduce((s,e)=>s+Number(e.hours||0),0);
+    return `<div class="admin-day-card" ondragover="adminDragOverDay(event)" ondragleave="adminDragLeaveDay(event)" ondrop="adminDropBuilder(event,'${ds}')">
+      <div class="admin-day-head">
+        <span>${escHtml(d.toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"}))}</span>
+        <button class="admin-day-add" onclick="addAdminScheduleEntry('${ds}')">Add</button>
+      </div>
+      <div class="admin-mini-meta" style="margin-bottom:7px">Chassis ${chHours}h · MS ${msHours}h</div>
+      ${manual.map(e => `<div class="admin-sched-entry ${escHtml(e.type || "build")}" onclick="openAdminScheduleEditor({dateStr:'${ds}',entryId:'${e.id}'})">
+        <div class="admin-sched-person">${escHtml(adminDisplayPersonName(e.person))}</div>
+        <div class="admin-sched-note">${escHtml(scheduleTypeLabel(e.type))} · ${escHtml(roleScheduleLabel(e.role))}${scheduleTypeCountsCapacity(e.type) ? ` · ${Number(e.hours || 0)}h` : ""}${e.note ? `<br>${escHtml(e.note)}` : ""}</div>
+      </div>`).join("")}
+      ${installs.map(i => {
+        const p = adminProjectLine(i);
+        const days = Math.max(1, Number(installExtensions[i.id] || 1));
+        const note = installNotes[i.id] || "";
+        return `<div class="admin-sched-entry install" onclick="openAdminInstallEditor('${i.id}')">
+          <div class="admin-sched-person">${p.installStaff.map(escHtml).join(", ")}</div>
+          <div class="admin-sched-note">${escHtml(p.label)} · ${escHtml(p.wo)} · ${days} day${days===1?"":"s"}${note ? `<br><span style="color:#fff">${escHtml(note)}</span>` : ""}</div>
+          <div class="admin-install-controls">
+            <button class="admin-install-btn" onclick="event.stopPropagation();adjustAdminInstallDays('${i.id}',1)">Extend</button>
+            <button class="admin-install-btn" onclick="event.stopPropagation();adjustAdminInstallDays('${i.id}',-1)">Shorten</button>
+          </div>
+        </div>`;
+      }).join("")}
+      ${!manual.length && !installs.length ? `<div class="admin-mini-meta" style="border:1px dashed var(--border2);border-radius:10px;padding:18px 8px;text-align:center">Drag builders here<br>or click Add</div>` : ""}
+    </div>`;
+  }).join("");
+  return `<div class="admin-capacity-grid">
+    <div class="admin-capacity-card"><div class="admin-capacity-val">${demand.orders}</div><div class="admin-capacity-lbl">Orders Due This Week</div></div>
+    <div class="admin-capacity-card"><div class="admin-capacity-val" style="color:var(--yellow)">${formatUnits(demand.chassisHoursNeeded)}</div><div class="admin-capacity-lbl">Chassis Hrs Needed</div></div>
+    <div class="admin-capacity-card"><div class="admin-capacity-val" style="color:var(--accent2)">${formatUnits(demand.msHoursNeeded)}</div><div class="admin-capacity-lbl">MS Hrs Needed</div></div>
+    <div class="admin-capacity-card"><div class="admin-capacity-val" style="color:${missingInstallStaff.length ? "var(--red)" : "var(--green)"}">${missingInstallStaff.length}</div><div class="admin-capacity-lbl">Install Dates Missing Staff</div></div>
+    <div class="admin-capacity-card"><div class="admin-capacity-val" style="color:var(--yellow)">${capacity.chassisHours}</div><div class="admin-capacity-lbl">Chassis Hours</div></div>
+    <div class="admin-capacity-card"><div class="admin-capacity-val" style="color:var(--accent2)">${capacity.msHours}</div><div class="admin-capacity-lbl">MS Hours</div></div>
+    <div class="admin-capacity-card"><div class="admin-capacity-val" style="color:var(--green)">${formatUnits(capacity.chassisCapacity)}</div><div class="admin-capacity-lbl">Est Chassis Units</div></div>
+    <div class="admin-capacity-card"><div class="admin-capacity-val" style="color:var(--green)">${formatUnits(capacity.msCapacity)}</div><div class="admin-capacity-lbl">Est MS Units</div></div>
+  </div>
+  ${missingInstallStaff.length ? `<div class="stream-alert" style="border-left-color:var(--red);margin-bottom:12px">
+    <div class="stream-alert-title">Install date needs staff assigned</div>
+    <div class="stream-alert-sub">${missingInstallStaff.map(i => `${compactProjectLabel(i)} · ${fmtShipDate(parseInstallDate(i))}`).map(escHtml).join("<br>")}</div>
+  </div>` : ""}
+  <div class="admin-mini-meta" style="margin-bottom:10px">Due this week by unit size: Chassis ${formatUnits(capacity.chassisUnits)} units · MS ${formatUnits(capacity.msUnits)} units. Drag builders onto days to plan capacity.</div>
+  <div class="admin-planner">${roster}<div class="admin-schedule-grid">${days}</div></div>`;
+}
+
+function renderAdminCommandCenter(items, sbTimers = [], sbUpdates = [], timerHistory = []) {
+  const today = dateOffsetYmd(0);
+  const tomorrow = dateOffsetYmd(1);
+  const dueToday = (items || []).filter(i => sameShipDate(i, today)).sort(compareScores);
+  const dueTomorrow = (items || []).filter(i => sameShipDate(i, tomorrow)).sort(compareScores);
+  return `<div style="margin-bottom:12px">
+    <div style="font-size:18px;font-weight:900">Production Command Center</div>
+    <div class="admin-command-sub">Morning meeting view · live shop status</div>
+  </div>
+  <div class="admin-command-grid admin-command-top">
+    <div class="admin-command-card">
+      <div class="admin-command-title">Shipping Focus <span class="admin-command-sub">Today / Tomorrow</span></div>
+      ${renderAdminShippingFocus(dueToday, dueTomorrow)}
+    </div>
+    <div class="admin-command-card">
+      <div class="admin-command-title">Live Builder Timers <span class="admin-command-sub">Running / Paused only</span></div>
+      ${adminLiveTimerRows(sbTimers)}
+    </div>
+    <div class="admin-command-card">
+      <div class="admin-command-title">Average Build Times <span class="admin-command-sub">Completed timers</span></div>
+      ${adminAverageBuildRows(timerHistory, sbUpdates)}
+    </div>
+  </div>`;
+}
+
+function renderAdminStreamlineWidgets(items, sbTimers = [], sbKits = [], sbUpdates = [], allocationSummaryByWo = {}) {
+  const today = todayStr();
+  const isOpenWorkflowItem = (item) => {
+    const g = (item.group?.title || "").toLowerCase();
+    return (
+      g === PARTS_PULLED.toLowerCase() ||
+      g === KIT_SOURCE_GROUP.toLowerCase() ||
+      g.includes("building queue") ||
+      g.includes("stand by") ||
+      g.includes("quality control")
+    );
+  };
+  const completedToday = items.filter(i =>
+    (getCompletionTs(i, "ms") || "").slice(0,10) === today ||
+    (getCompletionTs(i, "chassis") || "").slice(0,10) === today
+  ).length;
+  const progressUnitsToday = roundUnits((sbUpdates || [])
+    .filter(u => u.date_str === today)
+    .reduce((sum, u) => sum + progressUnitsFromUpdate(u, items), 0));
+  const buildTodayValue = progressUnitsToday > 0 ? formatUnits(progressUnitsToday) : String(completedToday);
+  const buildTodaySub = progressUnitsToday > 0 ? "Progress credit" : "Completed MS or Chassis";
+  const kitsToday = (sbKits || []).filter(k => k.date_str === today).length;
+  const running = (sbTimers || []).filter(t => t.state === "running").length;
+  const allocationOpenItems = items.filter(i => isAllocationOpenForAdmin(i, allocationSummaryByWo));
+  const partsPulled = allocationOpenItems.filter(i => (i.group?.title || "") === PARTS_PULLED);
+  const standBy = allocationOpenItems.filter(i => (i.group?.title || "").includes("Stand By"));
+  const qc = allocationOpenItems.filter(i => (i.group?.title || "").toLowerCase().includes("quality control"));
+  const overdue = items.filter(i => {
+    const d = parseShipDate(i);
+    return d && daysUntil(d) < 0 && isOpenWorkflowItem(i) && isAllocationOpenForAdmin(i, allocationSummaryByWo);
+  }).sort(compareScores);
+  const unassigned = items.filter(i => {
+    const g = i.group?.title || "";
+    if (!g.includes("Building") && g !== PARTS_PULLED && !g.includes("Stand By")) return false;
+    if (!isAllocationOpenForAdmin(i, allocationSummaryByWo)) return false;
+    return !parsePeople(i, COL.ms_who).length && !parsePeople(i, COL.chassis_who).length;
+  }).sort(compareScores);
+
+  const next = overdue[0] || unassigned[0] || partsPulled[0] || standBy[0] || qc[0];
+  const actionTitle = overdue[0] ? "Overdue project needs attention"
+    : unassigned[0] ? "Assign the next project"
+    : partsPulled[0] ? "Parts Pulled is ready"
+    : standBy[0] ? "Stand By needs a decision"
+    : qc[0] ? "QC projects ready to verify"
+    : "Shop is looking clean";
+  const actionSub = next
+    ? `${compactProjectLabel(next)} · ${next.group?.title || "No group"}`
+    : "No obvious bottlenecks found in the current board load.";
+  const nextWo = next ? getWoNumberFromItem(next) : "";
+  const nextId = next?.id || "";
+  const actionButton = nextWo
+    ? `<button class="next-action-btn" onclick="openAdminAllocationReview('${nextId}','${nextWo}',event)">Open Allocation Review</button>`
+    : next
+      ? `<button class="next-action-btn" onclick="showToast('This project does not have a work order number yet.', '')">No Pick List Yet</button>`
+      : `<button class="next-action-btn" onclick="manualRefresh('admin')">Refresh Admin View</button>`;
+
+  const alerts = [
+    overdue.length ? { title:`${overdue.length} overdue ship date${overdue.length===1?"":"s"}`, sub:compactProjectLabel(overdue[0]) } : null,
+    unassigned.length ? { title:`${unassigned.length} unassigned item${unassigned.length===1?"":"s"}`, sub:"Assign MS/chassis ownership before it stalls." } : null,
+    partsPulled.length ? { title:`${partsPulled.length} in Parts Pulled`, sub:"Ready for builders to grab or for Pete follow-up." } : null,
+    qc.length ? { title:`${qc.length} in Quality Control`, sub:"Verify pick lists are complete before closing." } : null,
+  ].filter(Boolean).slice(0,4);
+
+  return `<div class="next-action-card">
+    <div class="next-action-kicker">Admin Next Action</div>
+    <div class="next-action-title">${escHtml(actionTitle)}</div>
+    <div class="next-action-sub">${escHtml(actionSub)}</div>
+    ${actionButton}
+  </div>
+  <div class="stream-grid">
+    <div class="health-card"><div class="health-val" style="color:var(--green)">${buildTodayValue}</div><div class="health-lbl">Build Units Today</div><div class="health-sub">${buildTodaySub}</div></div>
+    <div class="health-card"><div class="health-val" style="color:var(--yellow)">${kitsToday}</div><div class="health-lbl">Kits Today</div><div class="health-sub">From Pete/Kitting</div></div>
+    <div class="health-card"><div class="health-val" style="color:var(--accent2)">${running}</div><div class="health-lbl">Running Timers</div><div class="health-sub">Live production</div></div>
+    <div class="health-card"><div class="health-val" style="color:${alerts.length ? "var(--red)" : "var(--green)"}">${alerts.length}</div><div class="health-lbl">Watch Items</div><div class="health-sub">Need attention</div></div>
+  </div>
+  ${alerts.length ? `<div style="margin-bottom:16px">
+    <div style="font-size:13px;font-weight:800;margin-bottom:8px">Smart Alerts</div>
+    ${alerts.map(a => `<div class="stream-alert"><div class="stream-alert-title">${escHtml(a.title)}</div><div class="stream-alert-sub">${escHtml(a.sub)}</div></div>`).join("")}
+  </div>` : ""}`;
+}
+
+async function openAdminAllocationReview(itemId, woNum, e) {
+  if (e) { e.stopPropagation(); e.preventDefault(); }
+  if (!woNum) {
+    showToast("This project does not have a work order number yet.", "");
+    return;
+  }
+  await openAllocationReviewByWo(woNum, "Admin Allocation Review");
+}
+
 function openManageMembers() {
   const list = document.getElementById("manage-members-list");
   list.innerHTML = "";
   TEAM.forEach(m=>{
     const row = document.createElement("div");
-    row.style.cssText = "display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--card);border-radius:10px;border:1px solid var(--border)";
-    row.innerHTML = `<div class="av" style="background:${m.color}25;color:${m.color};width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">${m.initials}</div>
+    row.style.cssText = "display:flex;align-items:flex-start;gap:10px;padding:12px;background:var(--card);border-radius:12px;border:1px solid var(--border)";
+    const floaterNote = m.role === FLOAT_ROLE
+      ? `<div style="font-size:10px;color:#fbbf24;margin-top:5px;line-height:1.35">Floater access: Monitor Stands · Chassis · Kitting</div>`
+      : "";
+    row.innerHTML = `<div class="av" style="background:${m.color}25;color:${m.color};width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0">${m.initials}</div>
       <div style="flex:1;min-width:0">
-        <div style="font-size:14px;font-weight:600">${escHtml(m.name)}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <div style="font-size:14px;font-weight:700">${escHtml(m.name)}</div>
+          <span style="font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;background:rgba(16,185,129,.12);color:#10b981;border-radius:999px;padding:3px 7px">Active</span>
+        </div>
         <select onchange="updateMemberRole('${m.name.replace(/'/g,"\\'")}',this.value)" style="margin-top:6px;width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-xs);padding:8px 9px;color:var(--text);font-size:12px">
           <option value="${MS_ROLE}" ${m.role===MS_ROLE?"selected":""}>MS Builder</option>
           <option value="${CHASSIS_ROLE}" ${m.role===CHASSIS_ROLE?"selected":""}>Chassis Builder</option>
           <option value="${KIT_ROLE}" ${m.role===KIT_ROLE?"selected":""}>Kitter</option>
           <option value="${FLOAT_ROLE}" ${m.role===FLOAT_ROLE?"selected":""}>Floater</option>
         </select>
+        ${floaterNote}
+        <div style="display:flex;gap:8px;margin-top:9px">
+          <button class="member-remove-btn" style="flex:1;color:var(--muted);border-color:var(--border2)" onclick="resetMemberPin('${m.name.replace(/'/g,"\\'")}')">Reset PIN</button>
+          <button class="member-remove-btn" style="flex:1" onclick="removeMember('${m.name.replace(/'/g,"\\'")}')">Deactivate</button>
+        </div>
       </div>
-      <button class="member-remove-btn" onclick="removeMember('${m.name.replace(/'/g,"\\'")}')">Remove</button>`;
+      `;
     list.appendChild(row);
   });
   closeSettings();
@@ -4365,8 +5604,26 @@ function doAdminLogout() { doLogout(); }
 /* ═══════════════════════════════════════
    ADMIN DATA + RENDER
 ═══════════════════════════════════════ */
+function adminDesktopModeOn() {
+  return localStorage.getItem("pt_admin_desktop_mode") === "1";
+}
+function applyAdminDesktopMode() {
+  const on = adminDesktopModeOn();
+  document.getElementById("screen-admin")?.classList.toggle("admin-desktop-mode", on);
+  const btn = document.getElementById("admin-desktop-toggle");
+  if (btn) {
+    btn.textContent = on ? "Compact View" : "Desktop View";
+    btn.style.borderColor = on ? "rgba(16,185,129,.45)" : "";
+    btn.style.color = on ? "var(--green)" : "";
+  }
+}
+function toggleAdminDesktopMode() {
+  localStorage.setItem("pt_admin_desktop_mode", adminDesktopModeOn() ? "0" : "1");
+  applyAdminDesktopMode();
+  if (window._adminItems) loadAdminData();
+}
 function isDesktop() {
-  return window.innerWidth >= 900 && !('ontouchstart' in window) && navigator.maxTouchPoints === 0;
+  return adminDesktopModeOn() || (window.innerWidth >= 900 && !('ontouchstart' in window) && navigator.maxTouchPoints === 0);
 }
 
 let _adminDateRange = "week"; /* "week" or "month" */
@@ -4381,7 +5638,7 @@ async function loadAdminData() {
       d.setDate(d.getDate() - (isDesktop() ? 30 : 7));
       return d.toISOString().slice(0,10);
     })();
-    const [boardRes, sbTimers, sbKits, sbUpdates] = await Promise.all([
+    const [boardRes, sbTimers, sbTimerHistory, sbKits, sbUpdates, sbPickItems] = await Promise.all([
       mondayQuery(`{
         boards(ids:[${BOARD_ID}]) {
           columns { id title type }
@@ -4395,17 +5652,23 @@ async function loadAdminData() {
         }
       }`),
       sbGetAllTimers(),
+      sbGetTimerHistory(),
       sbGetKitCompletions(kitSince),
-      isDesktop() ? sbFetch("build_updates?order=created_at.desc&limit=500",{method:"GET",headers:{"Prefer":"return=representation"}}) : Promise.resolve([]),
+      sbFetch("build_updates?order=created_at.desc&limit=500",{method:"GET",headers:{"Prefer":"return=representation"}}),
+      sbFetch("picklist_items?select=wo_number,allocated&limit=5000",{method:"GET",headers:{"Prefer":"return=representation"}}),
     ]);
     const board = boardRes.data.boards[0];
     discoverColumns(board.columns);
     const items = board.items_page.items;
+    const allocationSummaryByWo = buildAllocationSummaryByWo(sbPickItems || []);
+    await hydrateKitHistoryBoardItems(sbKits, items);
     window._sbBuildUpdates = sbUpdates || [];
+    window._adminAllocationSummary = allocationSummaryByWo;
+    window._sbTimerHistory = sbTimerHistory || [];
     if (isDesktop()) {
-      renderAdminDesktop(items, sbTimers, sbKits, sbUpdates || []);
+      renderAdminDesktop(items, sbTimers, sbKits, sbUpdates || [], allocationSummaryByWo, sbTimerHistory || []);
     } else {
-      renderAdminDash(items, sbTimers, sbKits);
+      renderAdminDash(items, sbTimers, sbKits, sbUpdates || [], allocationSummaryByWo, sbTimerHistory || []);
     }
     /* Subscribe to real-time timer updates */
     sbSubscribeAdminRealtime((record) => {
@@ -4428,11 +5691,13 @@ function getDateRange(range) {
   return start.toISOString().slice(0,10);
 }
 
-function renderAdminDesktop(items, sbTimers, sbKits, sbUpdates) {
+function renderAdminDesktop(items, sbTimers, sbKits, sbUpdates, allocationSummaryByWo = {}, sbTimerHistory = []) {
   window._adminItems    = items;
   window._sbTimers      = sbTimers;
   window._sbKits        = sbKits;
   window._sbBuildUpdates = sbUpdates;
+  window._sbTimerHistory = sbTimerHistory;
+  window._adminAllocationSummary = allocationSummaryByWo;
 
   const content  = document.getElementById("admin-content");
   const range    = _adminDateRange;
@@ -4446,7 +5711,7 @@ function renderAdminDesktop(items, sbTimers, sbKits, sbUpdates) {
   const builderStats = {};
   builders.forEach(m => {
     builderStats[m.name] = {
-      updates: [], totalMs: 0, units: 0, sessions: [], recordMs: null, recordProject: ""
+      updates: [], totalMs: 0, units: 0, unitsToday: 0, sessions: [], recordMs: null, recordProject: ""
     };
   });
 
@@ -4458,13 +5723,17 @@ function renderAdminDesktop(items, sbTimers, sbKits, sbUpdates) {
   /* Build per-builder time from build_updates */
   (sbUpdates||[]).forEach(u => {
     if (!builderStats[u.user_name]) return;
-    builderStats[u.user_name].updates.push(u);
+    const st = builderStats[u.user_name];
+    st.updates.push(u);
+    const unitCredit = progressUnitsFromUpdate(u, items);
+    if ((u.date_str || "") >= rangeStart) st.units += unitCredit;
+    if ((u.date_str || "") === today) st.unitsToday += unitCredit;
     /* Track max time per item as a "session" */
     const ms = u.col_type === "ms" ? (u.ms_total_ms||0) : (u.chassis_total_ms||0);
     if (ms > 0) {
-      const existing = builderStats[u.user_name].sessions.find(s => s.itemId === u.item_id);
+      const existing = st.sessions.find(s => s.itemId === u.item_id);
       if (!existing) {
-        builderStats[u.user_name].sessions.push({ itemId: u.item_id, itemName: u.item_name, ms, date: u.date_str });
+        st.sessions.push({ itemId: u.item_id, itemName: u.item_name, ms, date: u.date_str });
       } else if (ms > existing.ms) {
         existing.ms = ms;
       }
@@ -4494,9 +5763,10 @@ function renderAdminDesktop(items, sbTimers, sbKits, sbUpdates) {
   builders.forEach(m => {
     const st = builderStats[m.name];
     const inRangeSessions = st.sessions.filter(s => s.date >= rangeStart);
-    st.units = inRangeSessions.length;
+    st.units = roundUnits(st.units);
+    st.unitsToday = roundUnits(st.unitsToday);
     st.totalMs = inRangeSessions.reduce((s, se) => s + se.ms, 0);
-    st.avgMs = st.units > 0 ? Math.round(st.totalMs / st.units) : 0;
+    st.avgMs = inRangeSessions.length > 0 ? Math.round(st.totalMs / inRangeSessions.length) : 0;
     /* Record: fastest non-zero session */
     const validSessions = st.sessions.filter(s => s.ms > 60000); /* > 1 min */
     if (validSessions.length) {
@@ -4504,13 +5774,11 @@ function renderAdminDesktop(items, sbTimers, sbKits, sbUpdates) {
       st.recordMs = rec.ms;
       st.recordProject = rec.itemName;
     }
-    /* Units today */
-    st.unitsToday = st.sessions.filter(s => s.date === today).length;
     /* Efficiency: units / working days in range */
     const daysInRange = range === "week"
       ? Math.min(new Date().getDay() || 7, 5)
       : Math.min(new Date().getDate(), 20);
-    st.efficiency = daysInRange > 0 ? (st.units / daysInRange).toFixed(1) : "0.0";
+    st.efficiency = daysInRange > 0 ? roundUnits(st.units / daysInRange).toFixed(1) : "0.0";
   });
 
   /* ── Kitting stats ── */
@@ -4548,6 +5816,8 @@ function renderAdminDesktop(items, sbTimers, sbKits, sbUpdates) {
       <button class="seg-btn ${range==="month"?"active":""}" onclick="setAdminRange('month')">This Month</button>
     </div>
   </div>
+  ${renderAdminCommandCenter(items, sbTimers, sbUpdates, sbTimerHistory)}
+  ${renderAdminStreamlineWidgets(items, sbTimers, sbKits, sbUpdates, allocationSummaryByWo)}
 
   <!-- Board Health KPIs -->
   <div class="dt-grid">
@@ -4617,13 +5887,13 @@ function renderAdminDesktop(items, sbTimers, sbKits, sbUpdates) {
             <td><span style="color:${roleColor};font-size:11px;font-weight:700">${roleLabel}</span></td>
             <td>
               <div style="display:flex;align-items:center;gap:8px">
-                <span style="font-weight:700;font-size:15px">${st.units}</span>
+                <span style="font-weight:700;font-size:15px">${formatUnits(st.units)}</span>
                 <div class="dt-bar-bg" style="flex:1">
                   <div class="dt-bar-fill" style="width:${barPct}%;background:${m.color}"></div>
                 </div>
               </div>
             </td>
-            <td style="font-weight:600">${st.unitsToday}</td>
+            <td style="font-weight:600">${formatUnits(st.unitsToday)}</td>
             <td style="color:var(--muted)">${st.avgMs > 0 ? fmtMs(st.avgMs) : "—"}</td>
             <td>
               ${st.recordMs ? `<span style="color:var(--yellow);font-weight:700">${fmtMs(st.recordMs)}</span>
@@ -4709,11 +5979,11 @@ function renderAdminDesktop(items, sbTimers, sbKits, sbUpdates) {
     <table class="dt-table">
       <thead><tr><th>Project</th><th>Kitter</th><th>Time</th><th>Status</th></tr></thead>
       <tbody>
-        ${sbKits.slice(0,20).map(k => {
-          const missing = (k.missing_items||[]).filter(Boolean);
+        ${uniqueKitHistoryRows(sbKits).slice(0,20).map(k => {
+          const missing = normalizeMissingItems(k.missing_items).filter(Boolean);
           const ts = new Date(k.completed_at);
           return `<tr>
-            <td style="font-weight:600">${escHtml(k.item_name||k.item_id)}</td>
+            <td style="font-weight:600">${escHtml(kitHistoryProjectLabel(k))}</td>
             <td style="color:var(--muted)">${escHtml(k.user_name||"")}</td>
             <td style="color:var(--muted2);font-size:12px">${ts.toLocaleDateString("en-US",{month:"short",day:"numeric"})} ${ts.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"})}</td>
             <td>${missing.length
@@ -4734,10 +6004,13 @@ function setAdminRange(r) {
   loadAdminData();
 }
 
-function renderAdminDash(items, sbTimers = [], sbKits = []) {
+function renderAdminDash(items, sbTimers = [], sbKits = [], sbUpdates = [], allocationSummaryByWo = {}, sbTimerHistory = []) {
   window._adminItems = items; /* store for time log item name lookup */
   window._sbTimers   = sbTimers;
   window._sbKits     = sbKits;
+  window._sbBuildUpdates = sbUpdates;
+  window._sbTimerHistory = sbTimerHistory;
+  window._adminAllocationSummary = allocationSummaryByWo;
   const content = document.getElementById("admin-content");
   const deltas  = loadDeltas();
   const timers  = loadTimers();
@@ -4779,18 +6052,33 @@ function renderAdminDash(items, sbTimers = [], sbKits = []) {
     weekStats[t.user_name].totalTimeMs = Math.max(weekStats[t.user_name].totalTimeMs, ms);
   });
 
-  /* Weekly & today completions from delta log */
+  /* Weekly & today unit credit from progress updates.
+     Partial progress counts as fractional units: 35% + 40% = 0.8 units after rounding. */
   const countedItems = {}; /* "userName|itemId|colType" → prevent double-counting */
-  deltas.forEach(d =>{
+  const progressUpdates = (sbUpdates || []).length
+    ? (sbUpdates || []).map(u => ({
+        user: u.user_name,
+        itemId: u.item_id,
+        colType: u.col_type,
+        prevPct: u.prev_pct,
+        newPct: u.new_pct,
+        date: u.date_str,
+      }))
+    : deltas;
+  progressUpdates.forEach(d =>{
     if (!weekStats[d.user] || d.colType==="grab") return;
     const key = `${d.user}|${d.itemId}|${d.colType}`;
-    if (getWeekKey(d.date) === thisWeek && d.newPct >= 100 && !countedItems[key]) {
-      const item = boardItems.find(i => i.id === d.itemId);
-      weekStats[d.user].weekDone += getUnitWeight(item, d.colType);
-      weekStats[d.user].weekDone = Math.round(weekStats[d.user].weekDone * 10) / 10;
-      countedItems[key] = true;
+    const item = items.find(i => String(i.id) === String(d.itemId)) || boardItems.find(i => String(i.id) === String(d.itemId));
+    const unitCredit = progressUnitsFromPct(item, d.colType, d.prevPct, d.newPct);
+    if (getWeekKey(d.date) === thisWeek) {
+      weekStats[d.user].weekDone += unitCredit;
+      weekStats[d.user].weekDone = roundUnits(weekStats[d.user].weekDone);
+      if (Number(d.newPct) >= 100) countedItems[key] = true;
     }
-    if (d.date === todayStr() && d.newPct >= 100) weekStats[d.user].todayDone++;
+    if (d.date === todayStr()) {
+      weekStats[d.user].todayDone += unitCredit;
+      weekStats[d.user].todayDone = roundUnits(weekStats[d.user].todayDone);
+    }
   });
 
   /* Also count completions from Monday's updated_at (catches builds marked Complete directly in Monday) */
@@ -4832,11 +6120,14 @@ function renderAdminDash(items, sbTimers = [], sbKits = []) {
       }
       if (completedDate === todayStr()) {
         /* Only add todayDone if not already counted via delta */
-        const alreadyCounted = deltas.some(d =>
-          d.user === m.name && d.itemId === item.id &&
-          d.colType === colType && d.newPct >= 100 && d.date === todayStr()
+        const alreadyCounted = progressUpdates.some(d =>
+          d.user === m.name && String(d.itemId) === String(item.id) &&
+          d.colType === colType && Number(d.newPct) >= 100 && d.date === todayStr()
         );
-        if (!alreadyCounted) weekStats[m.name].todayDone++;
+        if (!alreadyCounted) {
+          weekStats[m.name].todayDone += getUnitWeight(item, colType);
+          weekStats[m.name].todayDone = roundUnits(weekStats[m.name].todayDone);
+        }
       }
     });
   });
@@ -4907,7 +6198,8 @@ function renderAdminDash(items, sbTimers = [], sbKits = []) {
   const maxWeekDone = Math.max(1, ...ranked.map(m => weekStats[m.name].weekDone));
 
   /* ── BUILD HTML ── */
-  let html = "";
+  let html = renderAdminCommandCenter(items, sbTimers, sbUpdates, sbTimerHistory);
+  html += renderAdminStreamlineWidgets(items, sbTimers, sbKits, sbUpdates, allocationSummaryByWo);
 
   /* Board Health */
   html += `
@@ -4969,13 +6261,13 @@ function renderAdminDash(items, sbTimers = [], sbKits = []) {
       <div class="lb-av" style="background:${m.color}25;color:${m.color}">${m.initials}</div>
       <div class="lb-info">
         <div class="lb-name">${m.name}</div>
-        <div class="lb-role">${m.role===MS_ROLE?"Monitor Stand":"Chassis Builder"} · Today: ${st.todayDone}</div>
+        <div class="lb-role">${m.role===MS_ROLE?"Monitor Stand":"Chassis Builder"} · Today: ${formatUnits(st.todayDone)} units</div>
         <div class="lb-bar-wrap">
           <div class="lb-bar-track"><div class="lb-bar-fill" style="width:${Math.min(100,barW)}%;background:${m.color}"></div></div>
         </div>
       </div>
       <div class="lb-stats">
-        <div class="lb-done" style="color:${doneColor}">${Number.isInteger(st.weekDone)?st.weekDone:st.weekDone.toFixed(1)}<span style="font-size:10px;font-weight:500;color:var(--muted2)">/${WEEKLY_GOAL}</span></div>
+        <div class="lb-done" style="color:${doneColor}">${formatUnits(st.weekDone)}<span style="font-size:10px;font-weight:500;color:var(--muted2)">/${WEEKLY_GOAL}</span></div>
         <div class="lb-time">⏱ ${timeLabel}</div>
       </div>
     </div>`;
@@ -5058,11 +6350,11 @@ function renderAdminDash(items, sbTimers = [], sbKits = []) {
       </div>
       <div class="tc-stats">
         <div class="tc-stat">
-          <div class="tc-stat-val" style="color:${doneColor}">${st.weekDone}</div>
+          <div class="tc-stat-val" style="color:${doneColor}">${formatUnits(st.weekDone)}</div>
           <div class="tc-stat-lbl">This Week</div>
         </div>
         <div class="tc-stat">
-          <div class="tc-stat-val" style="color:${st.todayDone>0?'var(--green)':'var(--muted2)'}">${st.todayDone}</div>
+          <div class="tc-stat-val" style="color:${st.todayDone>0?'var(--green)':'var(--muted2)'}">${formatUnits(st.todayDone)}</div>
           <div class="tc-stat-lbl">Today</div>
         </div>
         <div class="tc-stat">
@@ -5112,17 +6404,17 @@ function renderAdminDash(items, sbTimers = [], sbKits = []) {
       const kitsToday    = sbKitsToday;
       const kitsThisWeek = sbKitsWeek;
       /* Build kit history list from Supabase */
-      const kitterHistory = sbKits
+      const kitterHistory = uniqueKitHistoryRows(sbKits)
         .filter(k => k.user_name === m.name)
         .slice(0, 10); /* last 10 */
       const histHtml = kitterHistory.length ? kitterHistory.map(k => {
         const ts = new Date(k.completed_at);
         const timeStr = ts.toLocaleDateString("en-US",{month:"short",day:"numeric"}) + " " +
                         ts.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"});
-        const missing = (k.missing_items||[]).filter(Boolean);
+        const missing = normalizeMissingItems(k.missing_items).filter(Boolean);
         return `<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--border)">
           <div>
-            <div style="font-size:12px;font-weight:600">${escHtml(k.item_name||k.item_id)}</div>
+            <div style="font-size:12px;font-weight:600">${escHtml(kitHistoryProjectLabel(k))}</div>
             ${missing.length ? `<div style="font-size:10px;color:var(--red);margin-top:2px">Missing: ${missing.map(escHtml).join(", ")}</div>` : `<div style="font-size:10px;color:var(--green);margin-top:2px">✓ Full kit</div>`}
           </div>
           <div style="font-size:10px;color:var(--muted2);flex-shrink:0;margin-left:8px;text-align:right">${timeStr}</div>
@@ -5619,7 +6911,7 @@ function showKitScreen() {
   av.textContent      = currentUser.initials;
   document.getElementById("kit-date").textContent =
     new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
-  loadKitBoard();
+  return loadKitBoard();
 }
 
 let kitBoardItems = [];  /* cached kit board items — survives re-renders */
@@ -5721,6 +7013,24 @@ function getNeedKittedSide(item) {
   return null;
 }
 
+function renderKitNextAction(kitItems) {
+  const next = kitItems[0];
+  if (!next) return "";
+  const woNum = getWoNumberFromItem(next);
+  const side = getNeedKittedSide(next);
+  const sideText = side === "both" ? "Both sides need kitted" : side === "ms" ? "Monitor stand needs kitted" : side === "chassis" ? "Chassis needs kitted" : "Full kit";
+  const btn = woNum
+    ? `<button class="next-action-btn" onclick="openPickListForItem('${next.id}','${woNum}',event)">Open Pick List</button>`
+    : `<button class="next-action-btn" onclick="manualRefresh('kit')">Refresh Kitting Queue</button>`;
+  return `<div class="next-action-card">
+    <div class="next-action-kicker">Pete’s Next Action</div>
+    <div class="next-action-title">${escHtml(compactProjectLabel(next))}</div>
+    <div class="next-action-sub">${escHtml(sideText)}. This is first in the queue by ship date and priority.</div>
+    <div class="next-action-meta">${actionMetaPills(next, "Kitting")}</div>
+    ${btn}
+  </div>`;
+}
+
 function renderKitScreen(items) {
   const content = document.getElementById("kit-content");
 
@@ -5739,7 +7049,7 @@ function renderKitScreen(items) {
     return;
   }
 
-  content.innerHTML = "";
+  content.innerHTML = renderKitNextAction(kitItems);
 
   kitItems.forEach((item, idx) => {
     try {
@@ -5937,6 +7247,87 @@ function cleanMondayName(name) {
   return (name || "").replace(/^\d+\s+/, "").trim();
 }
 
+function getWoFromText(text) {
+  const m = String(text || "").match(/\b(W\d{4,})\b/i);
+  return m ? m[1].toUpperCase() : "";
+}
+
+async function hydrateKitHistoryBoardItems(kits = [], currentItems = []) {
+  const currentIds = new Set((currentItems || []).map(item => String(item.id)));
+  const ids = [...new Set((kits || [])
+    .map(k => String(k?.item_id || "").trim())
+    .filter(id => /^\d{8,}$/.test(id) && !currentIds.has(id))
+  )].slice(0, 100);
+  window._kitHistoryItemById = window._kitHistoryItemById || {};
+  if (!ids.length) return;
+  try {
+    const res = await mondayQuery(`{
+      items(ids:[${ids.join(",")}]) {
+        id name
+        group { id title }
+        column_values { id type text value }
+      }
+    }`);
+    (res?.data?.items || []).forEach(item => {
+      window._kitHistoryItemById[String(item.id)] = item;
+    });
+  } catch(e) {
+    console.warn("Could not hydrate shipped kit history items:", e.message);
+  }
+}
+
+function findKnownBoardItemForKitCompletion(k) {
+  const rows = getKnownBoardItems();
+  const itemId = String(k?.item_id || "");
+  const fromId = rows.find(item => String(item.id) === itemId);
+  if (fromId) return fromId;
+  const fromHistory = window._kitHistoryItemById?.[itemId];
+  if (fromHistory) return fromHistory;
+  const wo = getWoFromText(k?.item_id) || getWoFromText(k?.item_name);
+  const fromWo = wo ? findKnownBoardItemByWo(wo) : null;
+  if (fromWo) return fromWo;
+  const savedName = cleanMondayName(String(k?.item_name || "").replace(/\bW\d{4,}\b/ig, "").trim()).toLowerCase();
+  if (!savedName || /^\d+$/.test(savedName)) return null;
+  const historyRows = Object.values(window._kitHistoryItemById || {});
+  return [...rows, ...historyRows].find(item => cleanMondayName(item?.name || "").toLowerCase() === savedName) || null;
+}
+
+function kitHistoryProjectLabel(k) {
+  const mondayItem = findKnownBoardItemForKitCompletion(k);
+  const wo = getWoFromText(k?.item_id) || getWoFromText(k?.item_name) || (mondayItem ? getWoNumberFromItem(mondayItem) : "");
+  const rawName = String(k?.item_name || "").trim();
+  const mondayName = cleanMondayName(mondayItem?.name || "");
+  const savedName = cleanMondayName(rawName.replace(/\bW\d{4,}\b/ig, "").trim());
+  const customer = mondayName || (savedName && !/^\d+$/.test(savedName) ? savedName : "");
+  if (customer && wo) return `${customer} · ${wo}`;
+  return customer || wo || rawName || String(k?.item_id || "");
+}
+
+function kitHistoryProjectKey(k) {
+  const label = kitHistoryProjectLabel(k);
+  const wo = getWoFromText(label);
+  if (wo) return `wo:${wo}`;
+  return `label:${label.toLowerCase().replace(/\s+/g, " ").trim()}`;
+}
+
+function latestKitHistoryRows(kits = [], limit = 20) {
+  return [...kits]
+    .sort((a, b) => new Date(b.completed_at || 0) - new Date(a.completed_at || 0))
+    .slice(0, limit);
+}
+
+function uniqueKitHistoryRows(kits = []) {
+  const seen = new Set();
+  return [...kits]
+    .sort((a, b) => new Date(b.completed_at || 0) - new Date(a.completed_at || 0))
+    .filter(k => {
+      const key = kitHistoryProjectKey(k);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
 /* Identify leads (Thomas=MS lead, Sepan=Chassis lead) */
 function isLead() {
   return currentUser?.name === "Thomas Persichina" || currentUser?.name === "Sepan Ali";
@@ -5970,6 +7361,89 @@ function buildItemLabel(it) {
   const displayName = (isCustom && memo) ? `Custom: ${memo}` : name;
   const base = (brand && !isCustom) ? `${brand} — ${displayName}` : displayName;
   return qty > 1 ? `${base} (×${qty})` : base;
+}
+
+function jsArg(s) {
+  return String(s || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\n/g, "\\n").replace(/\r/g, "");
+}
+
+function getPickListItemMemo(it) {
+  return (it?.memo || it?.description || "").trim();
+}
+
+function registerPickListItemsForInfo(items = []) {
+  if (!window._pickListItemInfoById) window._pickListItemInfoById = {};
+  items.forEach(item => {
+    if (item?.id) window._pickListItemInfoById[String(item.id)] = item;
+  });
+}
+
+function findPickListItemForInfo(itemId) {
+  const key = String(itemId || "");
+  if (!key) return null;
+  if (window._pickListItemInfoById?.[key]) return window._pickListItemInfoById[key];
+  for (const list of Object.values(window._plItemsByPl || {})) {
+    const found = (list || []).find(item => String(item.id) === key);
+    if (found) return found;
+  }
+  for (const pl of (window._petePlLists || [])) {
+    const found = (pl.checklistItems || []).find(item => String(item.id) === key);
+    if (found) return found;
+  }
+  return null;
+}
+
+function pickListInfoButton(itemId) {
+  return `<button type="button" class="pl-more-info-btn" onclick="openPickListItemInfo('${jsArg(itemId)}',event)">More Info</button>`;
+}
+
+function openPickListItemInfo(itemId, e) {
+  if (e) { e.stopPropagation(); e.preventDefault(); }
+  const item = findPickListItemForInfo(itemId);
+  if (!item) {
+    showToast("Item details are not available yet.", "");
+    return;
+  }
+
+  const existing = document.getElementById("picklist-item-info-modal");
+  if (existing) existing.remove();
+
+  const label = item.label || buildItemLabel(item);
+  const memo = getPickListItemMemo(item);
+  const brand = (item.brand || "").trim();
+  const name = (item.item_name || "").trim();
+  const qty = parseInt(item.quantity) || 1;
+
+  const modal = document.createElement("div");
+  modal.id = "picklist-item-info-modal";
+  modal.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:1100;display:flex;align-items:flex-end;justify-content:center;padding:0";
+  modal.innerHTML = `
+    <div style="background:var(--surface);border-top:1px solid var(--border);border-radius:var(--radius) var(--radius) 0 0;padding:22px 18px 34px;width:100%;max-width:520px;max-height:82vh;overflow-y:auto">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px">
+        <div style="min-width:0">
+          <div style="font-size:16px;font-weight:800;line-height:1.25">${escHtml(label)}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:5px">Quantity: ${escHtml(qty)}</div>
+        </div>
+        <button onclick="document.getElementById('picklist-item-info-modal')?.remove()"
+          style="background:none;border:none;color:var(--muted);font-size:24px;line-height:1;cursor:pointer">×</button>
+      </div>
+
+      <div style="height:150px;border:1px dashed var(--border2);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.025);margin-bottom:12px;color:var(--muted2);font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;text-align:center;padding:14px">
+        Item Photo Coming Soon
+      </div>
+
+      <div style="display:grid;gap:8px;margin-bottom:12px">
+        ${brand ? `<div style="font-size:12px;color:var(--muted)"><span style="color:var(--text);font-weight:700">Brand:</span> ${escHtml(brand)}</div>` : ""}
+        ${name ? `<div style="font-size:12px;color:var(--muted)"><span style="color:var(--text);font-weight:700">Item:</span> ${escHtml(name)}</div>` : ""}
+      </div>
+
+      <div style="font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);margin-bottom:6px">Pick List Memo</div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-xs);padding:11px 12px;font-size:12px;line-height:1.45;color:${memo ? "var(--text)" : "var(--muted2)"};white-space:pre-wrap">
+        ${memo ? escHtml(memo) : "No memo saved for this item yet."}
+      </div>
+    </div>`;
+  modal.addEventListener("click", ev => { if (ev.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
 }
 
 async function fetchPickListFromApi(itemId, woNum) {
@@ -6635,16 +8109,17 @@ async function kitDoneConfirmed(itemId, e) {
     }
     /* Record kit completion in deltas so admin kitting stats count it */
     const kitCardName = document.getElementById("kit-card-" + itemId)?.querySelector(".kit-name")?.textContent || itemId;
+    const kitHistoryName = woNum ? `${cleanMondayName(kitCardName)} · ${woNum}` : kitCardName;
     addDelta({
       user:     currentUser.name,
       itemId,
-      itemName: kitCardName,
+      itemName: kitHistoryName,
       colType:  "kit",
       date:     todayStr(),
       ts:       new Date().toISOString(),
     });
     /* Write to Supabase so admin sees it cross-device */
-    sbRecordKitCompletion(itemId, kitCardName, missing2).catch(()=>{});
+    sbRecordKitCompletion(itemId, kitHistoryName, missing2).catch(()=>{});
 
     /* ── Sync kit allocation to pick list in Supabase ──
        Items Pete checked = allocated, unchecked = not allocated */
@@ -6817,11 +8292,13 @@ let _plAllPicklists  = [];      /* full list from Supabase */
 let _plCallerScreen  = "screen-dash"; /* for back button */
 let _plCurrentWo     = null;    /* WO number when opened from a card */
 let _plKittedAccessMode = false; /* Pete reviewing already-kitted open lists */
+let _plReviewOnlyMode = false; /* Admin/build review: allocation only, no kitter submit flow */
 
 /* ── Open pick list screen from a project card button ── */
 async function openPickListForItem(itemId, woNum, e, opts = {}) {
   if (e) { e.stopPropagation(); e.preventDefault(); }
   _plKittedAccessMode = !!opts.kittedAccess;
+  _plReviewOnlyMode = !!opts.reviewOnly;
   _plCallerScreen = document.querySelector(".screen.active")?.id || "screen-dash";
   _plCurrentWo    = woNum;
 
@@ -6839,6 +8316,7 @@ async function openPickListForItem(itemId, woNum, e, opts = {}) {
 /* ── Open pick list screen from a nav/menu (all lists) ── */
 async function openPickListScreen() {
   _plKittedAccessMode = false;
+  _plReviewOnlyMode = false;
   _plCallerScreen = document.querySelector(".screen.active")?.id || "screen-admin";
   _plCurrentWo    = null;
   document.getElementById("pl-header-sub").textContent = "All Pick Lists";
@@ -7012,18 +8490,19 @@ async function syncPickListItems(woNum) {
     const plId = pl[0].id;
 
     /* Get existing items for this WO */
-    const existing = await sbFetch(`picklist_items?wo_number=eq.${encodeURIComponent(woNum)}&select=id,item_name,brand,quantity`, {
+    const existing = await sbFetch(`picklist_items?wo_number=eq.${encodeURIComponent(woNum)}&select=id,item_name,brand,quantity,memo,label`, {
       method: "GET", headers: { "Prefer": "return=representation" }
     }) || [];
 
-    const existingKeys = new Set(existing.map(e => `${e.brand||""}|${e.item_name}|${e.quantity}`));
+    const existingByKey = new Map(existing.map(e => [`${e.brand||""}|${e.item_name}|${e.quantity}`, e]));
     let newItemCount = 0;
 
     for (const it of data.items) {
       if (isServiceItem(it)) continue;
       const key = `${(it.brand||"").trim()}|${(it.item_name||"").trim()}|${parseInt(it.quantity)||1}`;
-      if (!existingKeys.has(key)) {
-        const label = buildItemLabel(it); /* identical to kit checklist label */
+      const label = buildItemLabel(it); /* identical to kit checklist label */
+      const existingItem = existingByKey.get(key);
+      if (!existingItem) {
         await sbFetch("picklist_items", {
           method: "POST",
           prefer: "return=minimal",
@@ -7041,11 +8520,15 @@ async function syncPickListItems(woNum) {
         });
         newItemCount++;
       } else {
-        /* Link existing unlinked items to this picklist */
-        await sbFetch(`picklist_items?wo_number=eq.${encodeURIComponent(woNum)}&picklist_id=is.null`, {
+        /* Keep existing rows linked and refresh non-allocation details without changing allocated state. */
+        await sbFetch(`picklist_items?id=eq.${encodeURIComponent(existingItem.id)}`, {
           method: "PATCH",
           prefer: "return=minimal",
-          body: JSON.stringify({ picklist_id: plId }),
+          body: JSON.stringify({
+            picklist_id: plId,
+            memo:        (it.memo || "").trim(),
+            label,
+          }),
         });
       }
     }
@@ -7096,11 +8579,34 @@ async function repairKittedPickListAllocation(woNum, completions = null) {
     { method: "GET", headers: { "Prefer": "return=representation" } }
   ) || [];
   if (!items.length) return "no_items";
-  if (items.some(i => i.allocated)) return "has_allocations";
 
   const missingItems = completion ? normalizeMissingItems(completion.missing_items) : null;
   if (!Array.isArray(missingItems)) return "needs_review";
-  if (missingItems.length === 0) return "needs_review";
+
+  /* A recorded Full Kit means every checklist row should be allocated.
+     This repairs older pick lists where the completion history existed
+     before allocation rows were kept in sync. */
+  if (missingItems.length === 0) {
+    const unallocated = items.filter(item => !item.allocated);
+    if (unallocated.length) {
+      await Promise.all(unallocated.map(item => sbFetch(`picklist_items?id=eq.${encodeURIComponent(item.id)}`, {
+        method: "PATCH",
+        prefer: "return=minimal",
+        body: JSON.stringify({ allocated: true }),
+      })));
+    }
+    await sbFetch(`picklists?wo_number=eq.${encodeURIComponent(woNum)}&status=neq.complete`, {
+      method: "PATCH",
+      prefer: "return=minimal",
+      body: JSON.stringify({
+        status: "fully_kitted",
+        updated_at: new Date().toISOString(),
+      }),
+    });
+    return unallocated.length ? "repaired_full" : "full_confirmed";
+  }
+
+  if (items.some(i => i.allocated)) return "has_allocations";
 
   const missingLabels = new Set((missingItems || [])
     .map(i => String(i || "").toLowerCase().trim()));
@@ -7307,6 +8813,7 @@ async function renderPickLists() {
     if (!itemsByPl[ownerId]) itemsByPl[ownerId] = [];
     itemsByPl[ownerId].push(it);
   });
+  registerPickListItemsForInfo(allItems);
   window._plItemsByPl = itemsByPl;
 
   let html = "";
@@ -7386,6 +8893,7 @@ async function renderPickLists() {
               ${it.allocated ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>` : ""}
             </div>
             <span class="pl-item-label${it.allocated ? " allocated" : ""}" style="flex:1" onclick="togglePickListItem('${it.id}','${pl.id}',event)">${label}</span>
+            ${pickListInfoButton(it.id)}
             ${pl.has_changes && isNew ? `<span class="pl-item-new-badge">NEW</span>` : ""}
             <div style="display:flex;align-items:center;gap:5px;flex-shrink:0" onclick="toggleBuilderConfirm('${it.id}','${pl.id}',event)">
               <span style="font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#818cf8">Builder</span>
@@ -7401,6 +8909,7 @@ async function renderPickLists() {
             ${it.allocated ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>` : ""}
           </div>
           <span class="pl-item-label${it.allocated ? " allocated" : ""}">${label}</span>
+          ${pickListInfoButton(it.id)}
           ${pl.has_changes && isNew ? `<span class="pl-item-new-badge">NEW</span>` : ""}
         </div>`;
       }).join("")}
@@ -7414,12 +8923,16 @@ async function renderPickLists() {
                 Complete Locked Until QC
               </button>`
         }
-        ${pl.status !== "complete" && !isLead() && !_plKittedAccessMode ? `
+        ${pl.status !== "complete" && currentUser?.role === KIT_ROLE && !isLead() && !_plKittedAccessMode && !_plReviewOnlyMode ? `
         <button onclick="submitKitFromPickList('${pl.id}','${pl.wo_number}',event)"
           style="width:100%;background:var(--green);border:none;border-radius:var(--radius-xs);padding:13px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#fff;cursor:pointer">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="margin-right:5px"><polyline points="20 6 9 17 4 12"/></svg>
           Submit Kit → Move to Parts Pulled
         </button>` : ""}
+        ${_plReviewOnlyMode && pl.status !== "complete" ? `
+        <div style="padding:10px 11px;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.22);border-radius:var(--radius-xs);font-size:11px;color:var(--muted);line-height:1.45;text-align:center">
+          Review mode: tap checklist items to update allocation. This will not move the order in Monday.
+        </div>` : ""}
       </div>
     </div>`;
   }
@@ -7894,6 +9407,14 @@ function openPeteKittedPickList(woNum, e) {
   renderPetePlList();
 }
 
+function openFirstPeteReview() {
+  const pl = (window._petePlLists || []).find(p => p.needsReview);
+  if (!pl) return;
+  window._peteExpandedWo = pl.wo_number;
+  renderPetePlList();
+  setTimeout(() => openPeteAllocationReview(pl.id, pl.wo_number, null), 80);
+}
+
 function confirmPeteMissingItemArrived(itemId, plId, woNum, label, e) {
   if (e) { e.stopPropagation(); e.preventDefault(); }
   const existing = document.getElementById("pete-missing-confirm-modal");
@@ -8026,9 +9547,12 @@ async function openPeteKittedPickLists() {
         const kittedAt = kitCompletion?.completed_at || null;
         const completionMissingItems = kitCompletion ? normalizeMissingItems(kitCompletion.missing_items) : null;
         const hasExplicitMissingHistory = Array.isArray(completionMissingItems) && completionMissingItems.length > 0;
+        const hasConfirmedFullKitHistory = Array.isArray(completionMissingItems) && completionMissingItems.length === 0;
         const allAllocatedNoExplicitHistory = !!itemState?.total &&
           itemState.allocated === itemState.total &&
-          !hasExplicitMissingHistory;
+          !kitCompletion &&
+          !hasExplicitMissingHistory &&
+          !hasConfirmedFullKitHistory;
         const needsReview = !!reviewByWo[pl.wo_number] || (
           !!itemState?.total &&
           itemState.allocated === 0 &&
@@ -8078,6 +9602,15 @@ function renderPetePlList() {
   const statusColor = { in_queue:"#f59e0b", missing_items:"var(--accent)", fully_kitted:"#10b981", complete:"var(--muted2)" };
 
   let html = "";
+  const reviewCount = lists.filter(pl => pl.needsReview).length;
+  if (reviewCount) {
+    html += `<div class="next-action-card">
+      <div class="next-action-kicker">Needs Review</div>
+      <div class="next-action-title">${reviewCount} previous kit${reviewCount===1?"":"s"} need allocation review</div>
+      <div class="next-action-sub">Fix these in one step with Check All / Clear All instead of touching every item one at a time.</div>
+      <button class="next-action-btn" onclick="openFirstPeteReview()">Review First One</button>
+    </div>`;
+  }
   let lastKitDay = "";
   lists.forEach(pl => {
     const customer = getPetePickListCustomer(pl);
@@ -8134,6 +9667,7 @@ function renderPetePlList() {
               ${item.allocated ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>` : ""}
             </div>
             <div style="font-size:12px;color:${item.allocated ? "var(--muted)" : "var(--text)"};text-decoration:${item.allocated ? "line-through" : "none"};line-height:1.35;flex:1">${label}</div>
+            ${pickListInfoButton(item.id)}
             ${item.allocated ? "" : `<button onclick="confirmPeteMissingItemArrived('${item.id}','${pl.id}','${woArg}','${itemLabelArg}',event)"
               style="background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:var(--radius-xs);padding:6px 8px;font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#10b981;cursor:pointer;flex-shrink:0">
               Item Is Here
@@ -8155,6 +9689,7 @@ function openPeteAllocationReview(plId, woNum, e) {
   const pl = (window._petePlLists || []).find(p => p.id === plId || p.wo_number === woNum);
   if (!pl) return;
   const items = pl.checklistItems || [];
+  registerPickListItemsForInfo(items);
   const existing = document.getElementById("pete-review-modal");
   if (existing) existing.remove();
 
@@ -8192,7 +9727,8 @@ function openPeteAllocationReview(plId, woNum, e) {
           return `<label style="display:flex;align-items:flex-start;gap:9px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:12px;line-height:1.35;color:var(--text);cursor:pointer">
             <input type="checkbox" class="pete-review-allocated" data-item-id="${escHtml(item.id)}" ${checked}
               style="margin-top:2px;accent-color:var(--green);width:16px;height:16px;flex-shrink:0">
-            <span>${label}</span>
+            <span style="flex:1">${label}</span>
+            ${pickListInfoButton(item.id)}
           </label>`;
         }).join("") : `<div style="font-size:12px;color:var(--muted);padding:16px 0">No checklist items found.</div>`}
       </div>
@@ -8205,10 +9741,127 @@ function openPeteAllocationReview(plId, woNum, e) {
   document.body.appendChild(modal);
 }
 
+async function openAllocationReviewByWo(woNum, heading = "Review Allocation") {
+  const existing = document.getElementById("pete-review-modal");
+  if (existing) existing.remove();
+
+  const modal = document.createElement("div");
+  modal.id = "pete-review-modal";
+  modal.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:1000;display:flex;align-items:flex-end;justify-content:center;padding:0";
+  modal.innerHTML = `
+    <div style="background:var(--surface);border-top:1px solid var(--border);border-radius:var(--radius) var(--radius) 0 0;padding:22px 18px 34px;width:100%;max-width:520px;max-height:86vh;overflow-y:auto">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:6px">
+        <div>
+          <div style="font-size:16px;font-weight:800">${escHtml(heading)}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px">${escHtml(woNum)}</div>
+        </div>
+        <button onclick="document.getElementById('pete-review-modal')?.remove()"
+          style="background:none;border:none;color:var(--muted);font-size:24px;line-height:1;cursor:pointer">×</button>
+      </div>
+      <div id="generic-review-body">
+        <div class="loading-state" style="padding:22px 0"><div class="spinner"></div>Loading pick list…</div>
+      </div>
+    </div>`;
+  modal.addEventListener("click", ev => { if (ev.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+
+  try {
+    await ensurePickList(woNum);
+    const plRows = await sbFetch(`picklists?wo_number=eq.${encodeURIComponent(woNum)}&order=updated_at.desc&limit=1`, {
+      method: "GET", headers: { "Prefer": "return=representation" }
+    }) || [];
+    const pl = plRows[0];
+    if (!pl?.id) throw new Error("No pick list found for this work order.");
+    const byPickList = await sbFetch(
+      `picklist_items?picklist_id=eq.${encodeURIComponent(pl.id)}&order=id.asc`,
+      { method: "GET", headers: { "Prefer": "return=representation" } }
+    ) || [];
+    const byWorkOrder = await sbFetch(
+      `picklist_items?wo_number=eq.${encodeURIComponent(woNum)}&order=id.asc`,
+      { method: "GET", headers: { "Prefer": "return=representation" } }
+    ) || [];
+    const itemMap = new Map();
+    [...byPickList, ...byWorkOrder].forEach(item => {
+      if (item?.id) itemMap.set(String(item.id), item);
+    });
+    const items = [...itemMap.values()];
+    renderAllocationReviewBody(pl, items, woNum);
+  } catch (err) {
+    const body = document.getElementById("generic-review-body");
+    if (body) body.innerHTML = `<div class="empty-state" style="padding:22px 0">Could not load allocation review.<br><small>${escHtml(err.message)}</small></div>`;
+  }
+}
+
+function renderAllocationReviewBody(pl, items, woNum) {
+  const body = document.getElementById("generic-review-body");
+  if (!body) return;
+  registerPickListItemsForInfo(items);
+  body.innerHTML = `
+    <div style="background:rgba(99,102,241,0.09);border:1px solid rgba(99,102,241,0.25);border-radius:var(--radius-xs);padding:9px 10px;margin:12px 0;font-size:11px;line-height:1.4;color:var(--muted)">
+      This only updates allocation data in Supabase. It does not move the order in Monday.
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <button onclick="peteReviewSetAll(true)"
+        style="flex:1;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:var(--radius-xs);padding:10px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#10b981;cursor:pointer">
+        Check All
+      </button>
+      <button onclick="peteReviewSetAll(false)"
+        style="flex:1;background:rgba(224,32,32,0.1);border:1px solid rgba(224,32,32,0.28);border-radius:var(--radius-xs);padding:10px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);cursor:pointer">
+        Clear All
+      </button>
+    </div>
+    <div id="pete-review-items" style="display:flex;flex-direction:column;border-top:1px solid var(--border)">
+      ${items.length ? items.map(item => {
+        const label = escHtml(item.label || buildItemLabel(item));
+        const checked = item.allocated ? "checked" : "";
+        return `<label style="display:flex;align-items:flex-start;gap:9px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:12px;line-height:1.35;color:var(--text);cursor:pointer">
+          <input type="checkbox" class="pete-review-allocated" data-item-id="${escHtml(item.id)}" ${checked}
+            style="margin-top:2px;accent-color:var(--green);width:16px;height:16px;flex-shrink:0">
+          <span style="flex:1">${label}</span>
+          ${pickListInfoButton(item.id)}
+        </label>`;
+      }).join("") : `<div style="font-size:12px;color:var(--muted);padding:16px 0">No checklist items found.</div>`}
+    </div>
+    <button onclick="saveAllocationReview('${pl.id}','${woNum}',event)" ${items.length ? "" : "disabled"}
+      style="width:100%;margin-top:14px;background:var(--accent);border:none;border-radius:var(--radius-xs);padding:13px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#fff;cursor:${items.length ? "pointer" : "not-allowed"};opacity:${items.length ? "1" : ".45"}">
+      Save Allocation
+    </button>`;
+}
+
 function peteReviewSetAll(allocated) {
   document.querySelectorAll("#pete-review-modal .pete-review-allocated").forEach(cb => {
     cb.checked = !!allocated;
   });
+}
+
+async function saveAllocationReview(plId, woNum, e) {
+  if (e) e.stopPropagation();
+  const btn = e?.currentTarget;
+  if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
+  const boxes = [...document.querySelectorAll("#pete-review-modal .pete-review-allocated")];
+  const allIds = boxes.map(cb => cb.dataset.itemId).filter(Boolean);
+  const allocatedIds = new Set(boxes
+    .filter(cb => cb.checked)
+    .map(cb => cb.dataset.itemId));
+
+  await Promise.all(allIds.map(id => sbFetch(`picklist_items?id=eq.${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    prefer: "return=minimal",
+    body: JSON.stringify({ allocated: allocatedIds.has(String(id)) }),
+  })));
+
+  const allAllocated = allIds.length > 0 && allocatedIds.size === allIds.length;
+  await sbFetch(`picklists?id=eq.${encodeURIComponent(plId)}&status=neq.complete`, {
+    method: "PATCH",
+    prefer: "return=minimal",
+    body: JSON.stringify({
+      status: allAllocated ? "fully_kitted" : "missing_items",
+      updated_at: new Date().toISOString(),
+    }),
+  });
+
+  document.getElementById("pete-review-modal")?.remove();
+  showToast(allAllocated ? "Allocation saved — all items allocated." : "Allocation saved — missing items remain.", "ok");
 }
 
 async function savePeteAllocationReview(plId, woNum, e) {
@@ -8647,7 +10300,11 @@ function updateAdminTimerDisplay(record) {
     ? (record.duration_ms||0) + (Date.now() - new Date(record.updated_at).getTime())
     : (record.duration_ms||0);
   el.textContent = fmtMs(ms);
-  el.className = "tc-stat-val " + (record.state === "running" ? "admin-timer-running" : "admin-timer-paused");
+  if (el.classList.contains("admin-live-time")) {
+    el.classList.toggle("paused", record.state !== "running");
+  } else {
+    el.className = "tc-stat-val " + (record.state === "running" ? "admin-timer-running" : "admin-timer-paused");
+  }
 }
 
 async function checkForUpdates() {
@@ -8996,6 +10653,28 @@ try {
   </div>
 </div>
 
+<nav class="bottom-nav" id="bottom-nav" aria-label="Quick navigation">
+  <button class="bottom-nav-btn" id="bn-home" onclick="bottomNavHome()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+    Home
+  </button>
+  <button class="bottom-nav-btn" id="bn-queue" onclick="bottomNavQueue()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+    Queue
+  </button>
+  <button class="bottom-nav-btn" id="bn-history" onclick="bottomNavHistory()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+    History
+  </button>
+  <button class="bottom-nav-btn" id="bn-updates" onclick="showBuildUpdates()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+    Updates
+  </button>
+  <button class="bottom-nav-btn" id="bn-settings" onclick="openSettings()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33"/></svg>
+    Settings
+  </button>
+</nav>
 
 </body>
 </html>
