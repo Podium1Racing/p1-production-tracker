@@ -80,6 +80,14 @@ button, input, select, textarea { font-family:inherit; }
 .login-sub { font-size:13px; color:var(--muted); margin-bottom:1.75rem; }
 .name-list { width:100%; max-width:400px; display:flex; flex-direction:column; gap:7px; margin-bottom:1.25rem; }
 .divider-label { font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--muted2); padding:6px 2px 8px; }
+.device-login-copy { width:100%; max-width:400px; text-align:center; margin-bottom:14px; }
+.device-login-title { font-size:13px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--muted2); margin-bottom:6px; }
+.device-login-sub { font-size:12px; color:var(--muted); line-height:1.45; }
+.device-mode-actions { width:100%; max-width:400px; display:flex; flex-direction:column; gap:8px; margin-top:14px; }
+.device-mode-btn { background:transparent; border:1px solid var(--border); border-radius:10px; color:var(--text); font-size:13px; font-weight:700; padding:12px 14px; cursor:pointer; }
+.device-mode-btn.secondary { color:var(--muted); font-weight:600; }
+.pin-device-note { font-size:12px; color:var(--muted); text-align:center; line-height:1.45; margin:-2px 0 10px; }
+.pin-device-actions { display:flex; flex-direction:column; align-items:center; gap:6px; margin-top:10px; }
 .name-btn { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px 15px; color:var(--text); font-size:14px; font-weight:500; cursor:pointer; display:flex; align-items:center; gap:11px; width:100%; transition:border-color .15s,background .15s; }
 .name-btn:active { background:var(--surface2); }
 .name-btn.selected { border-color:var(--accent); background:rgba(224,32,32,0.1); }
@@ -1029,10 +1037,18 @@ input.photo-file-inp { display:none; }
   </div>
   <div class="login-title">Production Tracker</div>
   <div class="login-sub" style="color:var(--accent);letter-spacing:.14em;font-weight:700;font-size:11px">PODIUM 1 RACING</div>
+  <div id="login-device-copy" class="device-login-copy">
+    <div class="device-login-title" id="login-device-title">Device unlocked</div>
+    <div class="device-login-sub" id="login-device-sub">The main username and password only need to be entered once on this device. Daily login is just your PIN.</div>
+  </div>
 
   <!-- Step 1: Name list -->
   <div id="name-list-wrap" style="width:100%;max-width:400px;">
     <div class="name-list" id="name-list"></div>
+    <div class="device-mode-actions" id="login-device-mode-actions">
+      <button class="device-mode-btn" id="login-device-mode-btn" onclick="toggleSharedDeviceMode()">This is a shared device</button>
+      <button class="device-mode-btn secondary" id="login-device-reset-btn" onclick="resetRememberedDeviceOwner()" style="display:none">Choose a different builder for this phone</button>
+    </div>
   </div>
 
   <!-- Floater role choice -->
@@ -1049,6 +1065,7 @@ input.photo-file-inp { display:none; }
   <!-- Step 2: PIN entry (shown after name tap) -->
   <div id="pin-entry-wrap" style="display:none;width:100%;max-width:320px;align-items:center;flex-direction:column;">
     <div class="pin-sub" id="pin-entry-label" style="margin-bottom:16px">Enter your PIN</div>
+    <div class="pin-device-note" id="login-pin-note"></div>
     <div class="pin-dots" id="login-pin-dots">
       <div class="pin-dot" id="lpd0"></div>
       <div class="pin-dot" id="lpd1"></div>
@@ -1070,7 +1087,10 @@ input.photo-file-inp { display:none; }
       <button class="pin-key del" onclick="loginPinDel()">&#x232B;</button>
     </div>
     <div class="pin-error" id="login-pin-error"></div>
-    <button class="auth-back-btn" onclick="authBack()" style="margin-top:14px">&#8592; Back</button>
+    <div class="pin-device-actions">
+      <button class="auth-back-btn" id="login-pin-back-btn" onclick="authBack()" style="margin-top:0">&#8592; Back</button>
+      <button class="auth-back-btn" id="login-pin-alt-btn" onclick="loginPinAltAction()" style="display:none;margin-top:0">This is a shared device</button>
+    </div>
   </div>
 
 </div>
@@ -2511,6 +2531,125 @@ const ADMIN_NAME   = "Elijah Moosekian";
 let setupCodeUsed  = localStorage.getItem("pt_setup_used") === "1";
 let pendingUser    = null;
 let pendingFloater = null;
+const DEVICE_MODE_KEY = "pt_device_mode";
+const DEVICE_OWNER_KEY = "pt_device_owner";
+
+function getDeviceMode() {
+  return localStorage.getItem(DEVICE_MODE_KEY) === "shared" ? "shared" : "personal";
+}
+
+function setDeviceMode(mode) {
+  localStorage.setItem(DEVICE_MODE_KEY, mode === "shared" ? "shared" : "personal");
+}
+
+function getDeviceOwnerName() {
+  return (localStorage.getItem(DEVICE_OWNER_KEY) || "").trim();
+}
+
+function setDeviceOwnerName(name) {
+  if (name) localStorage.setItem(DEVICE_OWNER_KEY, name);
+  else localStorage.removeItem(DEVICE_OWNER_KEY);
+}
+
+function getTeamMemberByName(name) {
+  return TEAM.find(m => m.name === name) || null;
+}
+
+function clearAuthSelection() {
+  pendingUser = null;
+  pendingFloater = null;
+  document.getElementById("pin-entry-wrap").style.display = "none";
+  document.getElementById("floater-role-wrap").style.display = "none";
+  document.getElementById("name-list-wrap").style.display = "block";
+  document.getElementById("login-device-copy").style.display = "block";
+  document.getElementById("admin-login-btn").style.display = "flex";
+  document.querySelectorAll(".name-btn").forEach(b=>b.classList.remove("selected"));
+}
+
+function renderLoginSelectorState() {
+  clearAuthSelection();
+  buildNameList();
+  const mode = getDeviceMode();
+  const ownerName = getDeviceOwnerName();
+  const owner = getTeamMemberByName(ownerName);
+  const title = document.getElementById("login-device-title");
+  const sub = document.getElementById("login-device-sub");
+  const modeBtn = document.getElementById("login-device-mode-btn");
+  const resetBtn = document.getElementById("login-device-reset-btn");
+
+  if (mode === "shared") {
+    title.textContent = "Shared device unlocked";
+    sub.textContent = "The main username and password is already saved on this device. Builders will pick their name and use their PIN each time.";
+    modeBtn.textContent = "Use personal device mode";
+    resetBtn.style.display = "none";
+    return;
+  }
+
+  title.textContent = owner ? `Welcome back, ${owner.name.split(" ")[0]}` : "Device unlocked";
+  sub.textContent = owner
+    ? "The main username and password is already saved on this phone. Just enter your PIN, or switch the saved builder below."
+    : "Choose who this phone belongs to. After that, the main username and password will not be needed again on this device.";
+  modeBtn.textContent = "This is a shared device";
+  resetBtn.style.display = owner ? "inline-flex" : "none";
+}
+
+function showLoginEntryPoint() {
+  renderLoginSelectorState();
+  const mode = getDeviceMode();
+  const owner = mode === "personal" ? getTeamMemberByName(getDeviceOwnerName()) : null;
+  if (!owner) return;
+  if (owner.role === FLOAT_ROLE) openFloaterRoleChoice(owner, true);
+  else selectUser(owner, null, true);
+}
+
+function toggleSharedDeviceMode() {
+  if (getDeviceMode() === "shared") {
+    setDeviceMode("personal");
+  } else {
+    setDeviceMode("shared");
+    setDeviceOwnerName("");
+  }
+  showLoginEntryPoint();
+}
+
+function resetRememberedDeviceOwner() {
+  setDeviceMode("personal");
+  setDeviceOwnerName("");
+  showLoginEntryPoint();
+}
+
+function updatePinEntryActions(member, rememberedDevice = false) {
+  const note = document.getElementById("login-pin-note");
+  const backBtn = document.getElementById("login-pin-back-btn");
+  const altBtn = document.getElementById("login-pin-alt-btn");
+  const first = member.name.split(" ")[0];
+
+  if (rememberedDevice) {
+    note.textContent = `This phone is assigned to ${first}. The shared login is already saved on this device.`;
+    backBtn.textContent = `Not ${first}? Choose a different builder`;
+    altBtn.textContent = "Use shared device mode";
+    altBtn.style.display = "inline-flex";
+    return;
+  }
+
+  note.textContent = getDeviceMode() === "shared"
+    ? "Shared device mode is on. The shared login stays saved, and builders pick their own name each time."
+    : "After this login, this phone will remember your name and only ask for your PIN.";
+  backBtn.innerHTML = "&#8592; Back";
+  altBtn.textContent = getDeviceMode() === "shared" ? "Use personal device mode" : "This is a shared device";
+  altBtn.style.display = "inline-flex";
+}
+
+function loginPinAltAction() {
+  const rememberedDevice = !!(pendingUser && getDeviceMode() === "personal" && getDeviceOwnerName() === pendingUser.name);
+  if (rememberedDevice) {
+    setDeviceMode("shared");
+    setDeviceOwnerName("");
+    showLoginEntryPoint();
+    return;
+  }
+  toggleSharedDeviceMode();
+}
 
 /* ── Name list ─────────────────────────────────────────────── */
 function buildNameList() {
@@ -2535,16 +2674,19 @@ function buildNameList() {
   });
 }
 
-function openFloaterRoleChoice(m) {
+function openFloaterRoleChoice(m, fromRememberedDevice = false) {
   pendingFloater = m;
   pendingUser = null;
   document.querySelectorAll(".name-btn").forEach(b=>b.classList.remove("selected"));
   document.querySelectorAll("#name-list .name-btn").forEach(b=>{ if(b.textContent.includes(m.name)) b.classList.add("selected"); });
   document.getElementById("name-list-wrap").style.display = "none";
   document.getElementById("pin-entry-wrap").style.display = "none";
+  document.getElementById("login-device-copy").style.display = "none";
   document.getElementById("admin-login-btn").style.display = "none";
   const wrap = document.getElementById("floater-role-wrap");
-  document.getElementById("floater-role-label").textContent = `What is ${m.name.split(" ")[0]} working on?`;
+  document.getElementById("floater-role-label").textContent = fromRememberedDevice
+    ? `What is ${m.name.split(" ")[0]} working on today?`
+    : `What is ${m.name.split(" ")[0]} working on?`;
   wrap.style.display = "block";
 }
 
@@ -2553,28 +2695,30 @@ function chooseFloaterRole(role) {
   selectUser(pendingFloater, role);
 }
 
-function selectUser(m, roleOverride) {
+function selectUser(m, roleOverride, fromRememberedDevice = false) {
   document.querySelectorAll(".name-btn").forEach(b=>b.classList.remove("selected"));
   document.querySelectorAll(".name-btn").forEach(b=>{ if(b.textContent.includes(m.name)) b.classList.add("selected"); });
   pendingUser = roleOverride && m.role === FLOAT_ROLE ? { ...m, role: roleOverride, baseRole: FLOAT_ROLE } : m;
   /* Show PIN entry, hide name list + admin button */
   document.getElementById("name-list-wrap").style.display  = "none";
   document.getElementById("floater-role-wrap").style.display = "none";
+  document.getElementById("login-device-copy").style.display = "none";
   document.getElementById("admin-login-btn").style.display = "none";
   const wrap = document.getElementById("pin-entry-wrap");
   wrap.style.display = "flex";
   resetLoginPin();
   const hasPin     = !!loadPins()[m.name];
   document.getElementById("pin-entry-label").textContent = hasPin ? `Welcome back, ${m.name.split(" ")[0]}` : `Set a 4-digit PIN, ${m.name.split(" ")[0]}`;
+  updatePinEntryActions(m, fromRememberedDevice);
 }
 
 function authBack() {
-  pendingUser = null; pendingFloater = null;
-  document.getElementById("pin-entry-wrap").style.display  = "none";
-  document.getElementById("floater-role-wrap").style.display = "none";
-  document.getElementById("name-list-wrap").style.display  = "block";
-  document.getElementById("admin-login-btn").style.display = "flex";
-  document.querySelectorAll(".name-btn").forEach(b=>b.classList.remove("selected"));
+  const rememberedDevice = !!(pendingUser && getDeviceMode() === "personal" && getDeviceOwnerName() === pendingUser.name);
+  if (rememberedDevice) {
+    resetRememberedDeviceOwner();
+    return;
+  }
+  showLoginEntryPoint();
 }
 
 /* ── Login PIN keypad ──────────────────────────────────────── */
@@ -2640,6 +2784,8 @@ async function processLoginPin() {
 async function loginSuccess() {
   currentUser = pendingUser;
   localStorage.setItem("pt_user", JSON.stringify(currentUser));
+  if (getDeviceMode() === "shared") setDeviceOwnerName("");
+  else setDeviceOwnerName((pendingFloater?.name || pendingUser?.name || "").trim());
   syncPushForActiveSession(false);
   showLoginLoading(showDash);
 }
@@ -2790,14 +2936,10 @@ function signOutCompletely() {
 function doLogout() {
   stopRealTimeSync();
   localStorage.removeItem("pt_user"); currentUser = null; pendingUser = null; pendingFloater = null;
-  document.getElementById("pin-entry-wrap").style.display  = "none";
-  document.getElementById("floater-role-wrap").style.display = "none";
-  document.getElementById("name-list-wrap").style.display  = "block";
-  document.getElementById("admin-login-btn").style.display = "flex";
   const soBtn = document.getElementById("login-signout-btn");
   if (soBtn) soBtn.style.display = "none";
-  document.querySelectorAll(".name-btn").forEach(b=>b.classList.remove("selected"));
   showScreen("screen-login");
+  showLoginEntryPoint();
 }
 
 /* ═══════════════════════════════════════
@@ -3179,6 +3321,69 @@ function summarizeQueueMeta(item, label) {
   const group = item.group?.title || "No group";
   return `${ship} · ${group}${label ? ` · ${label}` : ""}`;
 }
+
+function getBuildSideState(item, side) {
+  const isMs = side === "ms";
+  const status = (cvText(item, isMs ? COL.ms_status : COL.chassis_status) || "").toLowerCase();
+  const pct = parsePct(cvText(item, isMs ? COL.ms_pct : COL.chassis_pct));
+
+  if (status.includes("complete") || status.includes("done") || pct >= 100) return "complete";
+  if (status.includes("paused")) return "paused";
+  if (status.includes("in progress") || status.includes("progress")) return "in_progress";
+  return "needs_built";
+}
+
+function getNeedBuiltSummary(item) {
+  const msState = getBuildSideState(item, "ms");
+  const chassisState = getBuildSideState(item, "chassis");
+  const labelFor = (side, state) => {
+    const sideLabel = side === "ms" ? "MS" : "Chassis";
+    if (state === "complete") return `${sideLabel} complete`;
+    if (state === "paused") return `${sideLabel} paused`;
+    if (state === "in_progress") return `${sideLabel} in progress`;
+    return `${sideLabel} needs built`;
+  };
+  return `${labelFor("chassis", chassisState)} · ${labelFor("ms", msState)}`;
+}
+
+function getNeedBuiltPill(item) {
+  const msState = getBuildSideState(item, "ms");
+  const chassisState = getBuildSideState(item, "chassis");
+  const openStates = [
+    ["chassis", chassisState],
+    ["ms", msState],
+  ].filter(([, state]) => state !== "complete");
+
+  if (!openStates.length) return "Ready to Move";
+  if (openStates.length === 2) {
+    if (openStates.every(([, state]) => state === "in_progress")) return "Both Building";
+    if (openStates.every(([, state]) => state === "paused")) return "Build Hold";
+    const pendingSides = openStates
+      .filter(([, state]) => state === "needs_built")
+      .map(([side]) => side === "ms" ? "MS" : "Chassis");
+    if (pendingSides.length === 2) return "Both to Build";
+    if (pendingSides.length === 1) return `${pendingSides[0]} to Build`;
+    return "Build Moving";
+  }
+
+  const [side, state] = openStates[0];
+  const sideLabel = side === "ms" ? "MS" : "Chassis";
+  if (state === "in_progress") return `${sideLabel} Building`;
+  if (state === "paused") return `${sideLabel} Hold`;
+  return `${sideLabel} to Build`;
+}
+
+function getNeedBuiltSide(item) {
+  const msState = getBuildSideState(item, "ms");
+  const chassisState = getBuildSideState(item, "chassis");
+  const msOpen = msState !== "complete";
+  const chassisOpen = chassisState !== "complete";
+  if (msOpen && chassisOpen) return "both";
+  if (msOpen) return "ms";
+  if (chassisOpen) return "chassis";
+  return null;
+}
+
 function sharedQueueSections(items) {
   const kitting = items
     .filter(i => {
@@ -3195,7 +3400,10 @@ function sharedQueueSections(items) {
     })
     .sort(compareScores)
     .slice(0, 4)
-    .map(i => ({ item: i, meta: summarizeQueueMeta(i, "Needs build movement") }));
+    .map(i => {
+      const buildLabel = getNeedBuiltSummary(i);
+      return ({ item: i, meta: summarizeQueueMeta(i, buildLabel) });
+    });
   const config = items
     .filter(i => (i.group?.title || "").toLowerCase().includes("config"))
     .sort(compareScores)
@@ -3240,7 +3448,6 @@ async function showSharedQueue() {
                 <div class="shared-queue-item-name">${escHtml(compactProjectLabel(item))}</div>
                 <div class="shared-queue-item-meta">${escHtml(meta)}</div>
               </div>
-              <div class="queue-stage-pill" style="${queueStageStyle(section.key)}">${escHtml(section.title.replace("Need ", ""))}</div>
             </div>
           </div>`).join("") + `</div>`;
       }
@@ -4825,11 +5032,11 @@ async function doAddMember() {
 ═══════════════════════════════════════ */
 
 const GATE_USER_HASH = "84e72cb2fce97fb96fc3b35fe1fed70e74660adc1497623a3a0298ef3f513777";
-const GATE_PASS_HASH = "98dcbed840e44810c72e93ab5c9b9c25dce7189ee8c39729a12a127e1f7f7ace";
+const GATE_PASS_HASH = "f287ae054d03ec82987cb6d60f756e08f6b55477af766c7893cf00e505274088";
 
 async function submitGate() {
   const u = (document.getElementById("gate-user")?.value || "").trim().toLowerCase();
-  const p = (document.getElementById("gate-pass")?.value || "").trim();
+  const p = (document.getElementById("gate-pass")?.value || "").replace(/\s+/g, "").trim().toLowerCase();
   const err = document.getElementById("gate-error");
   if (!u || !p) { err.textContent = "Enter both username and passcode."; return; }
   const [uh, ph] = await Promise.all([sha256(u), sha256(p)]);
@@ -4840,6 +5047,7 @@ async function submitGate() {
   }
   localStorage.setItem("pt_gate_passed", "1");
   showScreen("screen-login");
+  showLoginEntryPoint();
 }
 
 /* Check gate on startup */
@@ -4849,7 +5057,7 @@ async function submitGate() {
   }
 })();
 
-buildNameList();
+showLoginEntryPoint();
 
 function buildAllocationSummaryByWo(items = []) {
   const summary = {};
@@ -8951,17 +9159,18 @@ async function repairKittedPickListAllocation(woNum, completions = null) {
     return unallocated.length ? "repaired_full" : "full_confirmed";
   }
 
-  if (items.some(i => i.allocated)) return "has_allocations";
-
   const missingLabels = new Set((missingItems || [])
     .map(i => String(i || "").toLowerCase().trim()));
 
+  let changed = false;
   await Promise.all(items.map(item => {
     const label = (item.label || buildItemLabel(item)).toLowerCase().trim();
+    const shouldAllocate = !missingLabels.has(label);
+    if (!!item.allocated !== shouldAllocate) changed = true;
     return sbFetch(`picklist_items?id=eq.${encodeURIComponent(item.id)}`, {
       method: "PATCH",
       prefer: "return=minimal",
-      body: JSON.stringify({ allocated: !missingLabels.has(label) }),
+      body: JSON.stringify({ allocated: shouldAllocate }),
     });
   }));
 
@@ -8973,7 +9182,23 @@ async function repairKittedPickListAllocation(woNum, completions = null) {
       updated_at: new Date().toISOString(),
     }),
   });
-  return "repaired";
+  return changed ? "repaired" : "already_matched";
+}
+
+async function syncPeteKitCompletionMissing(pl, checklistItems) {
+  if (!pl?.wo_number || !Array.isArray(checklistItems)) return;
+  const completions = await sbGetKitCompletions();
+  const completion = findPeteKitCompletion(pl, completions);
+  if (!completion?.id) return;
+  const missingItems = checklistItems
+    .filter(item => !item.allocated)
+    .map(item => (item.label || buildItemLabel(item) || item.item_name || "").replace(/ \(×\d+\)$/, "").trim())
+    .filter(Boolean);
+  await sbFetch(`kit_completions?id=eq.${encodeURIComponent(completion.id)}`, {
+    method: "PATCH",
+    prefer: "return=minimal",
+    body: JSON.stringify({ missing_items: missingItems }),
+  });
 }
 
 /* ── Check for changes in P1 API vs stored items ── */
@@ -9487,12 +9712,36 @@ async function cyclePickListStatus(plId, currentStatus, e) {
   showToast(`Status → ${nextStatus === "in_queue" ? "In Queue" : "Open"}`, "ok");
 }
 
+async function loadResolvedPickListItems(plId, woNum) {
+  const byPickList = await sbFetch(
+    `picklist_items?picklist_id=eq.${encodeURIComponent(plId)}&order=id.asc`,
+    { method: "GET", headers: { "Prefer": "return=representation" } }
+  );
+  const byWorkOrder = woNum
+    ? await sbFetch(
+        `picklist_items?wo_number=eq.${encodeURIComponent(woNum)}&order=id.asc`,
+        { method: "GET", headers: { "Prefer": "return=representation" } }
+      )
+    : [];
+
+  const itemMap = new Map();
+  [...(Array.isArray(byPickList) ? byPickList : []), ...(Array.isArray(byWorkOrder) ? byWorkOrder : [])].forEach(item => {
+    if (item?.id) itemMap.set(String(item.id), item);
+  });
+
+  const merged = [...itemMap.values()];
+  const cached = ((window._plItemsByPl || {})[plId] || []).filter(item => item?.id);
+
+  if (!merged.length && cached.length) return cached;
+  if (!merged.length) throw new Error("Could not load pick list items from Supabase.");
+  return merged;
+}
+
 /* ── Pete submits kit from the pick list screen ── */
 async function submitKitFromPickList(plId, woNum, e) {
   if (e) e.stopPropagation();
 
-  const items     = await sbFetch(`picklist_items?picklist_id=eq.${encodeURIComponent(plId)}&order=id.asc`,
-    { method: "GET", headers: { "Prefer": "return=representation" } }) || [];
+  const items     = await loadResolvedPickListItems(plId, woNum);
   const missing   = items.filter(i => !i.allocated);
   const allocated = items.filter(i => i.allocated);
   const hasMissing = missing.length > 0;
@@ -9564,8 +9813,7 @@ async function confirmSubmitKitFromPickList(plId, woNum, mondayItemId, e) {
   if (btn) { btn.disabled = true; btn.textContent = "Submitting…"; }
 
   try {
-    const items   = await sbFetch(`picklist_items?picklist_id=eq.${encodeURIComponent(plId)}&order=id.asc`,
-      { method:"GET", headers:{"Prefer":"return=representation"} }) || [];
+    const items   = await loadResolvedPickListItems(plId, woNum);
     const missing = items.filter(i => !i.allocated);
 
     /* Find Monday item across all caches */
@@ -9757,75 +10005,60 @@ function openFirstPeteReview() {
   if (!pl) return;
   window._peteExpandedWo = pl.wo_number;
   renderPetePlList();
-  setTimeout(() => openPeteAllocationReview(pl.id, pl.wo_number, null), 80);
 }
 
-function confirmPeteMissingItemArrived(itemId, plId, woNum, label, e) {
-  if (e) { e.stopPropagation(); e.preventDefault(); }
-  const existing = document.getElementById("pete-missing-confirm-modal");
-  if (existing) existing.remove();
-
-  const modal = document.createElement("div");
-  modal.id = "pete-missing-confirm-modal";
-  modal.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:1000;display:flex;align-items:flex-end;justify-content:center;padding:0";
-  modal.innerHTML = `
-    <div style="background:var(--surface);border-top:1px solid var(--border);border-radius:var(--radius) var(--radius) 0 0;padding:22px 18px 34px;width:100%;max-width:480px">
-      <div style="font-size:16px;font-weight:800;margin-bottom:4px">Missing Item Is Here?</div>
-      <div style="font-size:12px;color:var(--muted);line-height:1.4;margin-bottom:14px">${escHtml(label)}</div>
-      <div style="display:flex;gap:8px">
-        <button onclick="document.getElementById('pete-missing-confirm-modal')?.remove()"
-          style="flex:1;background:none;border:1px solid var(--border2);border-radius:var(--radius-xs);padding:13px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);cursor:pointer">
-          Cancel
-        </button>
-        <button onclick="markPeteMissingItemArrived('${itemId}','${plId}','${woNum}',event)"
-          style="flex:2;background:var(--green);border:none;border-radius:var(--radius-xs);padding:13px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#fff;cursor:pointer">
-          Confirm Item Is Here
-        </button>
-      </div>
-    </div>`;
-  modal.addEventListener("click", ev => { if (ev.target === modal) modal.remove(); });
-  document.body.appendChild(modal);
-}
-
-async function markPeteMissingItemArrived(itemId, plId, woNum, e) {
-  if (e) e.stopPropagation();
-  const btn = e?.currentTarget;
-  if (btn) { btn.disabled = true; btn.textContent = "Updating…"; }
+async function togglePeteKittedItem(itemId, plId, woNum, e) {
+  if (e) {
+    e.stopPropagation();
+    e.preventDefault();
+  }
+  const lists = window._petePlLists || [];
+  const pl = lists.find(p => p.id === plId || p.wo_number === woNum);
+  if (!pl) return;
+  const locked = (pl.displayStatus || pl.status) === "complete" || pl.status === "complete";
+  if (locked) {
+    showToast("Pick list is locked after QC completion.", "warn");
+    return;
+  }
+  const currentItem = (pl.checklistItems || []).find(item => String(item.id) === String(itemId));
+  if (!currentItem) return;
+  const nextAllocated = !currentItem.allocated;
 
   await sbFetch(`picklist_items?id=eq.${encodeURIComponent(itemId)}`, {
     method: "PATCH",
     prefer: "return=minimal",
-    body: JSON.stringify({ allocated: true }),
+    body: JSON.stringify({ allocated: nextAllocated }),
   });
 
-  const items = await sbFetch(
-    `picklist_items?wo_number=eq.${encodeURIComponent(woNum)}&select=allocated`,
-    { method: "GET", headers: { "Prefer": "return=representation" } }
-  ) || [];
-  const allAllocated = items.length > 0 && items.every(i => i.allocated);
+  const checklistItems = (pl.checklistItems || []).map(item =>
+    String(item.id) === String(itemId) ? { ...item, allocated: nextAllocated } : item
+  );
+  const allAllocated = checklistItems.length > 0 && checklistItems.every(item => item.allocated);
+  const nextStatus = allAllocated ? "fully_kitted" : "missing_items";
+
   await sbFetch(`picklists?id=eq.${encodeURIComponent(plId)}&status=neq.complete`, {
     method: "PATCH",
     prefer: "return=minimal",
     body: JSON.stringify({
-      status: allAllocated ? "fully_kitted" : "missing_items",
+      status: nextStatus,
       updated_at: new Date().toISOString(),
     }),
   });
+  await syncPeteKitCompletionMissing(pl || { wo_number: woNum }, checklistItems).catch(()=>{});
 
-  document.getElementById("pete-missing-confirm-modal")?.remove();
-  showToast(allAllocated ? "Pick list fully kitted." : "Missing item marked here.", "ok");
-
-  window._petePlLists = (window._petePlLists || []).map(pl => {
-    if (pl.id !== plId) return pl;
-    const checklistItems = (pl.checklistItems || []).map(item =>
-      item.id === itemId ? { ...item, allocated: true } : item
-    );
-    const displayStatus = checklistItems.length && checklistItems.every(item => item.allocated)
-      ? "fully_kitted"
-      : "missing_items";
-    return { ...pl, checklistItems, displayStatus, status: displayStatus };
+  window._petePlLists = lists.map(row => {
+    if (row.id !== plId && row.wo_number !== woNum) return row;
+    return {
+      ...row,
+      checklistItems,
+      needsReview: false,
+      displayStatus: nextStatus,
+      status: nextStatus,
+    };
   });
+  saveTimedCache(PETE_KITTED_CACHE_KEY, window._petePlLists || []);
   renderPetePlList();
+  showToast(nextAllocated ? "Item allocated." : "Item marked missing.", "ok");
 }
 
 /* ── Pete's kitted pick lists — open kits after Parts Pulled until QC completion ── */
@@ -9952,8 +10185,8 @@ function renderPetePlList() {
     html += `<div class="next-action-card">
       <div class="next-action-kicker">Needs Review</div>
       <div class="next-action-title">${reviewCount} previous kit${reviewCount===1?"":"s"} need allocation review</div>
-      <div class="next-action-sub">Fix these in one step with Check All / Clear All instead of touching every item one at a time.</div>
-      <button class="next-action-btn" onclick="openFirstPeteReview()">Review First One</button>
+      <div class="next-action-sub">Open the pick list and tap items directly until the allocation matches the original kit.</div>
+      <button class="next-action-btn" onclick="openFirstPeteReview()">Open First One</button>
     </div>`;
   }
   let lastKitDay = "";
@@ -9970,6 +10203,7 @@ function renderPetePlList() {
     const missingCount = checklist.filter(i => !i.allocated).length;
     const qcReady = (groupLabel || "").toLowerCase().includes("quality control");
     const displayStatus = pl.needsReview ? "needs_review" : (pl.displayStatus || pl.status);
+    const isLocked = (pl.displayStatus || pl.status) === "complete" || pl.status === "complete";
     const sl = displayStatus === "needs_review" ? "Needs Review" : (statusLabel[displayStatus] || displayStatus);
     const sc = displayStatus === "needs_review" ? "#f59e0b" : (statusColor[displayStatus] || "var(--muted2)");
     const woArg = String(pl.wo_number || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
@@ -9993,30 +10227,25 @@ function renderPetePlList() {
       </button>
       <div style="display:${isExpanded ? "block" : "none"};border-top:1px solid var(--border);padding:10px 14px 14px">
         ${pl.needsReview ? `<div style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);border-radius:var(--radius-xs);padding:9px 10px;margin-bottom:10px;font-size:11px;line-height:1.35;color:#fbbf24">
-          Allocation history is incomplete. Use Review Allocation to fix this pick list in one step.
-          <button onclick="openPeteAllocationReview('${pl.id}','${woArg}',event)"
-            style="width:100%;margin-top:9px;background:rgba(245,158,11,0.16);border:1px solid rgba(245,158,11,0.38);border-radius:var(--radius-xs);padding:9px 10px;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#fbbf24;cursor:pointer">
-            Review Allocation
-          </button>
+          Allocation history is incomplete. Tap the checklist items below to correct what is here and what is missing.
         </div>` : ""}
         <div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:8px">
           <div style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">Checklist</div>
           <div style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:${missingCount ? "var(--accent)" : "#10b981"}">${missingCount ? missingCount + " Missing" : "All Allocated"}</div>
         </div>
+        <div style="font-size:10px;color:var(--muted2);margin-bottom:6px">${isLocked ? "This pick list is locked because QC completed it." : "Tap any item to mark it here or missing."}</div>
         ${checklist.length ? checklist.map(item => {
           const label = escHtml(item.label || buildItemLabel(item));
-          const rawLabel = item.label || buildItemLabel(item);
-          const itemLabelArg = rawLabel.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
-          return `<div style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-top:1px solid rgba(255,255,255,0.05)">
-            <div class="pl-checkbox${item.allocated ? " checked" : ""}" style="margin-top:1px;flex-shrink:0">
+          return `<div onclick="${isLocked ? "" : `togglePeteKittedItem('${item.id}','${pl.id}','${woArg}',event)`}"
+              style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-top:1px solid rgba(255,255,255,0.05);${isLocked ? "" : "cursor:pointer"}">
+            <div class="pl-checkbox${item.allocated ? " checked" : ""}" style="margin-top:1px;flex-shrink:0;opacity:${isLocked ? ".75" : "1"}">
               ${item.allocated ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>` : ""}
             </div>
             <div style="font-size:12px;color:${item.allocated ? "var(--muted)" : "var(--text)"};text-decoration:${item.allocated ? "line-through" : "none"};line-height:1.35;flex:1">${label}</div>
             ${pickListInfoButton(item.id)}
-            ${item.allocated ? "" : `<button onclick="confirmPeteMissingItemArrived('${item.id}','${pl.id}','${woArg}','${itemLabelArg}',event)"
-              style="background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:var(--radius-xs);padding:6px 8px;font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#10b981;cursor:pointer;flex-shrink:0">
-              Item Is Here
-            </button>`}
+            <div style="font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:${item.allocated ? "#10b981" : "var(--accent)"};padding-top:3px;flex-shrink:0">
+              ${item.allocated ? "Here" : "Missing"}
+            </div>
           </div>`;
         }).join("") : `<div style="font-size:12px;color:var(--muted);padding:12px 0">No checklist items found yet.</div>`}
         <button ${qcReady ? `onclick="confirmCompletePickList('${pl.id}',event)"` : "disabled"}
@@ -10234,6 +10463,10 @@ async function savePeteAllocationReview(plId, woNum, e) {
       updated_at: new Date().toISOString(),
     }),
   });
+  await syncPeteKitCompletionMissing(pl || { wo_number: woNum }, items.map(item => ({
+    ...item,
+    allocated: allocatedIds.has(String(item.id)),
+  }))).catch(()=>{});
 
   window._petePlLists = (window._petePlLists || []).map(p => {
     if (p.id !== plId && p.wo_number !== woNum) return p;
@@ -10715,9 +10948,8 @@ function showToast(msg, type, undoFn) {
 /* ═══════════════════════════════════════
    BOOT
 ═══════════════════════════════════════ */
-buildNameList();
 syncTeamFromSupabase().then(changed => {
-  if (changed) buildNameList();
+  if (changed && !currentUser) showLoginEntryPoint();
 }).catch(()=>{});
 syncPinsFromSupabase().catch(()=>{});
 registerPushWorker().catch(()=>{});
@@ -10737,6 +10969,7 @@ try {
     const soBtn = document.getElementById("login-signout-btn");
     if (soBtn) soBtn.style.display = "flex";
   }
+  if (!saved && localStorage.getItem("pt_gate_passed")==="1") showLoginEntryPoint();
   /* Pre-load build updates in background for splash screen */
   sbFetch("build_updates?order=created_at.desc&limit=100",{method:"GET",headers:{"Prefer":"return=representation"}}).then(d=>{ if(d) _allBuildUpdates=d; }).catch(()=>{});
 } catch(e) { localStorage.removeItem("pt_user"); }
