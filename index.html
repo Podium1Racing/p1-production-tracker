@@ -551,9 +551,9 @@ input.photo-file-inp { display:none; }
 .resolve-stuck-secondary { flex:1; background:none; border:1px solid var(--border2); border-radius:var(--radius-xs); padding:12px; font-size:12px; font-weight:700; color:var(--muted); cursor:pointer; }
 .resolve-stuck-primary { flex:1.2; background:var(--green); border:none; border-radius:var(--radius-xs); padding:12px; font-size:12px; font-weight:800; color:#fff; cursor:pointer; }
 /* UPDATE SHEET (bottom sheet modal) */
-.update-sheet-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.72); z-index:55; align-items:flex-end; justify-content:center; }
+.update-sheet-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.72); z-index:120; align-items:flex-end; justify-content:center; }
 .update-sheet-overlay.open { display:flex; }
-.update-sheet { background:var(--surface); border-radius:var(--radius) var(--radius) 0 0; border-top:2px solid var(--accent); padding:18px 18px 36px; width:100%; max-width:480px; max-height:92vh; overflow-y:auto; animation:slideUp .22s ease; }
+.update-sheet { background:var(--surface); border-radius:var(--radius) var(--radius) 0 0; border-top:2px solid var(--accent); padding:18px 18px calc(36px + env(safe-area-inset-bottom)); width:100%; max-width:480px; max-height:92vh; overflow-y:auto; animation:slideUp .22s ease; }
 .update-sheet-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
 .update-sheet-title { font-size:15px; font-weight:700; }
 .update-sheet-close { background:none; border:none; color:var(--muted); font-size:20px; cursor:pointer; padding:2px 6px; line-height:1; }
@@ -2354,8 +2354,7 @@ function swStart(itemId, colType) {
   /* Log time event to P1 API */
   const item = boardItems.find(i => i.id === itemId);
   const woRaw = COL.work_order_num ? (cvText(item, COL.work_order_num) || "") : "";
-  const woMatch = woRaw.match(/\b(W\d{4,})\b/);
-  const woNum = woMatch ? woMatch[1] : null;
+  const woNum = getWoFromText(woRaw) || null;
   if (woNum) p1Api("/time/event", { method:"POST", body: JSON.stringify({ wo_number: woNum, technician_name: currentUser.name, event_type: isResuming ? "resume" : "start" }) }).catch(()=>{});
   /* Update main button → Pause */
   const btnEl = document.getElementById("sw-main-btn-" + itemId + "-" + colType);
@@ -2382,8 +2381,7 @@ function swPause(itemId, colType) {
   /* Log pause event to P1 API */
   const item = boardItems.find(i => i.id === itemId);
   const woRaw = COL.work_order_num ? (cvText(item, COL.work_order_num) || "") : "";
-  const woMatch = woRaw.match(/\b(W\d{4,})\b/);
-  const woNum = woMatch ? woMatch[1] : null;
+  const woNum = getWoFromText(woRaw) || null;
   if (woNum) p1Api("/time/event", { method:"POST", body: JSON.stringify({ wo_number: woNum, technician_name: currentUser.name, event_type: "pause" }) }).catch(()=>{});
   const k = swKey(itemId, colType);
   if (SW_INTERVALS[k]) { clearInterval(SW_INTERVALS[k]); delete SW_INTERVALS[k]; }
@@ -2420,8 +2418,7 @@ async function swEnd(itemId, colType, itemName, opts = {}) {
 
   /* Log stop event + complete to P1 API */
   const woRaw2   = COL.work_order_num ? (cvText(boardItems.find(i=>i.id===itemId), COL.work_order_num) || "") : "";
-  const woMatch2 = woRaw2.match(/\b(W\d{4,})\b/);
-  const woNum2   = woMatch2 ? woMatch2[1] : null;
+  const woNum2   = getWoFromText(woRaw2) || null;
   if (woNum2) {
     const itemObj    = boardItems.find(i => i.id === itemId);
     const custName   = cvText(itemObj, COL.project) || itemObj?.name || "";
@@ -3453,8 +3450,7 @@ function openNextUpAssign() {
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
         ${(() => {
           const woRaw   = COL.work_order_num ? (cvText(item, COL.work_order_num) || "") : "";
-          const woMatch = woRaw.match(/\b(W\d{4,})\b/);
-          const woNum   = woMatch ? woMatch[1] : null;
+          const woNum   = getWoFromText(woRaw) || null;
           return woNum
             ? `<button onclick="document.getElementById('next-up-modal').remove();openPickListForItem('${item.id}','${woNum}',event)"
                 style="background:none;border:1px solid var(--border2);border-radius:var(--radius-xs);padding:8px 12px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);cursor:pointer;flex-shrink:0">
@@ -4034,8 +4030,7 @@ function findNextAvailableBuild(items, isMS) {
 
 function getWorkOrderNumber(item) {
   const woRaw = COL.work_order_num ? (cvText(item, COL.work_order_num) || "") : "";
-  const woMatch = woRaw.match(/\b(W\d{4,})\b/);
-  return woMatch ? woMatch[1] : null;
+  return getWoFromText(woRaw) || null;
 }
 
 function getCachedPickListStatus(woNum) {
@@ -4475,8 +4470,7 @@ function buildWorkOrderPdfBtn(item, compact = false) {
 
 function buildPickListBtn(item, centered = false) {
   const woRaw = COL.work_order_num ? (cvText(item, COL.work_order_num) || "") : "";
-  const woMatch = woRaw.match(/\b(W\d{4,})\b/);
-  const woNum = woMatch ? woMatch[1] : null;
+  const woNum = getWoFromText(woRaw) || null;
   const plStatus = getCachedPickListStatus(woNum);
   const plStatusLabel = plStatus === "fully_kitted" ? "Fully Kitted" : plStatus === "missing_items" ? "Missing Items" : "";
   return woNum
@@ -5391,6 +5385,57 @@ async function onEndSessionReasonChange(itemId) {
   await loadStuckItemOptions(itemId);
 }
 
+async function loadResolveStuckOptions(itemId) {
+  const select = document.getElementById("resolve-stuck-item-" + itemId);
+  const help = document.getElementById("resolve-stuck-help-" + itemId);
+  if (!select || !help) return;
+
+  select.innerHTML = `<option value="">Loading missing pick-list items…</option>`;
+  help.textContent = "";
+
+  try {
+    const item = boardItems.find(i => i.id === itemId);
+    const woNum = getWorkOrderNumber(item);
+    if (!woNum) throw new Error("No work order is linked to this build yet.");
+
+    let picklists = await sbFetch(
+      `picklists?wo_number=eq.${encodeURIComponent(woNum)}&select=id&order=updated_at.desc&limit=1`,
+      { method: "GET", headers: { "Prefer": "return=representation" } }
+    );
+    if (!picklists || !picklists[0]) {
+      await ensurePickList(woNum);
+      picklists = await sbFetch(
+        `picklists?wo_number=eq.${encodeURIComponent(woNum)}&select=id&order=updated_at.desc&limit=1`,
+        { method: "GET", headers: { "Prefer": "return=representation" } }
+      );
+    }
+
+    const plId = picklists?.[0]?.id;
+    if (!plId) throw new Error("This order does not have a synced pick list yet.");
+    select.dataset.plId = String(plId);
+
+    const resolvedItems = await loadResolvedPickListItems(plId, woNum);
+    const missingItems = (Array.isArray(resolvedItems) ? resolvedItems : [])
+      .filter(it => !isServiceItem(it) && !it.allocated);
+
+    if (!missingItems.length) {
+      select.innerHTML = `<option value="">No missing pick-list items found</option>`;
+      help.textContent = "This build is marked stuck, but nothing is currently missing on the pick list.";
+      return;
+    }
+
+    select.innerHTML = `<option value="">Choose the item that showed up…</option>` +
+      missingItems.map(it => {
+        const label = it.label || buildItemLabel(it);
+        return `<option value="${escAttr(String(it.id || ""))}" data-label="${escAttr(label)}">${escHtml(label)}</option>`;
+      }).join("");
+    help.textContent = `${missingItems.length} missing item${missingItems.length === 1 ? "" : "s"} currently open on this pick list.`;
+  } catch (err) {
+    select.innerHTML = `<option value="">Could not load missing items</option>`;
+    help.textContent = err.message || "Could not load missing pick-list items.";
+  }
+}
+
 function openResolveStuckPickList(itemId, colType, e) {
   if (e) e.stopPropagation();
   const item = boardItems.find(i => i.id === itemId);
@@ -5406,12 +5451,38 @@ function openResolveStuckPickList(itemId, colType, e) {
 async function resumeStuckBuild(itemId, colType, e) {
   if (e) e.stopPropagation();
   const btn = document.getElementById("resolve-stuck-submit-" + itemId);
+  const itemSelect = document.getElementById("resolve-stuck-item-" + itemId);
+  const selectedItemId = (itemSelect?.value || "").trim();
+  const selectedItemLabel = (itemSelect?.selectedOptions?.[0]?.dataset?.label || itemSelect?.selectedOptions?.[0]?.textContent || "").trim();
+  const plId = (itemSelect?.dataset?.plId || "").trim();
   const note = (document.getElementById("resolve-stuck-note-" + itemId)?.value || "").trim();
+  if (!selectedItemId || !plId) {
+    showToast("Choose the missing pick-list item that showed up first.", "err");
+    itemSelect?.focus();
+    return;
+  }
   if (btn) {
     btn.disabled = true;
     btn.textContent = "Resuming…";
   }
   try {
+    await sbFetch(`picklist_items?id=eq.${encodeURIComponent(selectedItemId)}`, {
+      method: "PATCH",
+      prefer: "return=minimal",
+      body: JSON.stringify({ allocated: true }),
+    });
+    const allItems = await sbFetch(`picklist_items?picklist_id=eq.${encodeURIComponent(plId)}&select=id,allocated`, {
+      method: "GET", headers: { "Prefer": "return=representation" }
+    }) || [];
+    const allAllocated = allItems.length > 0 && allItems.every(i => i.allocated);
+    await sbFetch(`picklists?id=eq.${encodeURIComponent(plId)}&status=neq.complete`, {
+      method: "PATCH",
+      prefer: "return=minimal",
+      body: JSON.stringify({
+        status: allAllocated ? "fully_kitted" : "missing_items",
+        updated_at: new Date().toISOString(),
+      }),
+    });
     await setBuildStatusLabel(itemId, colType, "In Progress");
     const local = boardItems.find(i => i.id === itemId);
     if (local) {
@@ -5424,7 +5495,7 @@ async function resumeStuckBuild(itemId, colType, e) {
     const bodyParts = [
       `[${currentUser.name}] ${tsLabel}`,
       `${colType === "ms" ? "MS" : "Chassis"} resumed from Stuck`,
-      "Blocking item is here — build ready to move again",
+      `Resolved blocking item: ${selectedItemLabel || "Missing item allocated"}`,
     ];
     if (note) bodyParts.push(note);
     await mondayQuery(`mutation {
@@ -5459,17 +5530,20 @@ function openResolveStuckSheet(itemId, colType, e) {
     </div>
     <div class="update-sheet-sub">${isMS ? "Monitor Stand" : "Chassis"} · ${curPct}% complete · currently stuck</div>
     <div style="background:rgba(224,32,32,0.08);border:1px solid rgba(224,32,32,0.18);border-radius:var(--radius-xs);padding:11px 13px;font-size:12px;color:var(--text);line-height:1.55;margin-bottom:14px">
-      Open the pick list, mark the item that showed up, then continue the build when you are ready to move again.
+      Choose the missing pick-list item that showed up. When you continue, the pick list will update and the build will move back into progress.
     </div>
-    <div class="resolve-stuck-help">
-      This keeps the pick list allocation and the build status in sync.
+    <div class="resolve-stuck-help" id="resolve-stuck-help-${itemId}">
+      Loading missing pick-list items…
     </div>
+    <select class="note-inp" id="resolve-stuck-item-${itemId}" style="margin-top:12px">
+      <option value="">Loading missing pick-list items…</option>
+    </select>
     <textarea class="note-inp" id="resolve-stuck-note-${itemId}" rows="2" placeholder="Optional note (what arrived, where it came from, etc.)…" style="margin-top:12px"></textarea>
     <div class="resolve-stuck-actions">
-      <button class="resolve-stuck-secondary" onclick="openResolveStuckPickList('${itemId}','${colType}',event)" ${woNum ? "" : "disabled style='opacity:.45;cursor:not-allowed'"}>Open Pick List</button>
       <button class="resolve-stuck-primary" id="resolve-stuck-submit-${itemId}" onclick="resumeStuckBuild('${itemId}','${colType}',event)">Continue Build</button>
     </div>`;
   document.getElementById("update-sheet-overlay").classList.add("open");
+  loadResolveStuckOptions(itemId);
 }
 
 /* Set build status column to Complete when a build hits 100% */
@@ -8540,8 +8614,7 @@ async function loadKitBoard() {
     });
     kitItemsToFetch.forEach(item => {
       const woRaw   = COL.work_order_num ? (cvText(item, COL.work_order_num) || "") : "";
-      const woMatch = woRaw.match(/\b(W\d{4,})\b/);
-      const woNum   = woMatch ? woMatch[1] : null;
+      const woNum   = getWoFromText(woRaw) || null;
       if (woNum && !KIT_LINE_CACHE[item.id]) fetchPickListFromApi(item.id, woNum);
     });
   } catch(e) {
@@ -8570,14 +8643,13 @@ function getKnownBoardItems() {
 
 function getWoNumberFromItem(item) {
   const woRaw = COL.work_order_num ? (cvText(item, COL.work_order_num) || "") : "";
-  const woMatch = woRaw.match(/\b(W\d{4,})\b/);
-  return woMatch ? woMatch[1] : null;
+  return getWoFromText(woRaw) || null;
 }
 
 function findKnownBoardItemByWo(woNum) {
   return getKnownBoardItems().find(i => {
     const raw = COL.work_order_num ? (cvText(i, COL.work_order_num) || "") : "";
-    return raw.includes(woNum);
+    return getWoFromText(raw) === woNum;
   });
 }
 
@@ -8686,8 +8758,7 @@ function renderKitScreen(items) {
     const safeTurnkey = escHtml(turnkey);
     const safeSize    = escHtml(msSize);
     const woRaw       = COL.work_order_num ? (cvText(item, COL.work_order_num) || "") : "";
-    const woMatch     = woRaw.match(/\b(W\d{4,})\b/);
-    const woNum       = woMatch ? woMatch[1] : (KIT_WO_CACHE[item.id] || "");
+    const woNum       = getWoFromText(woRaw) || (KIT_WO_CACHE[item.id] || "");
     const safeWo      = escHtml(woNum);
     const safePickUrl = pickLink ? escHtml(pickLink.url) : "";
     card.innerHTML = `
@@ -8813,8 +8884,12 @@ function cleanMondayName(name) {
   return (name || "").replace(/^\d+\s+/, "").trim();
 }
 
+function stripWoFromText(text) {
+  return String(text || "").replace(/\b(WO?\d{4,})\b/ig, "").trim();
+}
+
 function getWoFromText(text) {
-  const m = String(text || "").match(/\b(W\d{4,})\b/i);
+  const m = String(text || "").match(/\b(WO?\d{4,})\b/i);
   return m ? m[1].toUpperCase() : "";
 }
 
@@ -8852,7 +8927,7 @@ function findKnownBoardItemForKitCompletion(k) {
   const wo = getWoFromText(k?.item_id) || getWoFromText(k?.item_name);
   const fromWo = wo ? findKnownBoardItemByWo(wo) : null;
   if (fromWo) return fromWo;
-  const savedName = cleanMondayName(String(k?.item_name || "").replace(/\bW\d{4,}\b/ig, "").trim()).toLowerCase();
+  const savedName = cleanMondayName(stripWoFromText(k?.item_name || "")).toLowerCase();
   if (!savedName || /^\d+$/.test(savedName)) return null;
   const historyRows = Object.values(window._kitHistoryItemById || {});
   return [...rows, ...historyRows].find(item => cleanMondayName(item?.name || "").toLowerCase() === savedName) || null;
@@ -8863,7 +8938,7 @@ function kitHistoryProjectLabel(k) {
   const wo = getWoFromText(k?.item_id) || getWoFromText(k?.item_name) || (mondayItem ? getWoNumberFromItem(mondayItem) : "");
   const rawName = String(k?.item_name || "").trim();
   const mondayName = cleanMondayName(mondayItem?.name || "");
-  const savedName = cleanMondayName(rawName.replace(/\bW\d{4,}\b/ig, "").trim());
+  const savedName = cleanMondayName(stripWoFromText(rawName));
   const customer = mondayName || (savedName && !/^\d+$/.test(savedName) ? savedName : "");
   if (customer && wo) return `${customer} · ${wo}`;
   return customer || wo || rawName || String(k?.item_id || "");
@@ -9393,9 +9468,9 @@ function parsePickListText(text) {
   const lines   = text.split("\n").map(l => l.trim()).filter(Boolean);
 
   lines.forEach(line => {
-    if (!/^W\d{4,}/.test(line)) return;
+    if (!/^WO?\d{4,}/i.test(line)) return;
 
-    let rest = line.replace(/^W\d+\s*/, "").trim();
+    let rest = line.replace(/^WO?\d+\s*/i, "").trim();
 
     /* Qty at end */
     const qtyMatch = rest.match(/\s(\d+)\s*$/);
@@ -9453,8 +9528,7 @@ async function buildKitChecklistAsync(item) {
 
   /* Get WO number for this item */
   const woRaw   = COL.work_order_num ? (cvText(item, COL.work_order_num) || "") : "";
-  const woMatch = woRaw.match(/\b(W\d{4,})\b/);
-  const woNum   = woMatch ? woMatch[1] : null;
+  const woNum   = getWoFromText(woRaw) || null;
 
   if (woNum) {
     /* Ensure picklist exists and items are synced from P1 API */
@@ -9792,8 +9866,7 @@ async function kitDoneConfirmed(itemId, e) {
     const ic       = getItemChecks(itemId);
     const missing  = kitLines.filter(l => !ic.checks[l] && !ic.skips[l]);
     const woRaw    = COL.work_order_num ? (cvText(item, COL.work_order_num) || "") : "";
-    const woMatch  = woRaw.match(/\b(W\d{4,})\b/);
-    const woNum    = woMatch ? woMatch[1] : (KIT_WO_CACHE[itemId] || null);
+    const woNum    = getWoFromText(woRaw) || (KIT_WO_CACHE[itemId] || null);
 
     if (woNum) {
       try {
@@ -9858,8 +9931,7 @@ async function kitDoneConfirmed(itemId, e) {
     (async () => {
       try {
         const woRaw  = COL.work_order_num ? (cvText(kitBoardItems.find(i=>i.id===itemId), COL.work_order_num) || "") : "";
-        const woMatch = woRaw.match(/\b(W\d{4,})\b/);
-        const woNum   = woMatch ? woMatch[1] : null;
+        const woNum   = getWoFromText(woRaw) || null;
         if (!woNum) return;
 
         const checkedLabels = new Set(
@@ -9928,12 +10000,12 @@ async function handleKitPdfDrop(itemId, file) {
     const text = await extractPdfText(buf);
 
 
-    /* Extract WO number (e.g. W00186) and cache it */
-    const woMatch = text.match(/\b(W\d{4,})\b/);
-    if (woMatch) {
-      KIT_WO_CACHE[itemId] = woMatch[1];
+    /* Extract WO number (e.g. W00186 or WO0186) and cache it */
+    const woNum = getWoFromText(text);
+    if (woNum) {
+      KIT_WO_CACHE[itemId] = woNum;
       const woBadge = document.getElementById("wo-badge-" + itemId);
-      if (woBadge) { woBadge.textContent = woMatch[1]; woBadge.style.display = "inline-flex"; }
+      if (woBadge) { woBadge.textContent = woNum; woBadge.style.display = "inline-flex"; }
     }
     const lines = parsePickListText(text);
     if (lines.length > 0)
@@ -10089,7 +10161,7 @@ async function loadPickLists(woNum) {
 
     /* Backfill customer_name for any rows that only have the WO number */
     const needsName = rows.filter(pl =>
-      !pl.customer_name || pl.customer_name === pl.wo_number || pl.customer_name.match(/^W\d{4,}$/)
+      !pl.customer_name || pl.customer_name === pl.wo_number || !!getWoFromText(pl.customer_name)
     );
     if (needsName.length) {
       for (const pl of needsName) {
@@ -11341,7 +11413,7 @@ function getPetePickListCustomer(pl) {
   const mondayName = cleanMondayName(pl.mondayItem?.name);
   const savedName = (pl.customer_name || "").trim();
   if (mondayName && mondayName !== pl.wo_number) return mondayName;
-  if (savedName && savedName !== pl.wo_number && !savedName.match(/^W\d{4,}$/)) return savedName;
+  if (savedName && savedName !== pl.wo_number && !getWoFromText(savedName)) return savedName;
   return "";
 }
 
