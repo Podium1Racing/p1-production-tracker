@@ -101,32 +101,32 @@ button, input, select, textarea { font-family:inherit; }
 .btn-primary:disabled { opacity:.33; cursor:not-allowed; transform:none; }
 
 /* HEADER */
-.app-header { background:var(--surface); border-bottom:1px solid var(--border); padding:11px 15px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:20; }
-.header-left { display:flex; align-items:center; gap:10px; }
+.app-header { background:var(--surface); border-bottom:1px solid var(--border); padding:11px 15px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:20; gap:10px; flex-wrap:wrap; }
+.header-left { display:flex; align-items:center; gap:10px; min-width:0; flex:1 1 180px; }
 .hav { width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; flex-shrink:0; }
 .hname { font-size:13px; font-weight:800; line-height:1.2; letter-spacing:.01em; text-transform:uppercase; }
 .hrole-tag { font-size:10px; font-weight:600; padding:2px 7px; border-radius:20px; display:inline-block; margin-top:2px; }
 .hdate { font-size:11px; color:var(--muted); margin-top:1px; }
-.header-right { display:flex; align-items:center; gap:8px; }
-.switch-btn { background:none; border:1px solid var(--border2); border-radius:5px; padding:5px 10px; color:var(--muted); font-size:11px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; cursor:pointer; white-space:nowrap; }
-.history-btn { background:none; border:1px solid var(--border2); border-radius:5px; padding:5px 10px; color:var(--muted); font-size:11px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; cursor:pointer; display:flex; align-items:center; gap:4px; white-space:nowrap; }
+.header-right { display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end; margin-left:auto; }
+.switch-btn { background:none; border:1px solid var(--border2); border-radius:7px; padding:6px 11px; color:var(--muted); font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; cursor:pointer; white-space:nowrap; min-height:34px; display:inline-flex; align-items:center; justify-content:center; }
+.history-btn { background:none; border:1px solid var(--border2); border-radius:7px; padding:6px 11px; color:var(--muted); font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px; white-space:nowrap; min-height:34px; }
 
 /* CONTENT */
 .main-content { flex:1; padding:14px; overflow-y:auto; padding-bottom:36px; }
 
 /* PERF CARD */
-.perf-card { background:var(--surface); border-radius:var(--radius); border:1px solid var(--border); padding:16px; margin-bottom:12px; }
+.perf-card { background:var(--surface); border-radius:var(--radius); border:1px solid var(--border); padding:13px; margin-bottom:12px; }
 .card-eyebrow { font-size:9px; text-transform:uppercase; letter-spacing:1.6px; color:var(--accent); font-weight:700; margin-bottom:3px; }
 .card-title { font-size:14px; font-weight:700; margin-bottom:14px; color:var(--muted); }
-.rings-row { display:flex; gap:12px; margin-bottom:14px; }
-.ring-block { flex:1; display:flex; flex-direction:column; align-items:center; background:var(--surface2); border-radius:var(--radius-sm); padding:12px 8px; }
+.rings-row { display:flex; gap:10px; margin-bottom:12px; }
+.ring-block { flex:1; display:flex; flex-direction:column; align-items:center; background:var(--surface2); border-radius:var(--radius-sm); padding:10px 7px; }
 .ring-block-label { font-size:10px; font-weight:600; letter-spacing:.8px; text-transform:uppercase; color:var(--muted2); margin-bottom:8px; }
-.ring-svg { width:80px; height:80px; flex-shrink:0; }
+.ring-svg { width:72px; height:72px; flex-shrink:0; }
 .ring-track { fill:none; stroke:rgba(255,255,255,0.06); stroke-width:10; }
 .ring-fill { fill:none; stroke-width:10; stroke-linecap:round; transform:rotate(-90deg); transform-origin:50% 50%; transition:stroke-dashoffset .6s ease,stroke .4s; }
-.ring-num { font-size:22px; font-weight:700; fill:var(--text); }
+.ring-num { font-size:19px; font-weight:700; fill:var(--text); }
 .ring-lbl { font-size:8px; fill:var(--muted); }
-.ring-sub { font-size:11px; color:var(--muted); margin-top:5px; }
+.ring-sub { font-size:10px; color:var(--muted); margin-top:4px; }
 .kpis { display:flex; flex-direction:column; }
 .kpi { display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px solid var(--border); }
 .kpi:last-child { border-bottom:none; }
@@ -134,10 +134,48 @@ button, input, select, textarea { font-family:inherit; }
 .kpi-v { font-size:12px; font-weight:700; }
 .g { color:var(--green); } .y { color:var(--yellow); } .r { color:var(--red); }
 
+.dash-focus-grid { display:grid; grid-template-columns:1fr; gap:12px; margin-bottom:14px; }
+.dash-focus-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px; }
+.dash-focus-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:10px; }
+.dash-focus-head-actions { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+.dash-focus-toggle { background:transparent; border:1px solid var(--border2); color:var(--muted); border-radius:999px; padding:6px 9px; font-size:10px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; cursor:pointer; }
+.dash-focus-toggle.active { background:rgba(224,32,32,.14); border-color:rgba(224,32,32,.34); color:#fff; }
+.dash-focus-kicker { font-size:10px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--muted2); margin-bottom:4px; }
+.dash-focus-title { font-size:16px; font-weight:800; line-height:1.2; }
+.dash-focus-sub { font-size:12px; color:var(--muted); margin-top:3px; line-height:1.4; }
+.dash-focus-state { font-size:10px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; padding:5px 8px; border-radius:999px; white-space:nowrap; flex-shrink:0; }
+.dash-focus-state.running { background:rgba(16,185,129,.14); color:var(--green); }
+.dash-focus-state.paused { background:rgba(245,158,11,.14); color:var(--yellow); }
+.dash-focus-state.ready { background:rgba(99,102,241,.14); color:#a5b4fc; }
+.dash-focus-customer { font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted2); margin-bottom:3px; }
+.dash-focus-name { font-size:18px; font-weight:800; line-height:1.25; margin-bottom:8px; }
+.dash-focus-meta { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+.dash-focus-timer { display:flex; align-items:center; gap:7px; font-size:12px; color:var(--muted); padding:10px 11px; border-radius:var(--radius-sm); background:var(--surface2); margin-bottom:10px; }
+.dash-focus-timer strong { color:var(--text); font-variant-numeric:tabular-nums; }
+.dash-focus-actions { display:flex; flex-wrap:wrap; gap:8px; }
+.dash-focus-btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; background:none; border:1px solid var(--border2); border-radius:9px; padding:10px 12px; color:var(--text); font-size:11px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; cursor:pointer; text-decoration:none; }
+.dash-focus-btn.primary { background:rgba(224,32,32,.12); border-color:rgba(224,32,32,.35); color:#fff; }
+.dash-focus-btn.secondary { color:var(--muted); }
+.dash-focus-list { display:flex; flex-direction:column; gap:8px; }
+.dash-focus-row { display:flex; align-items:flex-start; gap:10px; padding:11px 12px; border-radius:var(--radius-sm); background:var(--surface2); border:1px solid rgba(255,255,255,.04); }
+.dash-focus-row-main { flex:1; min-width:0; }
+.dash-focus-row-name { font-size:13px; font-weight:700; line-height:1.3; }
+.dash-focus-row-meta { font-size:11px; color:var(--muted); margin-top:4px; line-height:1.35; }
+.dash-focus-row-state { flex-shrink:0; font-size:9px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; padding:5px 7px; border-radius:999px; background:rgba(255,255,255,.05); color:var(--muted2); }
+.dash-focus-row-state.mine { background:rgba(224,32,32,.15); color:var(--accent); }
+.dash-focus-row-state.progress { background:rgba(16,185,129,.15); color:var(--green); }
+.dash-focus-row-state.paused { background:rgba(245,158,11,.15); color:var(--yellow); }
+.dash-focus-row-state.ready { background:rgba(99,102,241,.14); color:#a5b4fc; }
+.dash-focus-empty { font-size:12px; color:var(--muted); line-height:1.5; padding:10px 0 2px; }
+
+@media (min-width: 900px) {
+  .dash-focus-grid { grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr); }
+}
+
 /* SECTION HEADER */
 .sec-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:11px; }
 .sec-title { font-size:15px; font-weight:700; }
-.refresh-btn { background:none; border:1px solid var(--border); border-radius:7px; padding:5px 10px; color:var(--muted); font-size:11px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; cursor:pointer; display:flex; align-items:center; gap:4px; white-space:nowrap; }
+.refresh-btn { background:none; border:1px solid var(--border2); border-radius:7px; padding:6px 11px; color:var(--muted); font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px; white-space:nowrap; min-height:34px; }
 .refresh-btn:active { background:var(--surface); }
 .refresh-btn:disabled, .admin-refresh:disabled { opacity:.6; cursor:not-allowed; }
 .admin-timer-running { color:var(--green) !important; animation: pulse-green 2s ease-in-out infinite; }
@@ -205,6 +243,11 @@ button, input, select, textarea { font-family:inherit; }
 /* Pick List button on project cards */
 .pick-list-btn { display:flex; align-items:center; gap:5px; background:none; border:1px solid var(--border2); border-radius:var(--radius-xs); padding:6px 10px; color:var(--muted); font-size:11px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; cursor:pointer; margin-top:5px; width:100%; justify-content:center; }
 .pick-list-btn .pl-changes-dot { width:7px; height:7px; border-radius:50%; background:var(--accent); flex-shrink:0; }
+.pick-list-btn .pl-mini-pill { margin-left:auto; font-size:9px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; padding:3px 7px; border-radius:999px; white-space:nowrap; }
+.pick-list-btn .pl-mini-pill.missing_items { background:rgba(224,32,32,0.15); color:var(--accent); }
+.pick-list-btn .pl-mini-pill.fully_kitted { background:rgba(16,185,129,0.15); color:#10b981; }
+.pick-list-btn.centered { justify-content:center; }
+.pick-list-btn.centered .pl-mini-pill { margin-left:8px; }
 
 /* Build Updates screen */
 .update-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); margin-bottom:12px; overflow:hidden; }
@@ -222,6 +265,21 @@ button, input, select, textarea { font-family:inherit; }
 .update-time-pill { font-size:10px; font-weight:700; padding:3px 8px; border-radius:5px; }
 .update-time-pill.ms { background:rgba(129,140,248,0.15); color:#818cf8; }
 .update-time-pill.chassis { background:rgba(245,158,11,0.15); color:#f59e0b; }
+.lead-update-panel { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:13px; margin:0 0 14px; }
+.lead-update-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:10px; }
+.lead-update-title { font-size:14px; font-weight:800; }
+.lead-update-sub { font-size:11px; color:var(--muted); margin-top:3px; line-height:1.45; }
+.lead-update-grid { display:flex; flex-direction:column; gap:7px; }
+.lead-update-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px 10px; align-items:center; background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 11px; }
+.lead-update-main { min-width:0; }
+.lead-update-name { font-size:13px; font-weight:700; line-height:1.25; }
+.lead-update-meta { font-size:10px; color:var(--muted); margin-top:3px; line-height:1.35; }
+.lead-update-side { display:flex; align-items:center; gap:8px; justify-self:end; }
+.lead-update-state { flex-shrink:0; font-size:8px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; padding:4px 6px; border-radius:999px; }
+.lead-update-state.done { background:rgba(16,185,129,0.12); color:#10b981; }
+.lead-update-state.missing { background:rgba(224,32,32,0.12); color:var(--accent); }
+.lead-update-action { flex-shrink:0; border:none; border-radius:8px; padding:8px 10px; font-size:10px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; cursor:pointer; background:rgba(224,32,32,.12); color:#fff; border:1px solid rgba(224,32,32,.28); }
+.lead-update-action.secondary { background:transparent; color:var(--muted); border-color:var(--border2); }
 .updates-project-header { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--muted2); padding:14px 0 6px; border-top:1px solid var(--border); margin-top:4px; }
 .updates-project-header:first-child { border-top:none; margin-top:0; }
 @keyframes spin-icon { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
@@ -313,6 +371,7 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:22px; h
 .wo-btn { display:inline-flex; align-items:center; gap:5px; background:rgba(99,102,241,0.12); border:1px solid rgba(99,102,241,0.3); border-radius:var(--radius-xs); padding:6px 12px; color:var(--accent2); font-size:11px; font-weight:700; cursor:pointer; text-decoration:none; transition:background .15s; margin-top:8px; width:100%; justify-content:center; }
 .wo-btn:active { background:rgba(99,102,241,0.22); }
 .wo-btn.disabled { opacity:.35; pointer-events:none; cursor:default; }
+.wo-btn.compact { width:auto; margin-top:0; padding:7px 10px; font-size:10px; letter-spacing:.05em; text-transform:uppercase; white-space:nowrap; flex-shrink:0; }
 .unassign-btn { width:100%; background:none; border:1px solid var(--border2); border-radius:var(--radius-xs); padding:8px 12px; color:var(--muted); font-size:11px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; margin-top:8px; transition:all .15s; }
 .unassign-btn:active { background:rgba(239,68,68,0.08); border-color:rgba(239,68,68,0.3); color:var(--red); }
 /* KITTING SCREEN */
@@ -391,7 +450,7 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:22px; h
 .team-build-bar { height:4px; background:rgba(255,255,255,0.06); border-radius:2px; overflow:hidden; flex:1; max-width:80px; }
 .team-build-fill { height:100%; border-radius:2px; }
 .team-no-builds { font-size:12px; color:var(--muted2); padding:4px 0; }
-.team-btn { background:none; border:1px solid var(--border); border-radius:8px; padding:6px 11px; color:var(--muted); font-size:11px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:4px; }
+.team-btn { background:none; border:1px solid var(--border2); border-radius:7px; padding:6px 11px; color:var(--muted); font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px; min-height:34px; white-space:nowrap; }
 /* ADD TIME */
 .add-time-btn { background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.25); border-radius:6px; padding:4px 9px; color:var(--accent2); font-size:10px; font-weight:700; cursor:pointer; flex-shrink:0; transition:background .15s; }
 .add-time-btn:active { background:rgba(99,102,241,0.22); }
@@ -477,12 +536,12 @@ input.photo-file-inp { display:none; }
 .delta-end { color:var(--muted2); text-align:right; }
 
 /* STOPWATCH */
-.sw-bar { display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:var(--radius-xs); padding:9px 12px; margin-top:10px; }
+.sw-bar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:var(--radius-xs); padding:9px 12px; margin-top:10px; }
 .sw-time { font-size:20px; font-weight:700; letter-spacing:1.5px; font-variant-numeric:tabular-nums; min-width:72px; flex-shrink:0; color:var(--muted2); transition:color .2s; }
 .sw-time.running { color:var(--green); }
 .sw-time.paused  { color:var(--yellow); }
-.sw-actions { display:flex; gap:6px; flex:1; justify-content:flex-end; align-items:center; }
-.sw-btn { border:none; border-radius:8px; padding:8px 13px; font-size:12px; font-weight:700; cursor:pointer; transition:all .15s; display:flex; align-items:center; gap:4px; white-space:nowrap; }
+.sw-actions { display:flex; gap:6px; flex:1; justify-content:flex-end; align-items:center; flex-wrap:wrap; min-width:0; }
+.sw-btn { border:none; border-radius:8px; padding:8px 11px; font-size:12px; font-weight:700; cursor:pointer; transition:all .15s; display:flex; align-items:center; gap:4px; white-space:nowrap; }
 .sw-btn:active { opacity:.75; transform:scale(0.96); }
 .sw-btn-start  { background:var(--green);   color:#fff; border:none; }
 .sw-btn-pause  { background:var(--yellow); color:#000; border:none; }
@@ -581,7 +640,7 @@ input.photo-file-inp { display:none; }
 #screen-admin-login::before { content:''; position:fixed; top:0; left:0; right:0; height:3px; background:var(--accent); z-index:100; }
 #screen-admin-login .auth-input, #screen-admin-login .btn-primary { max-width:400px; width:100%; }
 #screen-setup { align-items:center; justify-content:flex-start; padding:2rem 1.25rem; }
-.settings-icon-btn { background:none; border:none; color:var(--muted); cursor:pointer; padding:6px; border-radius:8px; display:flex; align-items:center; transition:color .15s,background .15s; }
+.settings-icon-btn { background:none; border:1px solid var(--border2); color:var(--muted); cursor:pointer; width:34px; height:34px; padding:0; border-radius:7px; display:inline-flex; align-items:center; justify-content:center; transition:color .15s,background .15s,border-color .15s; flex-shrink:0; }
 .settings-icon-btn:hover { color:var(--text); background:var(--surface2); }
 .srow { display:flex; align-items:center; gap:12px; padding:13px 14px; background:none; border:none; width:100%; cursor:pointer; text-align:left; transition:background .12s; }
 .srow:active { background:var(--surface2); }
@@ -597,7 +656,7 @@ input.photo-file-inp { display:none; }
 .seg-btn { background:none; border:1.5px solid var(--border2); border-radius:7px; color:var(--muted); font-size:12px; font-weight:600; padding:5px 11px; cursor:pointer; transition:all .15s; }
 .seg-btn.active { background:var(--accent); border-color:var(--accent); color:#fff; }
 .settings-modal { position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:300; display:flex; align-items:center; justify-content:center; padding:20px; }
-.settings-modal-box { background:var(--surface); border-radius:16px; padding:24px 20px; width:100%; max-width:360px; display:flex; flex-direction:column; align-items:center; }
+.settings-modal-box { background:var(--surface); border-radius:16px; padding:24px 20px; width:100%; max-width:360px; display:flex; flex-direction:column; align-items:center; box-sizing:border-box; }
 .settings-modal-title { font-size:18px; font-weight:700; margin-bottom:6px; }
 .settings-modal-sub { font-size:13px; color:var(--muted); text-align:center; margin-bottom:16px; }
 .member-remove-btn { background:none; border:1px solid var(--border2); border-radius:7px; color:var(--red); font-size:12px; font-weight:600; padding:5px 10px; cursor:pointer; flex-shrink:0; }
@@ -605,20 +664,14 @@ input.photo-file-inp { display:none; }
 
 /* ADMIN SCREEN */
 #screen-admin { flex-direction:column; }
-.admin-header { background:var(--surface); border-bottom:1px solid var(--border); padding:12px 16px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:20; }
-.admin-header-left { display:flex; align-items:center; gap:8px; }
+.admin-header { background:var(--surface); border-bottom:1px solid var(--border); padding:12px 16px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:20; gap:10px; flex-wrap:wrap; }
+.admin-header-left { display:flex; align-items:center; gap:8px; min-width:0; flex:1 1 200px; }
 .admin-logo { width:32px; height:32px; background:var(--accent); border-radius:8px; display:flex; align-items:center; justify-content:center; }
 .admin-logo svg { width:16px; height:16px; fill:white; }
 .admin-title { font-size:15px; font-weight:700; }
 .admin-sub   { font-size:11px; color:var(--muted); }
-.admin-content { flex:1; padding:14px; overflow-y:auto; padding-bottom:36px; }
-#screen-admin.admin-desktop-mode .admin-content { max-width:1680px; width:100%; margin:0 auto; padding:22px 28px 44px; box-sizing:border-box; }
-#screen-admin.admin-desktop-mode .admin-command-grid { grid-template-columns:1fr 1fr; }
-#screen-admin.admin-desktop-mode .admin-command-grid.admin-command-top { grid-template-columns:1.35fr .85fr .9fr; align-items:start; }
-#screen-admin.admin-desktop-mode .admin-command-top .admin-command-card { min-height:360px; }
-#screen-admin.admin-desktop-mode .admin-planner { grid-template-columns:320px 1fr; }
-#screen-admin.admin-desktop-mode .admin-schedule-grid { grid-template-columns:repeat(5,minmax(260px,1fr)); }
-#screen-admin.admin-desktop-mode .admin-day-card { min-height:360px; }
+.admin-content { flex:1; padding:14px; overflow-y:auto; padding-bottom:36px; box-sizing:border-box; }
+.admin-header-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end; flex:1 1 260px; }
 .health-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
 .health-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); padding:13px 14px; }
 .health-val  { font-size:26px; font-weight:800; line-height:1; margin-bottom:4px; }
@@ -653,7 +706,7 @@ input.photo-file-inp { display:none; }
 .tc-proj-row { display:flex; justify-content:space-between; align-items:center; font-size:11px; padding:5px 8px; background:var(--surface2); border-radius:6px; gap:8px; }
 .tc-proj-name{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .tc-proj-pct { font-weight:700; flex-shrink:0; }
-.admin-refresh { background:none; border:1px solid var(--border2); border-radius:5px; padding:5px 10px; color:var(--muted); font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; cursor:pointer; display:flex; align-items:center; gap:4px; }
+.admin-refresh { background:none; border:1px solid var(--border2); border-radius:7px; padding:6px 11px; color:var(--muted); font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px; min-height:34px; }
 
 /* MISC */
 .loading-state,.empty-state { text-align:center; padding:3rem 1rem; color:var(--muted); font-size:13px; }
@@ -785,9 +838,32 @@ input.photo-file-inp { display:none; }
 .bottom-nav-btn { flex:1; border:none; background:none; color:var(--muted); border-radius:13px; padding:7px 4px 6px; font-size:9px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer; }
 .bottom-nav-btn.active { background:rgba(224,32,32,.16); color:#fff; }
 .bottom-nav-btn svg { width:15px; height:15px; }
+.bottom-nav-icon-wrap { position:relative; display:inline-flex; align-items:center; justify-content:center; }
+.bottom-nav-badge { position:absolute; top:-7px; right:-11px; min-width:16px; height:16px; padding:0 4px; border-radius:999px; background:var(--accent); color:#fff; font-size:9px; font-weight:900; line-height:16px; text-align:center; box-shadow:0 0 0 2px rgba(18,18,18,.92); display:none; }
+.main-content,.kit-content,.admin-content,.hist-content,.team-screen-content { padding-bottom:88px; }
 @media (max-width:720px) {
   .bottom-nav { display:flex; }
   .main-content,.kit-content,.admin-content,.hist-content,.team-screen-content { padding-bottom:88px !important; }
+  .app-header, .admin-header { align-items:flex-start; }
+  .header-right, .admin-header-actions { width:100%; justify-content:flex-start; margin-left:0; }
+  .history-btn, .admin-refresh, .switch-btn { font-size:10px; padding:6px 9px; }
+  .settings-modal-box { max-width:100%; border-radius:14px; }
+  .pl-status-tab-bar { overflow-x:auto; padding-bottom:2px; scrollbar-width:none; }
+  .pl-status-tab-bar::-webkit-scrollbar { display:none; }
+  .pl-status-tab { flex:0 0 auto; min-width:108px; }
+}
+@media (min-width:721px) and (max-width:1024px) {
+  .settings-modal-box { max-width:min(92vw,560px); }
+  .admin-content { padding:16px 18px 40px; }
+}
+@media (min-width:1180px) {
+  .admin-content { max-width:1680px; width:100%; margin:0 auto; padding:22px 28px 44px; }
+  .admin-command-grid { grid-template-columns:1fr 1fr; }
+  .admin-command-grid.admin-command-top { grid-template-columns:1.35fr .85fr .9fr; align-items:start; }
+  .admin-command-top .admin-command-card { min-height:360px; }
+  .admin-planner { grid-template-columns:320px 1fr; }
+  .admin-schedule-grid { grid-template-columns:repeat(5,minmax(260px,1fr)); }
+  .admin-day-card { min-height:360px; }
 }
 .login-loading-overlay {
   position:fixed;
@@ -1163,7 +1239,7 @@ input.photo-file-inp { display:none; }
         <div class="admin-sub" id="admin-date"></div>
       </div>
     </div>
-    <div style="display:flex;gap:8px;align-items:center">
+    <div class="admin-header-actions">
       <button class="admin-refresh" id="admin-refresh-btn" onclick="manualRefresh('admin')">
         <svg id="admin-refresh-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
         Refresh
@@ -1171,9 +1247,6 @@ input.photo-file-inp { display:none; }
       <button class="admin-refresh" onclick="openPickListScreen()" style="border-color:rgba(224,32,32,0.4);color:var(--accent)">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
         Pick Lists
-      </button>
-      <button class="admin-refresh" id="admin-desktop-toggle" onclick="toggleAdminDesktopMode()">
-        Desktop View
       </button>
       <button class="switch-btn" onclick="doAdminLogout()">Exit</button>
       <button class="settings-icon-btn" onclick="openSettings()" aria-label="Settings">
@@ -1207,9 +1280,9 @@ input.photo-file-inp { display:none; }
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
         Next Up
       </button>
-      <button class="history-btn" onclick="showHistory()">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-        History
+      <button class="history-btn" id="updates-builds-btn" style="display:none;border-color:rgba(59,130,246,0.35);color:#93c5fd" onclick="showLeadUpdateBuilds()">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-6"/></svg>
+        Update Builds
       </button>
       <button class="switch-btn" onclick="doLogout()">Switch</button>
       <button class="settings-icon-btn" onclick="openSettings()" aria-label="Settings">
@@ -1983,26 +2056,78 @@ function progressUnitsFromUpdate(update, items) {
   return progressUnitsFromPct(item, update.col_type, update.prev_pct, update.new_pct);
 }
 
+function normalizeProgressUserName(name) {
+  return String(name || "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function normalizeProgressType(type) {
+  return String(type || "").trim().toLowerCase();
+}
+
+function progressDateKey(update) {
+  const direct = String(update?.date || update?.date_str || "").trim();
+  if (direct) return direct;
+  const ts = String(update?.ts || update?.created_at || "").trim();
+  if (ts) {
+    const d = new Date(ts);
+    if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0,10);
+  }
+  return "";
+}
+
+function progressBelongsToUser(update, user) {
+  return normalizeProgressUserName(update?.user) === normalizeProgressUserName(user?.name || user);
+}
+
+function mergeProgressUpdates(sbUpdates = [], deltas = []) {
+  const mappedSb = (sbUpdates || []).map(u => ({
+    user: u.user_name,
+    itemId: u.item_id,
+    colType: normalizeProgressType(u.col_type),
+    prevPct: u.prev_pct,
+    newPct: u.new_pct,
+    date: String(u.date_str || "").trim(),
+    ts: u.created_at || "",
+  }));
+  const mappedLocal = (deltas || []).map(d => ({
+    user: d.user,
+    itemId: d.itemId,
+    colType: normalizeProgressType(d.colType),
+    prevPct: d.prevPct,
+    newPct: d.newPct,
+    date: String(d.date || "").trim(),
+    ts: d.ts || "",
+  }));
+  const merged = [];
+  const seen = new Set();
+  [...mappedSb, ...mappedLocal].forEach(d => {
+    const key = [
+      normalizeProgressUserName(d.user || ""),
+      d.itemId || "",
+      normalizeProgressType(d.colType || ""),
+      progressDateKey(d),
+      Number(d.prevPct || 0),
+      Number(d.newPct || 0)
+    ].join("|");
+    if (seen.has(key)) return;
+    seen.add(key);
+    d.date = progressDateKey(d);
+    merged.push(d);
+  });
+  return merged;
+}
+
 /* Returns weighted unit total for the current week.
    Completed items are looked up in boardItems to get their Turnkey Product. */
 function countWeeklyCompletions(user) {
   const wk  = currentWeekKey();
-  const map = {}; /* itemId_colType → highest pct seen */
-  loadDeltas()
-    .filter(d => d.user === user.name && getWeekKey(d.date) === wk)
-    .forEach(d => {
-      const k = d.itemId + "_" + d.colType;
-      if (d.newPct > (map[k] || 0)) map[k] = d.newPct;
-    });
-
-  let total = 0;
-  Object.entries(map).forEach(([k, pct]) => {
-    if (pct < 100) return;
-    const [itemId, colType] = k.split("_");
-    const item = boardItems.find(i => i.id === itemId);
-    total += getUnitWeight(item, colType);
-  });
-  return Math.round(total * 10) / 10;
+  const progress = mergeProgressUpdates(window._allBuildUpdates || [], loadDeltas())
+    .filter(d => progressBelongsToUser(d, user) && getWeekKey(d.date) === wk && normalizeProgressType(d.colType) !== "grab")
+    .reduce((sum, d) => {
+      const item = boardItems.find(i => String(i.id) === String(d.itemId));
+      return roundUnits(sum + progressUnitsFromPct(item, d.colType, d.prevPct, d.newPct));
+    }, 0);
+  return roundUnits(progress);
 }
 
 /* ═══════════════════════════════════════
@@ -2152,12 +2277,16 @@ function swPause(itemId, colType) {
   applyProgressLock(itemId, colType);
 }
 
-async function swEnd(itemId, colType, itemName) {
+async function swEnd(itemId, colType, itemName, opts = {}) {
+  const { silentNoTime = false, suppressToast = false, manualMs = 0 } = opts || {};
   /* Pause first to freeze the time */
   swPause(itemId, colType);
   const entry = getTimer(itemId, colType);
-  const totalMs = entry.totalMs;
-  if (totalMs === 0) { showToast("No time recorded yet.", ""); return; }
+  const totalMs = entry.totalMs || Math.max(0, Number(manualMs || 0));
+  if (totalMs === 0) {
+    if (!silentNoTime) showToast("No time recorded yet.", "");
+    return;
+  }
 
   /* Log this session */
   entry.sessions = entry.sessions || [];
@@ -2242,12 +2371,12 @@ async function swEnd(itemId, colType, itemName) {
         applyProgressLock(itemId, colType);
         showToast("End Day undone — timer restored.", "ok");
       };
-      showToast(`Time saved: ${timeLabel} → Monday`, "ok", undoEnd);
+      if (!suppressToast) showToast(`Time saved: ${timeLabel} → Monday`, "ok", undoEnd);
     } catch(err) {
-      showToast(`Saved locally. Monday error: ${err.message}`, "");
+      if (!suppressToast) showToast(`Saved locally. Monday error: ${err.message}`, "");
     }
   } else {
-    showToast(`Time logged: ${timeLabel} (column not found on board)`, "");
+    if (!suppressToast) showToast(`Time logged: ${timeLabel} (column not found on board)`, "");
   }
 
   /* Refresh session history in the UI */
@@ -2364,10 +2493,9 @@ function buildSwHtml(itemId, colType) {
       <button class="sw-btn ${mainBtnClass}" id="sw-main-btn-${itemId}-${colType}"
         onclick="event.stopPropagation();${mainFn}('${itemId}','${colType}')">${mainBtnLabel}</button>
       <button class="sw-btn sw-btn-end" id="sw-end-btn-${itemId}-${colType}"
-        onclick="event.stopPropagation();swEnd('${itemId}','${colType}')"
-        ${liveMs === 0 ? "disabled" : ""}>
+        onclick="event.stopPropagation();openEndDaySheet('${itemId}','${colType}',event)">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
-        End Day
+        End Session
       </button>
     </div>
   </div>
@@ -2981,16 +3109,13 @@ function showScreen(id) {
 function updateBottomNav(activeId) {
   const nav = document.getElementById("bottom-nav");
   if (!nav) return;
-  const gatePassed = localStorage.getItem("pt_gate_passed") === "1";
-  const showOnBuilderSelection = !currentUser && gatePassed && activeId === "screen-login";
-  const showOnAuthenticatedScreens = !!currentUser;
-  nav.style.display = (showOnBuilderSelection || showOnAuthenticatedScreens) ? "flex" : "none";
+  nav.style.display = currentUser ? "flex" : "none";
   ["bn-home","bn-queue","bn-history","bn-updates","bn-settings"].forEach(id => document.getElementById(id)?.classList.remove("active"));
-  if (activeId === "screen-login") document.getElementById("bn-home")?.classList.add("active");
   if (activeId === "screen-dash" || activeId === "screen-kit" || activeId === "screen-admin") document.getElementById("bn-home")?.classList.add("active");
   if (activeId === "screen-picklist" || activeId === "screen-pete-kitted" || activeId === "screen-queue") document.getElementById("bn-queue")?.classList.add("active");
   if (activeId === "screen-history") document.getElementById("bn-history")?.classList.add("active");
   if (activeId === "screen-updates") document.getElementById("bn-updates")?.classList.add("active");
+  refreshTeamMessagesBadge().catch(() => {});
 }
 
 function returnToHomeScreen() {
@@ -3070,8 +3195,10 @@ function showDash() {
   /* Show team button only for leads */
   const teamBtn   = document.getElementById("team-btn");
   const nextUpBtn = document.getElementById("next-up-btn");
+  const updatesBtn = document.getElementById("updates-builds-btn");
   if (teamBtn)   teamBtn.style.display   = isTeamLead(currentUser) ? "flex" : "none";
   if (nextUpBtn) nextUpBtn.style.display = isLead() ? "flex" : "none";
+  if (updatesBtn) updatesBtn.style.display = isLead() ? "flex" : "none";
   return loadBoard().then(()=>{ resumeActiveTimers(); updatePickListChangeDots().catch(()=>{}); });
 }
 /* ── Lead: Next Up assign modal ── */
@@ -3206,6 +3333,64 @@ async function grabBuildAs(itemId, memberName) {
 }
 
 const TEAM_MESSAGES_KEY = "pt_team_messages_local";
+const TEAM_MESSAGES_SEEN_KEY = "pt_team_messages_seen";
+
+function messageSeenStorageKey() {
+  const name = String(currentUser?.name || "").trim().toLowerCase();
+  return name ? `${TEAM_MESSAGES_SEEN_KEY}:${name}` : TEAM_MESSAGES_SEEN_KEY;
+}
+
+function getTeamMessagesSeenAt() {
+  try { return localStorage.getItem(messageSeenStorageKey()) || ""; } catch(e) { return ""; }
+}
+
+function setTeamMessagesSeenAt(ts) {
+  try { localStorage.setItem(messageSeenStorageKey(), String(ts || "")); } catch(e) {}
+}
+
+async function markTeamMessagesSeen() {
+  const rows = await loadTeamMessages();
+  const newest = rows[0]?.created_at || new Date().toISOString();
+  setTeamMessagesSeenAt(newest);
+  updateTeamMessagesBadge(rows);
+}
+
+function getUnreadTeamMessageCount(messages = []) {
+  const seenAt = getTeamMessagesSeenAt();
+  const seenMs = seenAt ? new Date(seenAt).getTime() : 0;
+  return (messages || []).filter(msg => {
+    const ts = new Date(msg.created_at || 0).getTime();
+    const sender = String(msg.user_name || "").trim().toLowerCase();
+    const me = String(currentUser?.name || "").trim().toLowerCase();
+    if (!ts || ts <= seenMs) return false;
+    if (me && sender === me) return false;
+    return true;
+  }).length;
+}
+
+function updateTeamMessagesBadge(messages = null) {
+  const badge = document.getElementById("bn-history-badge");
+  if (!badge) return;
+  if (!currentUser) {
+    badge.style.display = "none";
+    badge.textContent = "";
+    return;
+  }
+  const unread = getUnreadTeamMessageCount(Array.isArray(messages) ? messages : loadLocalTeamMessages());
+  if (unread > 0) {
+    badge.textContent = unread > 99 ? "99+" : String(unread);
+    badge.style.display = "inline-block";
+  } else {
+    badge.textContent = "";
+    badge.style.display = "none";
+  }
+}
+
+async function refreshTeamMessagesBadge() {
+  const rows = await loadTeamMessages();
+  if (Array.isArray(rows) && rows.length) saveLocalTeamMessages(rows);
+  updateTeamMessagesBadge(rows);
+}
 
 function loadLocalTeamMessages() {
   try { return JSON.parse(localStorage.getItem(TEAM_MESSAGES_KEY) || "[]"); } catch(e) { return []; }
@@ -3236,12 +3421,14 @@ async function postTeamMessage(text) {
   const local = loadLocalTeamMessages();
   local.unshift(payload);
   saveLocalTeamMessages(local.slice(0, 100));
+  updateTeamMessagesBadge(local);
   return payload;
 }
 
 async function showHistory() {
   showScreen("screen-history");
-  document.getElementById("hist-title").textContent = "Team Messages";
+  document.getElementById("hist-title").textContent = getAppText("messages_tab_label", "Messages");
+  await markTeamMessagesSeen().catch(() => {});
   clearMessageBadge().catch(() => {});
   await renderHistory();
 }
@@ -3249,6 +3436,8 @@ async function renderHistory() {
   const content = document.getElementById("hist-content");
   content.innerHTML = `<div class="loading-state"><div class="spinner"></div>Loading messages…</div>`;
   const messages = await loadTeamMessages();
+  if (Array.isArray(messages) && messages.length) saveLocalTeamMessages(messages);
+  updateTeamMessagesBadge(messages);
   const canPost = !!currentUser;
   const notifSupported = pushNotificationsSupported();
   const notifEnabled = notifSupported && Notification.permission === "granted";
@@ -3303,6 +3492,7 @@ async function submitTeamMessage() {
     }).catch(() => {});
     if (input) input.value = "";
     showToast("Message posted.", "ok");
+    await markTeamMessagesSeen().catch(() => {});
     await renderHistory();
   } catch(err) {
     showToast("Could not post message.", "err");
@@ -3500,6 +3690,7 @@ function loadTimedCache(key, maxAgeMs) {
 
 async function loadBoard() {
   const listEl = document.getElementById("proj-list");
+  const cachedUpdates = Array.isArray(window._allBuildUpdates) ? window._allBuildUpdates : [];
 
   /* Render instantly from cache while fresh data loads */
   const cached = loadBoardCache();
@@ -3516,6 +3707,7 @@ async function loadBoard() {
     });
     resolveInventoryContacts(subs);
     boardItems = cached.items;
+    window.boardItems = boardItems;
     renderDash(boardItems);
     /* Show subtle refresh indicator */
     const hdate = document.getElementById("hdate");
@@ -3526,9 +3718,10 @@ async function loadBoard() {
 
   try {
     /* Run columns/subscribers and items queries in parallel */
-    const [metaRes, itemsRes] = await Promise.all([
+    const [metaRes, itemsRes, buildUpdatesRes] = await Promise.all([
       mondayQuery(`{ boards(ids:[${BOARD_ID}]) { columns { id title type settings_str } subscribers { id name } } }`),
-      mondayQuery(`{ boards(ids:[${BOARD_ID}]) { items_page(limit:200) { items { id name group { id title } column_values { id type text value ... on StatusValue { updated_at } } } } } }`)
+      mondayQuery(`{ boards(ids:[${BOARD_ID}]) { items_page(limit:200) { items { id name group { id title } column_values { id type text value ... on StatusValue { updated_at } } } } } }`),
+      sbFetch("build_updates?order=created_at.desc&limit=500",{method:"GET",headers:{"Prefer":"return=representation"}}).catch(() => cachedUpdates),
     ]);
 
     const board   = metaRes.data.boards[0];
@@ -3549,7 +3742,35 @@ async function loadBoard() {
     resolveInventoryContacts(subs);
 
     boardItems = items;
+    window.boardItems = boardItems;
+    window._allBuildUpdates = Array.isArray(buildUpdatesRes) ? buildUpdatesRes : cachedUpdates;
     saveBoardCache({ columns, subscribers: subs, items });
+
+    const woNums = Array.from(new Set(items.map(getWorkOrderNumber).filter(Boolean)));
+    if (woNums.length) {
+      const picklists = await sbFetch(
+        `picklists?wo_number=in.(${woNums.map(encodeURIComponent).join(",")})&select=id,wo_number,status`,
+        { method: "GET", headers: { "Prefer": "return=representation" } }
+      ).catch(() => []) || [];
+      const plItems = await sbFetch(
+        `picklist_items?wo_number=in.(${woNums.map(encodeURIComponent).join(",")})&select=wo_number,allocated`,
+        { method: "GET", headers: { "Prefer": "return=representation" } }
+      ).catch(() => []) || [];
+      const itemsByWo = {};
+      plItems.forEach(row => {
+        if (!row?.wo_number) return;
+        if (!itemsByWo[row.wo_number]) itemsByWo[row.wo_number] = [];
+        itemsByWo[row.wo_number].push(row);
+      });
+      const statusByWo = {};
+      picklists.forEach(pl => {
+        statusByWo[pl.wo_number] = derivePickListStatusFromAllocation(itemsByWo[pl.wo_number] || [], pl.status);
+      });
+      window._pickListStatusByWo = statusByWo;
+    } else {
+      window._pickListStatusByWo = {};
+    }
+
     renderDash(boardItems);
   } catch(e) {
     if (!cached) {
@@ -3592,44 +3813,154 @@ function findNextAvailableBuild(items, isMS) {
     .sort(compareScores)[0] || null;
 }
 
+function getWorkOrderNumber(item) {
+  const woRaw = COL.work_order_num ? (cvText(item, COL.work_order_num) || "") : "";
+  const woMatch = woRaw.match(/\b(W\d{4,})\b/);
+  return woMatch ? woMatch[1] : null;
+}
+
+function getCachedPickListStatus(woNum) {
+  if (!woNum) return null;
+  const cached = window._pickListStatusByWo || {};
+  return cached[woNum] || null;
+}
+
+function getRoleDueForWeek(items, isMS, weekOffset = 0) {
+  const side = isMS ? "ms" : "chassis";
+  const weekStart = startOfWeekDate();
+  weekStart.setDate(weekStart.getDate() + (weekOffset * 7));
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+  return (items || []).filter(item => {
+    const shipDate = parseShipDate(item);
+    if (!shipDate) return false;
+    if (shipDate < weekStart || shipDate > weekEnd) return false;
+    return getBuildSideState(item, side) !== "complete";
+  }).sort(compareScores);
+}
+
+function getRoleDueThisWeek(items, isMS) {
+  return getRoleDueForWeek(items, isMS, 0);
+}
+
+function formatBuilderWeekRange(weekOffset = 0) {
+  const start = startOfWeekDate();
+  start.setDate(start.getDate() + (weekOffset * 7));
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  return `${start.toLocaleDateString("en-US",{month:"short",day:"numeric"})} – ${end.toLocaleDateString("en-US",{month:"short",day:"numeric"})}`;
+}
+
+function setBuilderWeekOffset(offset) {
+  window._builderWeekOffset = offset === 1 ? 1 : 0;
+  renderDash(boardItems || window.boardItems || []);
+}
+
+function builderWeeklyState(item, isMS) {
+  const side = isMS ? "ms" : "chassis";
+  const whoCol = isMS ? COL.ms_who : COL.chassis_who;
+  const assigned = parsePeople(item, whoCol);
+  const state = getBuildSideState(item, side);
+  if (isMeInPeople(item, whoCol)) return { label: "On me", cls: "mine" };
+  if (state === "in_progress") return { label: "In progress", cls: "progress" };
+  if (state === "paused") return { label: "Paused", cls: "paused" };
+  if (!assigned.length) return { label: "Ready to grab", cls: "ready" };
+  const firstName = assigned[0]?.name?.split(" ")[0] || "Assigned";
+  return { label: `${firstName} on it`, cls: "" };
+}
+
 function renderBuilderNextAction(items, myItems, isMS) {
   const el = document.getElementById("dash-next-action");
   if (!el) return;
   const colType = isMS ? "ms" : "chassis";
-  const roleText = isMS ? "Monitor Stand" : "Chassis";
-  const paused = myItems.find(i => isBuildPaused(i, colType));
-  const active = myItems
-    .filter(i => !isBuildPaused(i, colType))
-    .sort((a,b) => parsePct(cvText(a, isMS ? COL.ms_pct : COL.chassis_pct)) - parsePct(cvText(b, isMS ? COL.ms_pct : COL.chassis_pct)))[0];
-  const next = paused || active || findNextAvailableBuild(items, isMS);
-
-  if (!next) {
-    el.innerHTML = `<div class="next-action-card">
-      <div class="next-action-kicker">My Next Action</div>
-      <div class="next-action-title">You’re clear right now</div>
-      <div class="next-action-sub">No active ${roleText.toLowerCase()} builds are waiting on you. Check the queue or refresh if something changed.</div>
-      <button class="next-action-btn" onclick="manualRefresh('dash')">Refresh My Work</button>
-    </div>`;
+  const roleLabel = isMS ? "Monitor Stand" : "Chassis";
+  const activeBuild = myItems.find(i => !isBuildPaused(i, colType)) || myItems[0] || null;
+  const nextAvailable = activeBuild ? null : findNextAvailableBuild(items, isMS);
+  const weekOffset = window._builderWeekOffset === 1 ? 1 : 0;
+  const weekItems = getRoleDueForWeek(items, isMS, weekOffset).slice(0, 6);
+  const thisWeekCount = getRoleDueForWeek(items, isMS, 0).length;
+  const nextWeekCount = getRoleDueForWeek(items, isMS, 1).length;
+  if (!activeBuild && !nextAvailable && !thisWeekCount && !nextWeekCount) {
+    el.innerHTML = "";
     return;
   }
 
-  const pct = parsePct(cvText(next, isMS ? COL.ms_pct : COL.chassis_pct));
-  const title = paused ? "Resume or update paused build" : active ? "Update your current build" : "Grab the next available build";
-  const sub = paused
-    ? `${compactProjectLabel(next)} is paused. Open it, add progress, or unpause when ready.`
-    : active
-      ? `${compactProjectLabel(next)} is at ${pct}%. This is the next thing to move forward.`
-      : `${compactProjectLabel(next)} is available in Parts Pulled / Stand By.`;
-  const btn = paused || active
-    ? `<button class="next-action-btn" onclick="openUpdateSheet('${next.id}','${colType}',event)">Open Update</button>`
-    : `<button class="next-action-btn" onclick="grabBuild('${next.id}',event)">Grab Build</button>`;
+  const primaryItem = activeBuild || nextAvailable;
+  window._dashPrimaryItemId = primaryItem?.id || "";
+  const weekLabel = formatBuilderWeekRange(weekOffset);
+  const weekTitle = weekOffset === 1 ? `${roleLabel} Due Next Week` : `${roleLabel} Due This Week`;
+  const weekCountLabel = weekOffset === 1 ? nextWeekCount : thisWeekCount;
+  const weekSub = weekOffset === 1
+    ? `Week of ${escHtml(weekLabel)}. Good for looking ahead before the rush hits.`
+    : `Week of ${escHtml(weekLabel)}. This keeps the team moving even if the office is out.`;
 
-  el.innerHTML = `<div class="next-action-card">
-    <div class="next-action-kicker">My Next Action</div>
-    <div class="next-action-title">${escHtml(title)}</div>
-    <div class="next-action-sub">${escHtml(sub)}</div>
-    <div class="next-action-meta">${actionMetaPills(next, roleText)}</div>
-    ${btn}
+  const weekRows = weekItems.length
+    ? weekItems.map(item => {
+        const state = builderWeeklyState(item, isMS);
+        const shipDate = parseShipDate(item);
+        const meta = [
+          shipDate ? `Ship ${fmtShipDate(shipDate)}` : "No ship date",
+          item.group?.title || "No group"
+        ].filter(Boolean).join(" · ");
+        return `<div class="dash-focus-row">
+          <div class="dash-focus-row-main">
+            <div class="dash-focus-row-name">${escHtml(compactProjectLabel(item))}</div>
+            <div class="dash-focus-row-meta">${escHtml(meta)}</div>
+          </div>
+          <div class="dash-focus-row-state ${state.cls}">${escHtml(state.label)}</div>
+        </div>`;
+      }).join("")
+    : `<div class="dash-focus-empty">Nothing on the ${escHtml(roleLabel.toLowerCase())} list is due ${weekOffset === 1 ? "next week" : "this week"} right now.</div>`;
+
+  const primaryCard = !activeBuild ? `
+    <div class="dash-focus-card">
+      <div class="dash-focus-head">
+        <div>
+          <div class="dash-focus-kicker">Next Up For You</div>
+          <div class="dash-focus-title">No active ${roleLabel.toLowerCase()} build on your name</div>
+          <div class="dash-focus-sub">If you finish what you’re on, this is the cleanest next thing to grab.</div>
+        </div>
+      </div>
+      ${primaryItem ? `
+        ${cvText(primaryItem, COL.project) ? `<div class="dash-focus-customer">${escHtml(cvText(primaryItem, COL.project))}</div>` : ""}
+        <div class="dash-focus-name">${escHtml(primaryItem.name)}</div>
+        <div class="dash-focus-meta">${actionMetaPills(primaryItem, `${roleLabel} ready`)}</div>
+        <div class="dash-focus-actions">
+          <button class="dash-focus-btn primary" onclick="showSharedQueue()">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+            Open Queue
+          </button>
+          ${getWorkOrderNumber(primaryItem) ? `<button class="dash-focus-btn secondary" onclick="openPickListForItem('${primaryItem.id}','${getWorkOrderNumber(primaryItem)}',event)">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            Pick List
+          </button>` : ``}
+        </div>
+      ` : `<div class="dash-focus-empty">Nothing is assigned or ready on your side at the moment. Use Queue to see the bigger shop picture.</div>`}
+    </div>
+  ` : ``;
+
+  el.innerHTML = `<div class="dash-focus-grid">
+    ${primaryCard}
+    <div class="dash-focus-card">
+      <div class="dash-focus-head">
+        <div>
+          <div class="dash-focus-kicker">${weekTitle}</div>
+          <div class="dash-focus-title">${weekCountLabel} still need attention</div>
+          <div class="dash-focus-sub">${weekSub}</div>
+        </div>
+        <div class="dash-focus-head-actions">
+          <button type="button" class="dash-focus-toggle ${weekOffset === 0 ? "active" : ""}" onclick="setBuilderWeekOffset(0)">This Week</button>
+          <button type="button" class="dash-focus-toggle ${weekOffset === 1 ? "active" : ""}" onclick="setBuilderWeekOffset(1)">Next Week</button>
+        </div>
+      </div>
+      <div class="dash-focus-list">${weekRows}</div>
+      <div class="dash-focus-actions" style="margin-top:10px">
+        <button class="dash-focus-btn secondary" onclick="showSharedQueue()">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+          Full Queue
+        </button>
+      </div>
+    </div>
   </div>`;
 }
 
@@ -3663,19 +3994,52 @@ function renderDash(items) {
 
   const myPcts    = myItems.map(i => parsePct(cvText(i, myPctCol)));
   const colType   = isMS ? "ms" : "chassis";
-  /* doneToday: weighted units completed today */
-  const doneToday = myCompleted.filter(item => {
+  const mergedProgress = mergeProgressUpdates(window._allBuildUpdates || [], loadDeltas())
+    .filter(d =>
+      progressBelongsToUser(d, currentUser) &&
+      normalizeProgressType(d.colType) === normalizeProgressType(colType)
+    );
+
+  const myProgressToday = mergedProgress
+    .filter(d =>
+      d.date === todayStr()
+    )
+    .reduce((sum, d) => {
+      const item = assignedToMe.find(i => String(i.id) === String(d.itemId)) || items.find(i => String(i.id) === String(d.itemId));
+      return roundUnits(sum + progressUnitsFromPct(item, d.colType, d.prevPct, d.newPct));
+    }, 0);
+
+  const myProgressWeek = mergedProgress
+    .filter(d => getWeekKey(d.date) === currentWeekKey())
+    .reduce((sum, d) => {
+      const item = assignedToMe.find(i => String(i.id) === String(d.itemId)) || items.find(i => String(i.id) === String(d.itemId));
+      return roundUnits(sum + progressUnitsFromPct(item, d.colType, d.prevPct, d.newPct));
+    }, 0);
+
+  const primaryActiveItem = myItems[0] || null;
+  const fallbackPrimaryProgress = (
+    myItems.length === 1 &&
+    primaryActiveItem &&
+    myProgressToday === 0 &&
+    !mergedProgress.some(d => d.date === todayStr())
+  )
+    ? progressUnitsFromPct(primaryActiveItem, colType, 0, parsePct(cvText(primaryActiveItem, myPctCol)))
+    : 0;
+
+  /* Also count full completions done today if they were marked complete without a local delta. */
+  const completionOnlyToday = myCompleted.filter(item => {
     const ts = getCompletionTs(item, colType);
     if (ts) return ts.slice(0, 10) === todayStr();
     const delta = loadDeltas().find(d =>
       d.user === currentUser.name && d.itemId === item.id &&
       d.colType === colType && d.newPct >= 100 && d.date === todayStr()
     );
-    return !!delta;
-  }).reduce((sum, item) => Math.round((sum + getUnitWeight(item, colType)) * 10) / 10, 0);
+    return !delta;
+  }).reduce((sum, item) => roundUnits(sum + getUnitWeight(item, colType)), 0);
+  const doneToday = roundUnits((myProgressToday || 0) + fallbackPrimaryProgress + completionOnlyToday);
   const wip       = myPcts.filter(p => p > 0 && p < 100).length;
   const avgPct    = avgArr(myPcts);
-  const weeklyDone = countWeeklyCompletions(currentUser);
+  const weeklyDone = roundUnits((myProgressWeek || 0) + (myProgressWeek === 0 ? fallbackPrimaryProgress : 0));
 
   updateRing("day",  doneToday,  1,           "#6366f1");
   updateRing("week", weeklyDone, WEEKLY_GOAL, "#10b981");
@@ -3705,8 +4069,12 @@ function renderDash(items) {
   renderBuilderNextAction(items, myItems, isMS);
 
   const activeCount = myItems.length;
-  document.getElementById("sec-title").textContent =
-    activeCount ? `My ${isMS ? "MS" : "Chassis"} Builds (${activeCount})` : "My Assignments";
+  const secTitle = document.getElementById("sec-title");
+  if (secTitle) {
+    if (!activeCount) secTitle.textContent = "My Assignments";
+    else if (activeCount === 1 && window._dashPrimaryItemId) secTitle.textContent = "Build Details";
+    else secTitle.textContent = `Other ${isMS ? "MS" : "Chassis"} Builds (${activeCount})`;
+  }
 
   const listEl = document.getElementById("proj-list");
   listEl.innerHTML = "";
@@ -3880,31 +4248,38 @@ function getWeekMonday(dateStr) {
 }
 
 /* Build a Work Order button for a card — opens the Pick List link */
-function buildWoBtn(item) {
+function buildWorkOrderPdfBtn(item, compact = false) {
   const link = parseLink(item, COL.pick_list);
+  const cls = `wo-btn${compact ? " compact" : ""}`;
+  return link
+    ? `<a class="${cls}" href="${link.url.replace(/"/g,"&quot;")}" target="_blank" rel="noopener" onclick="event.stopPropagation()">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      Work Order PDF
+    </a>`
+    : `<span class="${cls} disabled">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Work Order PDF
+    </span>`;
+}
+
+function buildPickListBtn(item, centered = false) {
   const woRaw = COL.work_order_num ? (cvText(item, COL.work_order_num) || "") : "";
   const woMatch = woRaw.match(/\b(W\d{4,})\b/);
   const woNum = woMatch ? woMatch[1] : null;
-
-  const woBtn = link
-    ? `<a class="wo-btn" href="${link.url.replace(/"/g,"&quot;")}" target="_blank" rel="noopener" onclick="event.stopPropagation()">
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-      Work Order
-    </a>`
-    : `<span class="wo-btn disabled">
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      Work Order
-    </span>`;
-
-  const plBtn = woNum
-    ? `<button class="pick-list-btn" id="pl-btn-${item.id}" onclick="openPickListForItem('${item.id}','${woNum}',event)" style="margin-top:4px">
+  const plStatus = getCachedPickListStatus(woNum);
+  const plStatusLabel = plStatus === "fully_kitted" ? "Fully Kitted" : plStatus === "missing_items" ? "Missing Items" : "";
+  return woNum
+    ? `<button class="pick-list-btn${centered ? " centered" : ""}" id="pl-btn-${item.id}" onclick="openPickListForItem('${item.id}','${woNum}',event)" style="margin-top:4px">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
         Pick List
+        ${plStatusLabel ? `<span class="pl-mini-pill ${plStatus}">${escHtml(plStatusLabel)}</span>` : ``}
         <span id="pl-changes-dot-${item.id}" style="display:none" class="pl-changes-dot"></span>
       </button>`
     : "";
+}
 
-  return woBtn + plBtn;
+function buildWoBtn(item) {
+  return buildWorkOrderPdfBtn(item) + buildPickListBtn(item);
 }
 
 /* ═══════════════════════════════════════
@@ -3919,6 +4294,7 @@ function renderProjectCard(item,listEl,isMS) {
   const chassisPeople=parsePeople(item,COL.chassis_who);
   const msPeople=parsePeople(item,COL.ms_who);
   const colType=isMS?"ms":"chassis";
+  const isPrimaryDashItem = !!window._dashPrimaryItemId && String(window._dashPrimaryItemId) === String(item.id);
   const grp=groupTitle(item);
   const groupPill=grp==="Building Queue - In Progress"
     ?`<span class="meta-pill pill-green">In Progress</span>`
@@ -3970,10 +4346,13 @@ function renderProjectCard(item,listEl,isMS) {
           ${project?`<div class="proj-customer">${project}</div>`:""}
           <div class="proj-name">${escHtml(item.name)}</div>
         </div>
-        <button class="update-pct-btn" style="width:auto;padding:7px 11px;margin-top:0;flex-shrink:0;font-size:11px" onclick="openUpdateSheet('${item.id}','${colType}',event)">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          Update %
-        </button>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+          ${buildWorkOrderPdfBtn(item, true)}
+          ${!isPrimaryDashItem ? `<button class="update-pct-btn" style="width:auto;padding:7px 11px;margin-top:0;flex-shrink:0;font-size:11px" onclick="openUpdateSheet('${item.id}','${colType}',event)">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Update %
+          </button>` : ``}
+        </div>
       </div>
       <div class="proj-meta">${turnkey?`<span class="meta-pill pill-blue">${turnkey}</span>`:""}
         ${msSize ?`<span class="meta-pill" style="background:rgba(20,184,166,0.15);color:#5eead4">${msSize}"</span>`:""}
@@ -4000,30 +4379,7 @@ function renderProjectCard(item,listEl,isMS) {
         </div>
       </div>${lastTs?`<div class="ts-row"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Last updated ${fmtTs(lastTs)}</div>`:""}
       ${buildSwHtml(item.id, colType)}
-      ${buildWoBtn(item)}
-      <button class="unassign-btn" onclick="toggleUnassignPanel('${item.id}','${colType}',event)">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="17" y1="8" x2="23" y2="14"/><line x1="23" y1="8" x2="17" y2="14"/></svg>
-        Unassign Me
-      </button>
-      <div class="unassign-confirm" id="ucp-${item.id}">
-        <div class="unassign-confirm-title">Log Your Progress Before Unassigning</div>
-        <div class="unassign-confirm-sub">Set your final percentage — this will be saved to Monday under your name before you are removed.</div>
-        <div class="unassign-pct-row">
-          <span>0%</span>
-          <span class="unassign-pct-val" id="ucv-${item.id}">${curPct}%</span>
-          <span>100%</span>
-        </div>
-        <input type="range" min="0" max="100" step="5" value="${curPct}" id="ucsl-${item.id}"
-          oninput="document.getElementById('ucv-${item.id}').textContent=this.value+'%'">
-        <textarea class="note-inp" id="ucnote-${item.id}" rows="2"
-          placeholder="Reason for unassigning (optional)…" style="margin-top:10px"></textarea>
-        <div class="unassign-actions">
-          <button class="unassign-cancel-btn" onclick="toggleUnassignPanel('${item.id}','${colType}',event)">Cancel</button>
-          <button class="unassign-confirm-btn" id="ucbtn-${item.id}" onclick="confirmUnassign('${item.id}','${colType}',event)">
-            Save &amp; Unassign
-          </button>
-        </div>
-      </div>
+      ${buildPickListBtn(item, true)}
       ${isBuildPaused(item, colType) ? (() =>{
         const saved = getPauseReason(item.id, colType);
         return `<div class="pause-reason-block" style="margin-top:8px">
@@ -4166,7 +4522,7 @@ async function savePauseComment(itemId, colType, e) {
 }
 
 /* Lock / unlock the progress % panel based on timer state.
-   Locked   = timer has running or paused (uncommitted) time → must End Day first.
+   Locked   = timer has running or paused (uncommitted) time → must end the session first.
    Unlocked = timer at 0 (fresh or just ended) → free to update %. */
 function applyProgressLock(itemId, colType) {
   const entry    = getTimer(itemId, colType);
@@ -4373,6 +4729,51 @@ function findMondayId(teamMember) {
   return null;
 }
 
+async function unassignCurrentUserFromBuild(itemId, colType, note = "") {
+  const isMS     = colType === "ms";
+  const whoColId = isMS ? COL.ms_who : COL.chassis_who;
+  const item     = boardItems.find(i => i.id === itemId);
+  if (!item) return;
+
+  buildUserIdCache();
+  let mondayUserId = findMondayId(currentUser);
+  if (!mondayUserId) {
+    const usersRes = await mondayQuery(`{ boards(ids:[${BOARD_ID}]) { subscribers { id name } } }`);
+    const subs = usersRes.data?.boards?.[0]?.subscribers || [];
+    const meFull  = currentUser.name.toLowerCase();
+    const meFirst = meFull.split(" ")[0];
+    const found   = subs.find(s => {
+      const n = s.name.toLowerCase();
+      return n === meFull || n.split(" ")[0] === meFirst;
+    });
+    if (found) mondayUserId = found.id;
+  }
+
+  const colObj = item.column_values?.find(c => c.id === whoColId);
+  let persons = [];
+  try {
+    persons = (JSON.parse(colObj?.value || "{}").personsAndTeams || []).filter(p => p.kind === "person");
+  } catch(_) {}
+  const remaining = persons.filter(p => String(p.id) !== String(mondayUserId));
+  const remainingNames = parsePeople(item, whoColId)
+    .map(p => p.name)
+    .filter(name => normalizeProgressUserName(name) !== normalizeProgressUserName(currentUser.name));
+  const value = JSON.stringify({ personsAndTeams: remaining });
+  const safeVal = value.replace(/"/g, '\\"');
+  const body = `[${currentUser.name}] Unassigned after session${note ? ` | ${String(note).replace(/"/g, "'").replace(/\n/g, " ")}` : ""}`;
+
+  const result = await mondayQuery(`mutation {
+    who: change_column_value(board_id:${BOARD_ID}, item_id:${itemId}, column_id:"${whoColId}", value:"${safeVal}") { id }
+    upd: create_update(item_id:${itemId}, body:"${body}") { id }
+  }`);
+  if (result.errors?.length) throw new Error(result.errors[0].message);
+
+  if (colObj) {
+    colObj.text = remainingNames.join(", ");
+    colObj.value = value;
+  }
+}
+
 async function grabBuild(itemId, e) {
   e.stopPropagation();
   const btn = document.getElementById("grab-"+itemId);
@@ -4539,6 +4940,86 @@ async function uploadPhotoToMonday(itemId, file, label) {
 /* ── UPDATE % BOTTOM SHEET ── */
 let updateSheetContext = null;
 
+function openEndDaySheet(itemId, colType, e) {
+  if (e) e.stopPropagation();
+  const isMS     = colType === "ms";
+  const pctColId = isMS ? COL.ms_pct : COL.chassis_pct;
+  const item     = boardItems.find(i => i.id === itemId);
+  const curPct   = parsePct(cvText(item, pctColId));
+  const itemName = item?.name || itemId;
+  const timerEntry = getTimer(itemId, colType);
+  const sessionMs = timerLiveMs(timerEntry);
+  const hasTrackedTime = sessionMs > 0;
+
+  updateSheetContext = { itemId, colType, mode: "endday" };
+
+  const sliderColor = isMS ? "var(--ms-color)" : "var(--chassis-color)";
+  const sliderId    = "us-slider-" + itemId;
+  const sliderValId = "us-val-" + itemId;
+
+  const body = document.getElementById("update-sheet-body");
+  body.innerHTML = `
+    <div class="update-sheet-header">
+      <div class="update-sheet-title">${escHtml(itemName.length > 28 ? itemName.slice(0,28)+"…" : itemName)}</div>
+      <button class="update-sheet-close" onclick="closeUpdateSheet()">×</button>
+    </div>
+    <div class="update-sheet-sub">${isMS ? "Monitor Stand" : "Chassis"} · Log where you left off before switching builds or ending the day</div>
+    <div style="background:rgba(224,32,32,0.08);border:1px solid rgba(224,32,32,0.18);border-radius:var(--radius-xs);padding:11px 13px;font-size:12px;color:var(--text);line-height:1.55;margin-bottom:14px">
+      Update the percentage, add a photo, and leave a quick reason so the next person knows exactly where this build stands.
+    </div>
+    <div class="upd-section">
+      <div class="upd-label">Session Time</div>
+      <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:var(--radius-xs);padding:11px 12px;margin-top:8px">
+        ${hasTrackedTime
+          ? `<div style="font-size:12px;color:var(--muted);margin-bottom:4px">Tracked on this build</div>
+             <div style="font-size:20px;font-weight:800;color:var(--text)">${escHtml(fmtMs(sessionMs))}</div>`
+          : `<div style="font-size:12px;color:var(--yellow);margin-bottom:10px">No tracked time found. Add the time for this session manually.</div>
+             <div style="display:flex;gap:10px;align-items:end">
+               <label style="flex:1;display:flex;flex-direction:column;gap:6px;font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.06em">
+                 Hours
+                 <input class="note-inp" id="us-manual-hours-${itemId}" type="number" min="0" max="23" step="1" value="0" style="margin-top:0">
+               </label>
+               <label style="flex:1;display:flex;flex-direction:column;gap:6px;font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.06em">
+                 Minutes
+                 <input class="note-inp" id="us-manual-mins-${itemId}" type="number" min="0" max="59" step="1" value="0" style="margin-top:0">
+               </label>
+             </div>`
+        }
+      </div>
+    </div>
+    <div class="upd-section">
+      <div class="upd-label" style="color:${sliderColor}">Final Progress For This Session</div>
+      <div class="slider-row"><span>0%</span><span class="slv" id="${sliderValId}">${curPct}%</span><span>100%</span></div>
+      <input type="range" min="0" max="100" step="5" value="${curPct}" id="${sliderId}"
+        oninput="document.getElementById('${sliderValId}').textContent=this.value+'%'">
+    </div>
+    <div class="upd-section" style="margin-top:12px">
+      <div class="upd-label">Reason</div>
+      <select class="note-inp" id="us-endday-reason-${itemId}" style="margin-top:8px">
+        <option value="End Session">End Session</option>
+        <option value="Switching Projects">Switching Projects</option>
+      </select>
+    </div>
+    <div class="photo-section">
+      <div class="photo-label">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Build Photo <span class="photo-required">* Required</span>
+      </div>
+      <input type="file" accept="image/*" capture="environment" class="photo-file-inp" id="photo-inp-${itemId}" onchange="onPhotoSelected('${itemId}')">
+      <div class="photo-capture-btn" id="photo-btn-${itemId}" onclick="document.getElementById('photo-inp-${itemId}').click()">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Take Photo
+      </div>
+      <img class="photo-preview" id="photo-preview-${itemId}" alt="Build photo">
+      <button class="photo-retake" id="photo-retake-${itemId}" onclick="retakePhoto('${itemId}')">Retake photo</button>
+    </div>
+    <button class="save-btn" id="sbtn-${itemId}" onclick="saveUpdate('${itemId}',event,true)">
+      Save & End Session
+    </button>`;
+
+  document.getElementById("update-sheet-overlay").classList.add("open");
+}
+
 function openUpdateSheet(itemId, colType, e) {
   if (e) e.stopPropagation();
   const isMS     = colType === "ms";
@@ -4551,7 +5032,7 @@ function openUpdateSheet(itemId, colType, e) {
   const timerEntry  = getTimer(itemId, colType);
   const timerLocked = timerEntry.running || timerEntry.totalMs > 0;
 
-  updateSheetContext = { itemId, colType };
+  updateSheetContext = { itemId, colType, mode: "update" };
 
   const sliderColor = isMS ? "var(--ms-color)" : "var(--chassis-color)";
   const sliderId    = "us-slider-" + itemId;
@@ -4624,12 +5105,28 @@ async function setCompletionStatus(itemId, colType) {
 /* ═══════════════════════════════════════
    SAVE PROGRESS UPDATE
 ═══════════════════════════════════════ */
-async function saveUpdate(itemId,e) {
+async function saveUpdate(itemId,e,forceEndDay=false) {
   if (e) { e.stopPropagation(); e.preventDefault(); }
-  const isMS=currentUser.role===MS_ROLE;
-  const colType=isMS?"ms":"chassis";
-  const note=(document.getElementById("us-note-"+itemId)?.value || document.getElementById("note-"+itemId)?.value||"").trim();
+  const contextColType = updateSheetContext?.itemId === itemId ? updateSheetContext?.colType : null;
+  const colType=contextColType || (currentUser.role===MS_ROLE?"ms":"chassis");
+  const isMS=colType==="ms";
+  const isEndDayMode = !!forceEndDay || updateSheetContext?.mode === "endday";
+  const manualHours = parseInt(document.getElementById("us-manual-hours-"+itemId)?.value || "0", 10) || 0;
+  const manualMins = parseInt(document.getElementById("us-manual-mins-"+itemId)?.value || "0", 10) || 0;
+  const manualMs = Math.max(0, ((manualHours * 60) + manualMins) * 60 * 1000);
+  const endDayReason = (document.getElementById("us-endday-reason-"+itemId)?.value || "").trim();
+  const typedNote=(document.getElementById("us-note-"+itemId)?.value || document.getElementById("note-"+itemId)?.value||"").trim();
+  const note=(isEndDayMode ? endDayReason : typedNote).trim();
   const btn=document.getElementById("sbtn-"+itemId);
+
+  if (isEndDayMode) {
+    const timerEntry = getTimer(itemId, colType);
+    const trackedMs = timerLiveMs(timerEntry);
+    if (trackedMs <= 0 && manualMs <= 0) {
+      showToast("Add the session time before ending it.", "err");
+      return;
+    }
+  }
 
   /* Require photo before saving */
   const photo = PENDING_PHOTOS[itemId];
@@ -4748,12 +5245,27 @@ async function saveUpdate(itemId,e) {
         renderDash(boardItems);
       } catch(err) { showToast("Undo failed: "+err.message, "err"); }
     };
-    showToast(overCredit>0?`Saved! +${overCredit}% over 100`:"Saved!", overCredit>0?"":"ok", undoSave);
+    const shouldUnassignAfterSession = isEndDayMode && endDayReason === "Switching Projects";
+    if (isEndDayMode) {
+      await swEnd(itemId, colType, local?.name || itemId, { silentNoTime: true, suppressToast: true, manualMs });
+    }
+    if (shouldUnassignAfterSession) {
+      await unassignCurrentUserFromBuild(itemId, colType, endDayReason);
+    }
+    showToast(
+      shouldUnassignAfterSession
+        ? (overCredit>0 ? `Saved, ended session, and unassigned you. +${overCredit}% over 100` : "Saved, ended session, and unassigned you.")
+        : isEndDayMode
+        ? (overCredit>0 ? `Saved and ended session. +${overCredit}% over 100` : "Saved and ended session.")
+        : (overCredit>0?`Saved! +${overCredit}% over 100`:"Saved!"),
+      overCredit>0?"":"ok",
+      isEndDayMode ? null : undoSave
+    );
     closeUpdateSheet();
-    setTimeout(()=>{ btn.disabled=false; btn.textContent="Save to Monday.com"; btn.classList.remove("saved"); renderDash(boardItems); },2200);
+    setTimeout(()=>{ btn.disabled=false; btn.textContent=isEndDayMode?"Save & End Session":"Save to Monday.com"; btn.classList.remove("saved"); renderDash(boardItems); },2200);
   } catch(err) {
     showToast("Error: "+err.message,"err");
-    btn.disabled=false; btn.textContent="Save to Monday.com";
+    btn.disabled=false; btn.textContent=isEndDayMode?"Save & End Session":"Save to Monday.com";
   }
 }
 
@@ -4789,7 +5301,7 @@ applyTheme(loadTheme());
 function openLoginSettings() {
   /* Login screen — show only appearance */
   ["settings-team-section","settings-add-member","settings-manage-members","settings-reset-pin",
-   "change-pin-section","settings-account-section"].forEach(id=>{
+   "change-pin-section","settings-account-section","settings-app-controls-section"].forEach(id=>{
     const el = document.getElementById(id); if(el) el.style.display = "none";
   });
   const t = loadTheme();
@@ -4808,7 +5320,7 @@ function openSettings() {
   });
   /* Show/hide admin-only rows */
   const isAdmin = currentUser?.role === "admin";
-  ["settings-team-section","settings-add-member","settings-manage-members","settings-reset-pin"].forEach(id=>{
+  ["settings-team-section","settings-add-member","settings-manage-members","settings-reset-pin","settings-app-controls-section"].forEach(id=>{
     const el = document.getElementById(id);
     if (el) el.style.display = isAdmin ? "" : "none";
   });
@@ -4828,6 +5340,47 @@ function closeSettings() {
   document.getElementById("settings-drawer").style.display  = "none";
 }
 function closeModal(id) { document.getElementById(id).style.display = "none"; }
+
+function openAppControls() {
+  const s = loadAppSettings();
+  const set = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.value = value || "";
+  };
+  set("app-setting-gate-user", s.gate_username);
+  set("app-setting-gate-pass", s.gate_password);
+  set("app-setting-ms-lead", s.ms_lead_name);
+  set("app-setting-chassis-lead", s.chassis_lead_name);
+  set("app-setting-contact-1", s.inventory_contact_1);
+  set("app-setting-contact-2", s.inventory_contact_2);
+  const err = document.getElementById("app-controls-error");
+  if (err) err.textContent = "";
+  closeSettings();
+  document.getElementById("modal-app-controls").style.display = "flex";
+}
+
+function saveAppControls() {
+  const next = {
+    gate_username: normalizeAppSettingText(document.getElementById("app-setting-gate-user")?.value),
+    gate_password: normalizeAppSettingText(document.getElementById("app-setting-gate-pass")?.value),
+    ms_lead_name: normalizeAppSettingText(document.getElementById("app-setting-ms-lead")?.value),
+    chassis_lead_name: normalizeAppSettingText(document.getElementById("app-setting-chassis-lead")?.value),
+    inventory_contact_1: normalizeAppSettingText(document.getElementById("app-setting-contact-1")?.value),
+    inventory_contact_2: normalizeAppSettingText(document.getElementById("app-setting-contact-2")?.value),
+  };
+  const err = document.getElementById("app-controls-error");
+  if (!next.gate_username || !next.gate_password) {
+    if (err) err.textContent = "Shared login username and password are required.";
+    return;
+  }
+  saveAppSettings(next);
+  resolveInventoryContacts(boardSubs || []);
+  applyAppSettingLabels();
+  buildNameList();
+  if (err) err.textContent = "";
+  closeModal("modal-app-controls");
+  showToast("App controls saved.", "ok");
+}
 
 /* ── Change PIN ─────────────────────────────────────────────── */
 let cpBuf = "", cpStage = "current", cpFirst = "";
@@ -5031,19 +5584,28 @@ async function doAddMember() {
    before the app is accessible at all.
 ═══════════════════════════════════════ */
 
-const GATE_USER_HASH = "84e72cb2fce97fb96fc3b35fe1fed70e74660adc1497623a3a0298ef3f513777";
-const GATE_PASS_HASH = "f287ae054d03ec82987cb6d60f756e08f6b55477af766c7893cf00e505274088";
-
 async function submitGate() {
   const u = (document.getElementById("gate-user")?.value || "").trim().toLowerCase();
   const p = (document.getElementById("gate-pass")?.value || "").replace(/\s+/g, "").trim().toLowerCase();
   const err = document.getElementById("gate-error");
   if (!u || !p) { err.textContent = "Enter both username and passcode."; return; }
-  const [uh, ph] = await Promise.all([sha256(u), sha256(p)]);
-  if (uh !== GATE_USER_HASH || ph !== GATE_PASS_HASH) {
+  const expectedUser = normalizeAppSettingText(getAppSetting("gate_username")).toLowerCase();
+  const expectedPass = normalizeAppSettingText(getAppSetting("gate_password")).replace(/\s+/g, "").toLowerCase();
+  const fallbackUser = normalizeAppSettingText(APP_SETTINGS_DEFAULTS.gate_username).toLowerCase();
+  const fallbackPass = normalizeAppSettingText(APP_SETTINGS_DEFAULTS.gate_password).replace(/\s+/g, "").toLowerCase();
+  const matchesSaved = u === expectedUser && p === expectedPass;
+  const matchesFallback = u === fallbackUser && p === fallbackPass;
+  if (!matchesSaved && !matchesFallback) {
     err.textContent = "Incorrect credentials.";
     document.getElementById("gate-pass").value = "";
     return;
+  }
+  if (matchesFallback && (!matchesSaved || expectedUser !== fallbackUser || expectedPass !== fallbackPass)) {
+    saveAppSettings({
+      ...loadAppSettings(),
+      gate_username: APP_SETTINGS_DEFAULTS.gate_username,
+      gate_password: APP_SETTINGS_DEFAULTS.gate_password,
+    });
   }
   localStorage.setItem("pt_gate_passed", "1");
   showScreen("screen-login");
@@ -5997,24 +6559,6 @@ function renderAdminStreamlineWidgets(items, sbTimers = [], sbKits = [], sbUpdat
     return !parsePeople(i, COL.ms_who).length && !parsePeople(i, COL.chassis_who).length;
   }).sort(compareScores);
 
-  const next = overdue[0] || unassigned[0] || partsPulled[0] || standBy[0] || qc[0];
-  const actionTitle = overdue[0] ? "Overdue project needs attention"
-    : unassigned[0] ? "Assign the next project"
-    : partsPulled[0] ? "Parts Pulled is ready"
-    : standBy[0] ? "Stand By needs a decision"
-    : qc[0] ? "QC projects ready to verify"
-    : "Shop is looking clean";
-  const actionSub = next
-    ? `${compactProjectLabel(next)} · ${next.group?.title || "No group"}`
-    : "No obvious bottlenecks found in the current board load.";
-  const nextWo = next ? getWoNumberFromItem(next) : "";
-  const nextId = next?.id || "";
-  const actionButton = nextWo
-    ? `<button class="next-action-btn" onclick="openAdminAllocationReview('${nextId}','${nextWo}',event)">Open Allocation Review</button>`
-    : next
-      ? `<button class="next-action-btn" onclick="showToast('This project does not have a work order number yet.', '')">No Pick List Yet</button>`
-      : `<button class="next-action-btn" onclick="manualRefresh('admin')">Refresh Admin View</button>`;
-
   const alerts = [
     overdue.length ? { title:`${overdue.length} overdue ship date${overdue.length===1?"":"s"}`, sub:compactProjectLabel(overdue[0]) } : null,
     unassigned.length ? { title:`${unassigned.length} unassigned item${unassigned.length===1?"":"s"}`, sub:"Assign MS/chassis ownership before it stalls." } : null,
@@ -6022,13 +6566,7 @@ function renderAdminStreamlineWidgets(items, sbTimers = [], sbKits = [], sbUpdat
     qc.length ? { title:`${qc.length} in Quality Control`, sub:"Verify pick lists are complete before closing." } : null,
   ].filter(Boolean).slice(0,4);
 
-  return `<div class="next-action-card">
-    <div class="next-action-kicker">Admin Next Action</div>
-    <div class="next-action-title">${escHtml(actionTitle)}</div>
-    <div class="next-action-sub">${escHtml(actionSub)}</div>
-    ${actionButton}
-  </div>
-  <div class="stream-grid">
+  return `<div class="stream-grid">
     <div class="health-card"><div class="health-val" style="color:var(--green)">${buildTodayValue}</div><div class="health-lbl">Build Units Today</div><div class="health-sub">${buildTodaySub}</div></div>
     <div class="health-card"><div class="health-val" style="color:var(--yellow)">${kitsToday}</div><div class="health-lbl">Kits Today</div><div class="health-sub">From Pete/Kitting</div></div>
     <div class="health-card"><div class="health-val" style="color:var(--accent2)">${running}</div><div class="health-lbl">Running Timers</div><div class="health-sub">Live production</div></div>
@@ -6157,26 +6695,12 @@ function doAdminLogout() { doLogout(); }
 /* ═══════════════════════════════════════
    ADMIN DATA + RENDER
 ═══════════════════════════════════════ */
-function adminDesktopModeOn() {
-  return localStorage.getItem("pt_admin_desktop_mode") === "1";
-}
 function applyAdminDesktopMode() {
-  const on = adminDesktopModeOn();
+  const on = isDesktop();
   document.getElementById("screen-admin")?.classList.toggle("admin-desktop-mode", on);
-  const btn = document.getElementById("admin-desktop-toggle");
-  if (btn) {
-    btn.textContent = on ? "Compact View" : "Desktop View";
-    btn.style.borderColor = on ? "rgba(16,185,129,.45)" : "";
-    btn.style.color = on ? "var(--green)" : "";
-  }
-}
-function toggleAdminDesktopMode() {
-  localStorage.setItem("pt_admin_desktop_mode", adminDesktopModeOn() ? "0" : "1");
-  applyAdminDesktopMode();
-  if (window._adminItems) loadAdminData();
 }
 function isDesktop() {
-  return adminDesktopModeOn() || (window.innerWidth >= 900 && !('ontouchstart' in window) && navigator.maxTouchPoints === 0);
+  return window.innerWidth >= 1180;
 }
 
 let _adminDateRange = "week"; /* "week" or "month" */
@@ -6608,16 +7132,7 @@ function renderAdminDash(items, sbTimers = [], sbKits = [], sbUpdates = [], allo
   /* Weekly & today unit credit from progress updates.
      Partial progress counts as fractional units: 35% + 40% = 0.8 units after rounding. */
   const countedItems = {}; /* "userName|itemId|colType" → prevent double-counting */
-  const progressUpdates = (sbUpdates || []).length
-    ? (sbUpdates || []).map(u => ({
-        user: u.user_name,
-        itemId: u.item_id,
-        colType: u.col_type,
-        prevPct: u.prev_pct,
-        newPct: u.new_pct,
-        date: u.date_str,
-      }))
-    : deltas;
+  const progressUpdates = mergeProgressUpdates(sbUpdates || [], deltas || []);
   progressUpdates.forEach(d =>{
     if (!weekStats[d.user] || d.colType==="grab") return;
     const key = `${d.user}|${d.itemId}|${d.colType}`;
@@ -7025,11 +7540,88 @@ function adminDeleteSession(userName, itemId, colType, sessionIdx) {
    Monday mention syntax in the comment.
 ═══════════════════════════════════════ */
 
-/* Names to search for in the subscribers list */
-const INVENTORY_CONTACTS = [
-  { search: ["jake c", "jake"],   label: "Jake C."       },
-  { search: ["ayden penley", "ayden"], label: "Ayden Penley" },
-];
+const APP_SETTINGS_KEY = "pt_app_settings";
+const APP_SETTINGS_DEFAULTS = {
+  gate_username: "podium1racing",
+  gate_password: "alwaysberacing",
+  ms_lead_name: "Thomas Persichina",
+  chassis_lead_name: "Sepan Ali",
+  inventory_contact_1: "Jake C.",
+  inventory_contact_2: "Ayden Penley",
+  queue_tab_label: "Queue",
+  messages_tab_label: "Messages",
+  updates_tab_label: "Updates",
+  pick_lists_title: "Pick Lists",
+  kitted_pick_lists_title: "Kitted Pick Lists",
+  build_updates_title: "Build Updates",
+  kitting_done_full_label: "Done Kitting — Move to Parts Pulled",
+  kitting_done_missing_label: "Submit Kit (Missing Items)",
+  picklist_complete_label: "Complete Pick List",
+  picklist_complete_locked_label: "Complete Locked Until QC",
+  picklist_submit_label: "Submit Kit → Move to Parts Pulled",
+};
+
+function normalizeAppSettingText(value) {
+  return String(value || "").trim();
+}
+
+function loadAppSettings() {
+  try {
+    return { ...APP_SETTINGS_DEFAULTS, ...(JSON.parse(localStorage.getItem(APP_SETTINGS_KEY) || "{}") || {}) };
+  } catch(e) {
+    return { ...APP_SETTINGS_DEFAULTS };
+  }
+}
+
+function saveAppSettings(settings) {
+  const merged = { ...APP_SETTINGS_DEFAULTS, ...(settings || {}) };
+  localStorage.setItem(APP_SETTINGS_KEY, JSON.stringify(merged));
+  return merged;
+}
+
+function getAppSetting(key) {
+  return loadAppSettings()[key];
+}
+
+function getAppText(key, fallback = "") {
+  return normalizeAppSettingText(getAppSetting(key)) || fallback;
+}
+
+function kittingDoneButtonText(allDone) {
+  return allDone
+    ? getAppText("kitting_done_full_label", "Done Kitting — Move to Parts Pulled")
+    : getAppText("kitting_done_missing_label", "Submit Kit (Missing Items)");
+}
+
+function applyAppSettingLabels() {
+  const map = {
+    "settings-dynamic-queue-tab": getAppText("queue_tab_label", "Queue"),
+    "settings-dynamic-messages-tab": getAppText("messages_tab_label", "Messages"),
+    "settings-dynamic-updates-tab": getAppText("updates_tab_label", "Updates"),
+    "settings-dynamic-picklists-title": getAppText("pick_lists_title", "Pick Lists"),
+    "settings-dynamic-kitted-title": getAppText("kitted_pick_lists_title", "Kitted Pick Lists"),
+    "settings-dynamic-updates-title": getAppText("build_updates_title", "Build Updates"),
+  };
+  Object.entries(map).forEach(([id, text]) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+  });
+}
+
+function getInventoryContacts() {
+  const s = loadAppSettings();
+  return [
+    { label: normalizeAppSettingText(s.inventory_contact_1) || APP_SETTINGS_DEFAULTS.inventory_contact_1 },
+    { label: normalizeAppSettingText(s.inventory_contact_2) || APP_SETTINGS_DEFAULTS.inventory_contact_2 },
+  ].filter(c => c.label);
+}
+
+function inventorySearchTerms(label) {
+  const normalized = normalizeAppSettingText(label).toLowerCase();
+  const compact = normalized.replace(/[^a-z0-9]+/g, " ").trim();
+  const first = compact.split(" ")[0] || compact;
+  return [...new Set([normalized, compact, first].filter(Boolean))];
+}
 
 /* Status label indexes for chassis/ms build status columns — populated on loadBoard */
 const STATUS_LABELS = {};  /* colId → { "Complete": index, "In Progress": index, "Paused": index } */
@@ -7051,10 +7643,12 @@ const INVENTORY_IDS = {};   /* "Jake C." → monday user id */
 
 /* Called from loadBoard after subscribers are fetched */
 function resolveInventoryContacts(subs) {
-  INVENTORY_CONTACTS.forEach(contact => {
+  Object.keys(INVENTORY_IDS).forEach(key => delete INVENTORY_IDS[key]);
+  getInventoryContacts().forEach(contact => {
+    const searchTerms = inventorySearchTerms(contact.label);
     const found = subs.find(s => {
       const n = s.name.toLowerCase();
-      return contact.search.some(term => n.includes(term));
+      return searchTerms.some(term => n.includes(term));
     });
     if (found) INVENTORY_IDS[contact.label] = found.id;
   });
@@ -7085,7 +7679,8 @@ function openInventoryModal() {
   document.getElementById("inv-message").value = "";
   document.getElementById("inv-char-count").textContent = "0 characters";
   document.getElementById("inv-send-btn").disabled = false;
-  document.getElementById("inv-send-btn").textContent = "Send to Jake & Ayden";
+  const contacts = getInventoryContacts().map(c => c.label.split(" ")[0]).join(" & ");
+  document.getElementById("inv-send-btn").textContent = contacts ? `Send to ${contacts}` : "Send Request";
 
   document.getElementById("inv-modal").classList.add("open");
 }
@@ -7118,11 +7713,9 @@ async function sendInventoryRequest() {
     const tsLabel  = now.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}) +
                      " at " + now.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"});
 
-    const jakeId  = INVENTORY_IDS["Jake C."];
-    const aydenId = INVENTORY_IDS["Ayden Penley"];
+    const mentionIds = getInventoryContacts().map(c => INVENTORY_IDS[c.label]).filter(Boolean).map(Number);
 
     /* Build mentions_list for the API — triggers real @mention notifications */
-    const mentionIds = [jakeId, aydenId].filter(Boolean).map(Number);
     const mentionsList = mentionIds.length
       ? `, mentions_list: [${mentionIds.map(id => `{id: ${id}, type: User}`).join(", ")}]`
       : "";
@@ -7302,7 +7895,7 @@ function openAddTimeModalFromBtn(btn, e) {
 }
 
 function openAddTimeModal(memberName, colType, e) {
-  e.stopPropagation();
+  if (e?.stopPropagation) e.stopPropagation();
   addTimeContext = { memberName, colType };
   document.getElementById("atm-title").textContent = `Add Time — ${memberName.split(" ")[0]}`;
   document.getElementById("atm-sub").textContent = `Select which project to credit time to.`;
@@ -7567,21 +8160,7 @@ function getNeedKittedSide(item) {
 }
 
 function renderKitNextAction(kitItems) {
-  const next = kitItems[0];
-  if (!next) return "";
-  const woNum = getWoNumberFromItem(next);
-  const side = getNeedKittedSide(next);
-  const sideText = side === "both" ? "Both sides need kitted" : side === "ms" ? "Monitor stand needs kitted" : side === "chassis" ? "Chassis needs kitted" : "Full kit";
-  const btn = woNum
-    ? `<button class="next-action-btn" onclick="openPickListForItem('${next.id}','${woNum}',event)">Open Pick List</button>`
-    : `<button class="next-action-btn" onclick="manualRefresh('kit')">Refresh Kitting Queue</button>`;
-  return `<div class="next-action-card">
-    <div class="next-action-kicker">Pete’s Next Action</div>
-    <div class="next-action-title">${escHtml(compactProjectLabel(next))}</div>
-    <div class="next-action-sub">${escHtml(sideText)}. This is first in the queue by ship date and priority.</div>
-    <div class="next-action-meta">${actionMetaPills(next, "Kitting")}</div>
-    ${btn}
-  </div>`;
+  return "";
 }
 
 function renderKitScreen(items) {
@@ -7741,7 +8320,7 @@ function updateKitChecklistProgress(itemId) {
   const doneBtn = document.getElementById("kdone-" + itemId);
   if (doneBtn) {
     const allNowDone = relevant.length > 0 && done >= relevant.length;
-    doneBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> ${allNowDone ? "Done Kitting — Move to Parts Pulled" : "Submit Kit (Missing Items)"}`;
+    doneBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> ${kittingDoneButtonText(allNowDone)}`;
   }
 }
 
@@ -7881,12 +8460,11 @@ function uniqueKitHistoryRows(kits = []) {
     });
 }
 
-/* Identify leads (Thomas=MS lead, Sepan=Chassis lead) */
 function isLead() {
-  return currentUser?.name === "Thomas Persichina" || currentUser?.name === "Sepan Ali";
+  return currentUser?.name === getAppSetting("ms_lead_name") || currentUser?.name === getAppSetting("chassis_lead_name");
 }
-function isChassisLead() { return currentUser?.name === "Sepan Ali"; }
-function isMSLead()      { return currentUser?.name === "Thomas Persichina"; }
+function isChassisLead() { return currentUser?.name === getAppSetting("chassis_lead_name"); }
+function isMSLead()      { return currentUser?.name === getAppSetting("ms_lead_name"); }
 
 /* Items that require a second builder confirmation checkbox */
 function isBuilderGrabItem(label) {
@@ -7914,6 +8492,98 @@ function buildItemLabel(it) {
   const displayName = (isCustom && memo) ? `Custom: ${memo}` : name;
   const base = (brand && !isCustom) ? `${brand} — ${displayName}` : displayName;
   return qty > 1 ? `${base} (×${qty})` : base;
+}
+
+const PICKLIST_ORDER_CACHE = {};
+
+function normalizePickListText(value) {
+  return String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function pickListOrderKey(it) {
+  const brand = normalizePickListText(it?.brand);
+  const name = normalizePickListText(it?.item_name);
+  const memo = normalizePickListText(it?.memo || it?.description);
+  const qty = parseInt(it?.quantity) || 1;
+  return `${brand}|${name}|${memo}|${qty}`;
+}
+
+function pickListOrderLooseKey(it) {
+  const brand = normalizePickListText(it?.brand);
+  const name = normalizePickListText(it?.item_name);
+  const qty = parseInt(it?.quantity) || 1;
+  return `${brand}|${name}|${qty}`;
+}
+
+function pickListOrderLabelKey(it) {
+  const label = normalizePickListText((it?.label || buildItemLabel(it)).replace(/ \(×\d+\)$/i, ""));
+  const qty = parseInt(it?.quantity) || 1;
+  return `${label}|${qty}`;
+}
+
+async function getWorkOrderItemOrder(woNum) {
+  if (!woNum) return [];
+  const cached = PICKLIST_ORDER_CACHE[woNum];
+  if (Array.isArray(cached) && cached.length) return cached;
+  try {
+    const data = await p1Api(`/picklist?wo=${encodeURIComponent(woNum)}`);
+    const ordered = (data?.items || [])
+      .filter(it => !isServiceItem(it))
+      .map(it => ({
+        strict: pickListOrderKey(it),
+        loose: pickListOrderLooseKey(it),
+        label: pickListOrderLabelKey(it),
+      }));
+    PICKLIST_ORDER_CACHE[woNum] = ordered;
+    return ordered;
+  } catch {
+    return [];
+  }
+}
+
+async function sortPickListItemsByWorkOrder(items = [], woNum = "") {
+  if (!Array.isArray(items) || items.length < 2 || !woNum) return Array.isArray(items) ? items : [];
+  const orderEntries = await getWorkOrderItemOrder(woNum);
+  if (!orderEntries.length) return items;
+
+  const positionsByStrict = {};
+  const positionsByLoose = {};
+  const positionsByLabel = {};
+  orderEntries.forEach((entry, idx) => {
+    if (!positionsByStrict[entry.strict]) positionsByStrict[entry.strict] = [];
+    positionsByStrict[entry.strict].push(idx);
+    if (!positionsByLoose[entry.loose]) positionsByLoose[entry.loose] = [];
+    positionsByLoose[entry.loose].push(idx);
+    if (!positionsByLabel[entry.label]) positionsByLabel[entry.label] = [];
+    positionsByLabel[entry.label].push(idx);
+  });
+
+  const seenByStrict = {};
+  const seenByLoose = {};
+  const seenByLabel = {};
+  return items
+    .map((item, idx) => {
+      const strictKey = pickListOrderKey(item);
+      const looseKey = pickListOrderLooseKey(item);
+      const labelKey = pickListOrderLabelKey(item);
+      const strictSeen = seenByStrict[strictKey] || 0;
+      seenByStrict[strictKey] = strictSeen + 1;
+      const looseSeen = seenByLoose[looseKey] || 0;
+      seenByLoose[looseKey] = looseSeen + 1;
+      const labelSeen = seenByLabel[labelKey] || 0;
+      seenByLabel[labelKey] = labelSeen + 1;
+      const rank =
+        positionsByStrict[strictKey]?.[strictSeen] ??
+        positionsByStrict[strictKey]?.[0] ??
+        positionsByLoose[looseKey]?.[looseSeen] ??
+        positionsByLoose[looseKey]?.[0] ??
+        positionsByLabel[labelKey]?.[labelSeen] ??
+        positionsByLabel[labelKey]?.[0] ??
+        (100000 + idx);
+      return { item, idx, rank };
+    })
+    .sort((a, b) => a.rank - b.rank || a.idx - b.idx)
+    .map(entry => entry.item);
 }
 
 function jsArg(s) {
@@ -8075,7 +8745,7 @@ async function fetchPickListFromApi(itemId, woNum) {
 
     if (doneBtn) {
       doneBtn.disabled = false;
-      doneBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> ${done >= relevant.length ? "Done Kitting — Move to Parts Pulled" : "Submit Kit (Missing Items)"}`;
+      doneBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> ${kittingDoneButtonText(done >= relevant.length)}`;
     }
 
   } catch(e) {
@@ -8329,7 +8999,8 @@ async function buildKitChecklistAsync(item) {
       ).catch(() => null);
 
       if (sbItems && sbItems.length > 0) {
-        const lines = sbItems
+        const orderedSbItems = await sortPickListItemsByWorkOrder(sbItems, woNum);
+        const lines = orderedSbItems
           .filter(it => !isServiceItem(it))
           .map(it => it.label || buildItemLabel(it))
           .filter(l => l.length > 2);
@@ -8442,7 +9113,7 @@ function toggleKitCheck(itemId, label, rowEl) {
   const doneBtn = document.getElementById("kdone-" + itemId);
   if (doneBtn) {
     const allNowDone = relevant.length > 0 && done >= relevant.length;
-    doneBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> ${allNowDone ? "Done Kitting — Move to Parts Pulled" : "Submit Kit (Missing Items)"}`;
+    doneBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> ${kittingDoneButtonText(allNowDone)}`;
   }
 }
 
@@ -8483,7 +9154,7 @@ function toggleKitSkip(itemId, label, btnEl) {
   const doneBtn = document.getElementById("kdone-" + itemId);
   if (doneBtn) {
     const allNowDone = relevant.length > 0 && done >= relevant.length;
-    doneBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> ${allNowDone ? "Done Kitting — Move to Parts Pulled" : "Submit Kit (Missing Items)"}`;
+    doneBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> ${kittingDoneButtonText(allNowDone)}`;
   }
 }
 
@@ -8730,7 +9401,7 @@ async function kitDoneConfirmed(itemId, e) {
   } catch(err) {
     showToast("Error: " + err.message, "err");
     btn.disabled = false; btn.classList.remove("moving");
-    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> Done Kitting — Move to Parts Pulled`;
+    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> ${getAppText("kitting_done_full_label", "Done Kitting — Move to Parts Pulled")}`;
   }
 }
 
@@ -8806,7 +9477,7 @@ async function handleKitPdfDrop(itemId, file) {
     if (countEl)  countEl.textContent = `Kitting Checklist — ${done}/${relevant2.length} items`;
     if (doneBtn) {
       doneBtn.disabled = false;
-      doneBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> ${done >= relevant2.length ? "Done Kitting — Move to Parts Pulled" : "Submit Kit (Missing Items)"}`;
+      doneBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> ${kittingDoneButtonText(done >= relevant2.length)}`;
     }
 
     showToast(lines.length + " items loaded from PDF", "ok");
@@ -8929,7 +9600,7 @@ async function loadPickLists(woNum) {
     /* If no picklist exists yet for this WO, auto-create it */
     if (woNum && rows.length === 0) {
       await ensurePickList(woNum);
-      if (_plKittedAccessMode) await repairKittedPickListAllocation(woNum);
+      await repairKittedPickListAllocation(woNum);
       const fresh = await sbFetch(`picklists?wo_number=eq.${encodeURIComponent(woNum)}&order=updated_at.desc`, {
         method: "GET", headers: { "Prefer": "return=representation" }
       }) || [];
@@ -8938,7 +9609,7 @@ async function loadPickLists(woNum) {
       /* Sync status from Monday group on every open (except complete) */
       await syncPickListStatusFromMonday(woNum);
       await syncPickListItems(woNum);
-      if (_plKittedAccessMode) await repairKittedPickListAllocation(woNum);
+      await repairKittedPickListAllocation(woNum);
       const refreshed = await sbFetch(`picklists?wo_number=eq.${encodeURIComponent(woNum)}&order=updated_at.desc`, {
         method: "GET", headers: { "Prefer": "return=representation" }
       }) || [];
@@ -8970,6 +9641,16 @@ function mondayGroupToPlStatus(groupTitle) {
     g.includes("hold")
   ) return "missing_items";
   return "missing_items"; /* safe default */
+}
+
+function derivePickListStatusFromAllocation(items = [], fallback = "missing_items") {
+  const base = String(fallback || "missing_items");
+  if (base === "complete" || base === "exclude") return base;
+  if (!Array.isArray(items) || !items.length) return base;
+  const allocated = items.filter(item => !!item?.allocated).length;
+  if (allocated === 0) return base === "in_queue" ? "in_queue" : "missing_items";
+  if (allocated === items.length) return "fully_kitted";
+  return "missing_items";
 }
 
 async function ensurePickList(woNum) {
@@ -9119,13 +9800,8 @@ function normalizeMissingItems(missingItems) {
 
 async function repairKittedPickListAllocation(woNum, completions = null) {
   const mondayItem = findKnownBoardItemByWo(woNum);
-  const cleanName = cleanMondayName(mondayItem?.name || "").toLowerCase();
   const completionRows = completions || await sbGetKitCompletions();
-  const completion = completionRows.find(k =>
-    String(k.item_id || "") === String(woNum || "") ||
-    (mondayItem?.id && String(k.item_id || "") === String(mondayItem.id)) ||
-    cleanMondayName(k.item_name || "").toLowerCase() === cleanName
-  );
+  const completion = completionRows.find(k => kitCompletionMatchesOrder(k, woNum, mondayItem));
 
   const items = await sbFetch(
     `picklist_items?wo_number=eq.${encodeURIComponent(woNum)}&select=id,item_name,brand,quantity,label,allocated`,
@@ -9340,10 +10016,15 @@ async function renderPickLists() {
   const el = document.getElementById("pl-content");
   if (!el) return;
 
+  const enrichedPicklists = (_plAllPicklists || []).map(pl => {
+    const items = ((window._plItemsByPl || {})[pl.id] || []);
+    return { ...pl, _displayStatus: derivePickListStatusFromAllocation(items, pl.status) };
+  });
+
   const filtered = (_plCurrentTab === "all"
-    ? _plAllPicklists
-    : _plAllPicklists.filter(pl => pl.status === _plCurrentTab)
-  ).filter(pl => pl.status !== "exclude"); /* never show excluded */
+    ? enrichedPicklists
+    : enrichedPicklists.filter(pl => (pl._displayStatus || pl.status) === _plCurrentTab)
+  ).filter(pl => (pl._displayStatus || pl.status) !== "exclude"); /* never show excluded */
 
   if (!filtered.length) {
     el.innerHTML = `<div class="empty-state" style="padding:40px 0">No pick lists found.</div>`;
@@ -9383,6 +10064,10 @@ async function renderPickLists() {
     if (!itemsByPl[ownerId]) itemsByPl[ownerId] = [];
     itemsByPl[ownerId].push(it);
   });
+  await Promise.all(filtered.map(async pl => {
+    if (!itemsByPl[pl.id]?.length) return;
+    itemsByPl[pl.id] = await sortPickListItemsByWorkOrder(itemsByPl[pl.id], pl.wo_number);
+  }));
   registerPickListItemsForInfo(allItems);
   window._plItemsByPl = itemsByPl;
 
@@ -9399,13 +10084,14 @@ async function renderPickLists() {
     pl._inQC = (mondayItem?.group?.title || "").toLowerCase().includes("quality control");
     const items = itemsByPl[pl.id] || [];
     const allocatedCount = items.filter(i => i.allocated).length;
+    const displayStatus = derivePickListStatusFromAllocation(items, pl._displayStatus || pl.status);
     const statusLabel = {
       in_queue:      "In Queue",
       missing_items: "Missing Items",
       fully_kitted:  "Fully Kitted",
       complete:      "Complete"
-    }[pl.status] || pl.status;
-    const showKitCheckAll = pl.status !== "complete" && currentUser?.role === KIT_ROLE && !isLead() && !_plKittedAccessMode;
+    }[displayStatus] || displayStatus;
+    const showKitCheckAll = displayStatus !== "complete" && currentUser?.role === KIT_ROLE && !isLead() && !_plKittedAccessMode;
     const checkAllHtml = showKitCheckAll ? `
       <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.24);border-radius:var(--radius-xs);padding:9px 10px;margin:0 12px 10px">
         <div style="display:flex;gap:7px;align-items:stretch">
@@ -9423,7 +10109,7 @@ async function renderPickLists() {
         </div>
       </div>` : "";
 
-    html += `<div class="pl-card status-${pl.status}${pl.has_changes ? " has-changes" : ""}" id="plcard-${pl.id}">
+    html += `<div class="pl-card status-${displayStatus}${pl.has_changes ? " has-changes" : ""}" id="plcard-${pl.id}">
       <div class="pl-card-header">
         <div style="flex:1;min-width:0">
           <div class="pl-card-title">${escHtml(pl.customer_name && pl.customer_name !== pl.wo_number ? pl.customer_name : pl.wo_number)}</div>
@@ -9435,7 +10121,7 @@ async function renderPickLists() {
           </div>` : ""}
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px">
-          <span class="pl-status-pill ${pl.status}">${statusLabel}</span>
+          <span class="pl-status-pill ${displayStatus}">${statusLabel}</span>
         </div>
       </div>
 
@@ -9485,21 +10171,21 @@ async function renderPickLists() {
       }).join("")}
 
       <div class="pl-action-bar" style="display:flex;gap:8px;flex-direction:column">
-        ${pl.status === "complete"
+        ${displayStatus === "complete"
           ? `<div style="padding:10px;font-size:11px;color:var(--muted);text-align:center">Completed${pl.completed_by ? " by " + escHtml(pl.completed_by) : ""}</div>`
           : pl._inQC
-            ? `<button class="pl-complete-btn" onclick="confirmCompletePickList('${pl.id}',event)">✓ Complete Pick List</button>`
+            ? `<button class="pl-complete-btn" onclick="confirmCompletePickList('${pl.id}',event)">✓ ${escHtml(getAppText("picklist_complete_label", "Complete Pick List"))}</button>`
             : `<button disabled style="width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:var(--radius-xs);padding:13px;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);cursor:not-allowed;opacity:.5">
-                Complete Locked Until QC
+                ${escHtml(getAppText("picklist_complete_locked_label", "Complete Locked Until QC"))}
               </button>`
         }
-        ${pl.status !== "complete" && currentUser?.role === KIT_ROLE && !isLead() && !_plKittedAccessMode && !_plReviewOnlyMode ? `
+        ${displayStatus !== "complete" && currentUser?.role === KIT_ROLE && !isLead() && !_plKittedAccessMode && !_plReviewOnlyMode ? `
         <button onclick="submitKitFromPickList('${pl.id}','${pl.wo_number}',event)"
           style="width:100%;background:var(--green);border:none;border-radius:var(--radius-xs);padding:13px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#fff;cursor:pointer">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="margin-right:5px"><polyline points="20 6 9 17 4 12"/></svg>
-          Submit Kit → Move to Parts Pulled
+          ${escHtml(getAppText("picklist_submit_label", "Submit Kit → Move to Parts Pulled"))}
         </button>` : ""}
-        ${_plReviewOnlyMode && pl.status !== "complete" ? `
+        ${_plReviewOnlyMode && displayStatus !== "complete" ? `
         <div style="padding:10px 11px;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.22);border-radius:var(--radius-xs);font-size:11px;color:var(--muted);line-height:1.45;text-align:center">
           Review mode: tap checklist items to update allocation. This will not move the order in Monday.
         </div>` : ""}
@@ -9713,6 +10399,15 @@ async function cyclePickListStatus(plId, currentStatus, e) {
 }
 
 async function loadResolvedPickListItems(plId, woNum) {
+  if (woNum) {
+    try {
+      const completions = await sbGetKitCompletions();
+      await repairKittedPickListAllocation(woNum, completions);
+    } catch (repairErr) {
+      console.warn("Pick list allocation repair skipped:", repairErr.message);
+    }
+  }
+
   const byPickList = await sbFetch(
     `picklist_items?picklist_id=eq.${encodeURIComponent(plId)}&order=id.asc`,
     { method: "GET", headers: { "Prefer": "return=representation" } }
@@ -9734,7 +10429,7 @@ async function loadResolvedPickListItems(plId, woNum) {
 
   if (!merged.length && cached.length) return cached;
   if (!merged.length) throw new Error("Could not load pick list items from Supabase.");
-  return merged;
+  return sortPickListItemsByWorkOrder(merged, woNum);
 }
 
 /* ── Pete submits kit from the pick list screen ── */
@@ -9940,6 +10635,20 @@ function getKitCompletionSets(completions) {
   };
 }
 
+function kitCompletionMatchesOrder(k, woNum, mondayItem = null) {
+  const targetWo = String(woNum || "").trim().toUpperCase();
+  const savedId = String(k?.item_id || "").trim();
+  const mondayId = String(mondayItem?.id || "").trim();
+  const savedWo = getWoFromText(k?.item_id) || getWoFromText(k?.item_name);
+  const boardName = cleanMondayName(mondayItem?.name || "").toLowerCase();
+  const savedName = cleanMondayName(String(k?.item_name || "").replace(/\bW\d{4,}\b/ig, "").trim()).toLowerCase();
+  if (targetWo && savedId === targetWo) return true;
+  if (targetWo && savedWo === targetWo) return true;
+  if (mondayId && savedId === mondayId) return true;
+  if (boardName && savedName === boardName) return true;
+  return false;
+}
+
 async function ensurePeteKittedPickListsFromKnownItems(completedItemIds, completedItemNames) {
   const kittedWos = [...new Set(
     getKnownBoardItems()
@@ -9978,12 +10687,7 @@ function isPeteKittedCompletion(pl, completedItemIds, completedItemNames) {
 }
 
 function findPeteKitCompletion(pl, completions) {
-  const customer = getPetePickListCustomer(pl).toLowerCase();
-  return completions.find(k =>
-    String(k.item_id || "") === String(pl.wo_number || "") ||
-    (pl.mondayItem?.id && String(k.item_id || "") === String(pl.mondayItem.id)) ||
-    cleanMondayName(k.item_name || "").toLowerCase() === customer
-  ) || null;
+  return completions.find(k => kitCompletionMatchesOrder(k, pl.wo_number, pl.mondayItem)) || null;
 }
 
 function getPetePickListCustomer(pl) {
@@ -10111,6 +10815,9 @@ async function openPeteKittedPickLists() {
       if (it.allocated) itemStateByWo[it.wo_number].allocated++;
       itemStateByWo[it.wo_number].items.push(it);
     });
+    await Promise.all(Object.keys(itemStateByWo).map(async wo => {
+      itemStateByWo[wo].items = await sortPickListItemsByWorkOrder(itemStateByWo[wo].items, wo);
+    }));
 
     /* Sort by when Pete kitted it, while still showing ship date */
     const withDates = rows
@@ -10181,14 +10888,6 @@ function renderPetePlList() {
 
   let html = "";
   const reviewCount = lists.filter(pl => pl.needsReview).length;
-  if (reviewCount) {
-    html += `<div class="next-action-card">
-      <div class="next-action-kicker">Needs Review</div>
-      <div class="next-action-title">${reviewCount} previous kit${reviewCount===1?"":"s"} need allocation review</div>
-      <div class="next-action-sub">Open the pick list and tap items directly until the allocation matches the original kit.</div>
-      <button class="next-action-btn" onclick="openFirstPeteReview()">Open First One</button>
-    </div>`;
-  }
   let lastKitDay = "";
   lists.forEach(pl => {
     const customer = getPetePickListCustomer(pl);
@@ -10202,8 +10901,9 @@ function renderPetePlList() {
     const checklist = pl.checklistItems || [];
     const missingCount = checklist.filter(i => !i.allocated).length;
     const qcReady = (groupLabel || "").toLowerCase().includes("quality control");
-    const displayStatus = pl.needsReview ? "needs_review" : (pl.displayStatus || pl.status);
-    const isLocked = (pl.displayStatus || pl.status) === "complete" || pl.status === "complete";
+    const baseStatus = derivePickListStatusFromAllocation(checklist, pl.status);
+    const displayStatus = pl.needsReview ? "needs_review" : baseStatus;
+    const isLocked = baseStatus === "complete" || pl.status === "complete";
     const sl = displayStatus === "needs_review" ? "Needs Review" : (statusLabel[displayStatus] || displayStatus);
     const sc = displayStatus === "needs_review" ? "#f59e0b" : (statusColor[displayStatus] || "var(--muted2)");
     const woArg = String(pl.wo_number || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
@@ -10250,7 +10950,7 @@ function renderPetePlList() {
         }).join("") : `<div style="font-size:12px;color:var(--muted);padding:12px 0">No checklist items found yet.</div>`}
         <button ${qcReady ? `onclick="confirmCompletePickList('${pl.id}',event)"` : "disabled"}
           style="width:100%;margin-top:10px;background:${qcReady ? "var(--accent)" : "rgba(255,255,255,0.05)"};border:1px solid ${qcReady ? "transparent" : "var(--border)"};border-radius:var(--radius-xs);padding:12px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:${qcReady ? "#fff" : "var(--muted2)"};cursor:${qcReady ? "pointer" : "not-allowed"};opacity:${qcReady ? "1" : ".55"}">
-          ${qcReady ? "Complete Pick List" : "Complete Locked Until QC"}
+          ${qcReady ? escHtml(getAppText("picklist_complete_label", "Complete Pick List")) : escHtml(getAppText("picklist_complete_locked_label", "Complete Locked Until QC"))}
         </button>
       </div>
     </div>`;
@@ -10696,18 +11396,34 @@ function renderHomeUpdates() {
 }
 
 let _updatesCallerScreen = "screen-dash";
+let _updatesMode = "history";
 
 async function showBuildUpdates() {
   /* Track which screen opened updates so back button goes to right place */
   const active = document.querySelector(".screen.active");
   _updatesCallerScreen = active?.id || "screen-dash";
+  _updatesMode = "history";
   showScreen("screen-updates");
+  document.getElementById("settings-dynamic-updates-title").textContent = getAppText("build_updates_title", "Build Updates");
   document.getElementById("updates-date").textContent =
     new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
+  document.getElementById("updates-tools-wrap").style.display = "";
   document.getElementById("updates-search").value = "";
   _buildUpdateFilter = "all";
   document.querySelectorAll(".seg-btn[id^='upd-filter']").forEach(b => b.classList.remove("active"));
   document.getElementById("upd-filter-all").classList.add("active");
+  await loadBuildUpdates();
+}
+
+async function showLeadUpdateBuilds() {
+  const active = document.querySelector(".screen.active");
+  _updatesCallerScreen = active?.id || "screen-dash";
+  _updatesMode = "lead_queue";
+  showScreen("screen-updates");
+  document.getElementById("settings-dynamic-updates-title").textContent = "Update Builds";
+  document.getElementById("updates-date").textContent =
+    new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
+  document.getElementById("updates-tools-wrap").style.display = "none";
   await loadBuildUpdates();
 }
 
@@ -10731,8 +11447,85 @@ function setBuildUpdateFilter(f, btn) {
 
 function filterBuildUpdates() { renderBuildUpdates(); }
 
+function getLeadManagedActiveBuilds() {
+  if (!isLead()) return [];
+  const isMsLead = isMSLead();
+  const whoCol = isMsLead ? COL.ms_who : COL.chassis_who;
+  const pctCol = isMsLead ? COL.ms_pct : COL.chassis_pct;
+  const colType = isMsLead ? "ms" : "chassis";
+  const items = boardItems || window.boardItems || [];
+  const ACTIVE_GROUPS = [
+    "Parts Pulled",
+    "Building Queue - In Progress",
+    "Stand By - Pending MS or Chassis",
+    "Configuration",
+    "Quality Control (Support)",
+    "Pending Shipping",
+    "Hold",
+  ];
+  return items
+    .filter(item => ACTIVE_GROUPS.includes(item.group?.title || ""))
+    .filter(item => parsePeople(item, whoCol).length > 0)
+    .filter(item => getBuildSideState(item, colType) !== "complete")
+    .map(item => ({
+      item,
+      colType,
+      pct: parsePct(cvText(item, pctCol)),
+      assignees: parsePeople(item, whoCol).map(p => p.name).filter(Boolean),
+    }));
+}
+
+function renderLeadBuildUpdatePanel() {
+  if (!isLead()) return "";
+  const builds = getLeadManagedActiveBuilds();
+  if (!builds.length) return "";
+  const today = todayStr();
+  const todayLabel = new Date(today + "T12:00:00").toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"});
+  const colType = isMSLead() ? "ms" : "chassis";
+  const rows = builds.map(({ item, pct, assignees }) => {
+    const todayUpdates = (_allBuildUpdates || [])
+      .filter(u => String(u.item_id) === String(item.id) && u.col_type === colType && progressDateKey(u) === today)
+      .sort((a,b) => String(b.created_at || "").localeCompare(String(a.created_at || "")));
+    const latest = todayUpdates[0] || null;
+    const hasToday = !!latest;
+    const meta = [
+      assignees.length ? assignees.join(", ") : "Unassigned",
+      item.group?.title || "No group",
+      `Progress ${pct}%`
+    ].filter(Boolean).join(" · ");
+    const sub = hasToday
+      ? `Updated today${latest?.user_name ? ` by ${latest.user_name}` : ""}${latest?.created_at ? ` · ${new Date(latest.created_at).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"})}` : ""}`
+      : "No update posted today yet";
+    return `<div class="lead-update-row">
+      <div class="lead-update-main">
+        <div class="lead-update-name">${escHtml(compactProjectLabel(item))}</div>
+        <div class="lead-update-meta">${escHtml(meta)}</div>
+        <div class="lead-update-meta">${escHtml(sub)}</div>
+      </div>
+      <div class="lead-update-side">
+        <div class="lead-update-state ${hasToday ? "done" : "missing"}">${hasToday ? "Updated" : "Need"}</div>
+        <button class="lead-update-action ${hasToday ? "secondary" : ""}" onclick="openUpdateSheet('${item.id}','${colType}',event)">${hasToday ? "Update Again" : "Add Update"}</button>
+      </div>
+    </div>`;
+  }).join("");
+  return `<div class="lead-update-panel">
+    <div class="lead-update-head">
+      <div>
+        <div class="lead-update-title">Floor Builds Needing Updates</div>
+        <div class="lead-update-sub">This shows your active team builds on the floor and whether they already received an update on ${escHtml(todayLabel)}.</div>
+      </div>
+    </div>
+    <div class="lead-update-grid">${rows}</div>
+  </div>`;
+}
+
 function renderBuildUpdates() {
   const content  = document.getElementById("updates-content");
+  if (_updatesMode === "lead_queue") {
+    const leadHtml = renderLeadBuildUpdatePanel();
+    content.innerHTML = leadHtml || `<div class="empty-state" style="padding:40px 0">No active builds need lead follow-up right now.</div>`;
+    return;
+  }
   const query    = (document.getElementById("updates-search")?.value || "").toLowerCase().trim();
   const filter   = _buildUpdateFilter;
 
@@ -10973,9 +11766,20 @@ try {
   /* Pre-load build updates in background for splash screen */
   sbFetch("build_updates?order=created_at.desc&limit=100",{method:"GET",headers:{"Prefer":"return=representation"}}).then(d=>{ if(d) _allBuildUpdates=d; }).catch(()=>{});
 } catch(e) { localStorage.removeItem("pt_user"); }
+applyAppSettingLabels();
 updateBottomNav(document.querySelector(".screen.active")?.id || "screen-gate");
 handleInitialHashRoute();
 window.addEventListener("hashchange", handleInitialHashRoute);
+let _appResizeTimer = null;
+window.addEventListener("resize", () => {
+  clearTimeout(_appResizeTimer);
+  _appResizeTimer = setTimeout(() => {
+    applyAdminDesktopMode();
+    if (document.getElementById("screen-admin")?.classList.contains("active") && window._adminItems) {
+      loadAdminData();
+    }
+  }, 120);
+});
 </script>
 
 <!-- PETE KITTED PICK LISTS SCREEN -->
@@ -10986,7 +11790,7 @@ window.addEventListener("hashchange", handleInitialHashRoute);
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>
       </button>
       <div>
-        <div class="hname">Kitted Pick Lists</div>
+        <div class="hname" id="settings-dynamic-kitted-title">Kitted Pick Lists</div>
         <div class="hdate">Open after kitting, sorted by kitted date</div>
       </div>
     </div>
@@ -11018,7 +11822,7 @@ window.addEventListener("hashchange", handleInitialHashRoute);
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>
       </button>
       <div>
-        <div class="hname">Pick Lists</div>
+        <div class="hname" id="settings-dynamic-picklists-title">Pick Lists</div>
         <div class="hdate" id="pl-header-sub">All Pick Lists</div>
       </div>
     </div>
@@ -11049,7 +11853,7 @@ window.addEventListener("hashchange", handleInitialHashRoute);
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>
       </button>
       <div>
-        <div class="hname">Build Updates</div>
+        <div class="hname" id="settings-dynamic-updates-title">Build Updates</div>
         <div class="hdate" id="updates-date"></div>
       </div>
     </div>
@@ -11061,7 +11865,7 @@ window.addEventListener("hashchange", handleInitialHashRoute);
   </div>
   <div class="main-content" style="padding-top:0">
     <!-- Search bar -->
-    <div style="padding:12px 0 8px;position:sticky;top:0;background:var(--bg);z-index:10">
+    <div id="updates-tools-wrap" style="padding:12px 0 8px;position:sticky;top:0;background:var(--bg);z-index:10">
       <div style="position:relative">
         <svg style="position:absolute;left:11px;top:50%;transform:translateY(-50%);pointer-events:none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
         <input id="updates-search" type="text" placeholder="Search by customer or project…"
@@ -11160,6 +11964,19 @@ window.addEventListener("hashchange", handleInitialHashRoute);
       </div>
     </div>
 
+    <div id="settings-app-controls-section">
+      <div class="settings-section-label">App Controls</div>
+      <div style="background:var(--surface);border-radius:12px;border:1px solid var(--border);overflow:hidden;margin-top:6px;display:flex;flex-direction:column;">
+        <button class="srow" onclick="openAppControls()">
+          <div class="srow-icon" style="background:rgba(16,185,129,0.15);color:#10b981;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+          </div>
+          <span class="srow-label">Operations Controls</span>
+          <svg class="srow-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+      </div>
+    </div>
+
     <!-- Account -->
     <div id="settings-account-section">
       <div class="settings-section-label">Account</div>
@@ -11236,6 +12053,39 @@ window.addEventListener("hashchange", handleInitialHashRoute);
   </div>
 </div>
 
+<div id="modal-app-controls" class="settings-modal" style="display:none;align-items:flex-start;overflow-y:auto;padding:18px">
+  <div class="settings-modal-box" style="max-width:520px;align-items:stretch;max-height:min(88vh,760px);overflow-y:auto;padding:20px 18px 18px;width:100%;margin:auto">
+    <div class="settings-modal-title">Operations Controls</div>
+    <div class="settings-modal-sub">This is for real shop controls you may actually need to change later without asking for a code edit.</div>
+
+    <div style="display:flex;flex-direction:column;gap:12px;width:100%">
+      <div>
+        <div class="settings-section-label" style="padding-bottom:6px">Shared Login</div>
+        <input id="app-setting-gate-user" class="auth-input" placeholder="Shared username" style="margin-bottom:8px">
+        <input id="app-setting-gate-pass" class="auth-input" placeholder="Shared password">
+      </div>
+
+      <div>
+        <div class="settings-section-label" style="padding-bottom:6px">Lead Assignments</div>
+        <input id="app-setting-ms-lead" class="auth-input" placeholder="MS lead name" style="margin-bottom:8px">
+        <input id="app-setting-chassis-lead" class="auth-input" placeholder="Chassis lead name">
+      </div>
+
+      <div>
+        <div class="settings-section-label" style="padding-bottom:6px">Inventory Request Contacts</div>
+        <input id="app-setting-contact-1" class="auth-input" placeholder="Primary contact" style="margin-bottom:8px">
+        <input id="app-setting-contact-2" class="auth-input" placeholder="Secondary contact">
+      </div>
+    </div>
+
+    <div class="pin-error" id="app-controls-error" style="margin-top:10px"></div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;position:sticky;bottom:-18px;background:linear-gradient(180deg, rgba(18,18,18,0) 0%, var(--surface) 18%);padding-top:10px">
+      <button class="btn-primary" onclick="saveAppControls()">Save Controls</button>
+      <button class="auth-back-btn" onclick="closeModal('modal-app-controls')" style="margin-top:0">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <nav class="bottom-nav" id="bottom-nav" aria-label="Quick navigation" style="display:none">
   <button class="bottom-nav-btn" id="bn-home" onclick="bottomNavHome()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
@@ -11243,15 +12093,18 @@ window.addEventListener("hashchange", handleInitialHashRoute);
   </button>
   <button class="bottom-nav-btn" id="bn-queue" onclick="bottomNavQueue()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
-    Queue
+    <span id="settings-dynamic-queue-tab">Queue</span>
   </button>
   <button class="bottom-nav-btn" id="bn-history" onclick="bottomNavHistory()">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-    Messages
+    <span class="bottom-nav-icon-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      <span class="bottom-nav-badge" id="bn-history-badge"></span>
+    </span>
+    <span id="settings-dynamic-messages-tab">Messages</span>
   </button>
   <button class="bottom-nav-btn" id="bn-updates" onclick="showBuildUpdates()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
-    Updates
+    <span id="settings-dynamic-updates-tab">Updates</span>
   </button>
   <button class="bottom-nav-btn" id="bn-settings" onclick="openContextSettings()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33"/></svg>
