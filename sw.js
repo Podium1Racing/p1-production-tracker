@@ -1,3 +1,25 @@
+const PUSH_USER_CACHE = "pt-push-meta";
+const PUSH_USER_KEY = "/__push_user__";
+
+async function setStoredPushUser(userName) {
+  const cache = await caches.open(PUSH_USER_CACHE);
+  await cache.put(PUSH_USER_KEY, new Response(JSON.stringify({ userName: String(userName || "") }), {
+    headers: { "Content-Type": "application/json" },
+  }));
+}
+
+async function getStoredPushUser() {
+  try {
+    const cache = await caches.open(PUSH_USER_CACHE);
+    const res = await cache.match(PUSH_USER_KEY);
+    if (!res) return "";
+    const data = await res.json();
+    return String(data?.userName || "");
+  } catch (_) {
+    return "";
+  }
+}
+
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
 });
@@ -6,9 +28,10 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());
 });
 
-async function fetchLatestMessage() {
+async function fetchLatestAlert(userName) {
   try {
-    const r = await fetch("/api/push?action=latest-message", { cache: "no-store" });
+    if (!userName) return null;
+    const r = await fetch(`/api/push?action=latest-alert&userName=${encodeURIComponent(userName)}`, { cache: "no-store" });
     if (!r.ok) return null;
     const data = await r.json();
     return data?.latest || null;
@@ -19,18 +42,19 @@ async function fetchLatestMessage() {
 
 self.addEventListener("push", (event) => {
   event.waitUntil((async () => {
-    const latest = await fetchLatestMessage();
-    const title = latest?.user_name ? `${latest.user_name} sent a message` : "New team message";
-    const body = latest?.message
-      ? String(latest.message).slice(0, 120)
-      : "Open Podium 1 Production Tracker to read it.";
+    const userName = await getStoredPushUser();
+    const latest = await fetchLatestAlert(userName);
+    const title = latest?.title || "Podium 1 alert";
+    const body = latest?.body
+      ? String(latest.body).slice(0, 160)
+      : "Open Podium 1 Production Tracker to review it.";
     if (self.registration?.showNotification) {
       await self.registration.showNotification(title, {
         body,
-        tag: "team-message",
+        tag: latest?.tag || "pt-alert",
         badge: "/assets/podium1-login-loading.png",
         icon: "/assets/podium1-login-loading.png",
-        data: { url: "/#messages" },
+        data: { url: latest?.url || "/#messages" },
       });
     }
     if (self.navigator && "setAppBadge" in self.navigator) {
@@ -55,6 +79,14 @@ self.addEventListener("notificationclick", (event) => {
 });
 
 self.addEventListener("message", (event) => {
+  if (event.data?.type === "SET_PUSH_USER") {
+    event.waitUntil?.(setStoredPushUser(event.data?.userName || ""));
+    return;
+  }
+  if (event.data?.type === "CLEAR_PUSH_USER") {
+    event.waitUntil?.(setStoredPushUser(""));
+    return;
+  }
   if (event.data?.type === "CLEAR_BADGE" && self.navigator && "clearAppBadge" in self.navigator) {
     event.waitUntil?.((async () => {
       try { await self.navigator.clearAppBadge(); } catch (_) {}
