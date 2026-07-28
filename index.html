@@ -294,6 +294,19 @@ button, input, select, textarea { font-family:inherit; }
 .pick-list-btn .pl-mini-pill.fully_kitted { background:rgba(16,185,129,0.15); color:#10b981; }
 .pick-list-btn.centered { justify-content:center; }
 .pick-list-btn.centered .pl-mini-pill { margin-left:8px; }
+.pick-list-btn.active { background:rgba(224,32,32,0.08); border-color:rgba(224,32,32,0.28); color:#fff; }
+.kit-inline-panel { margin:0 14px 12px; background:var(--surface2); border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:12px; }
+.kit-inline-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:10px; }
+.kit-inline-title { font-size:13px; font-weight:800; line-height:1.25; }
+.kit-inline-sub { font-size:11px; color:var(--muted); margin-top:3px; }
+.kit-inline-close { width:34px; height:34px; border:none; border-radius:10px; background:rgba(255,255,255,0.04); color:var(--muted2); font-size:18px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.kit-inline-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px; }
+.kit-inline-action-btn { min-height:42px; border-radius:10px; padding:10px 12px; font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; cursor:pointer; }
+.kit-inline-list { display:flex; flex-direction:column; border-top:1px solid rgba(255,255,255,0.05); margin-bottom:10px; }
+.kit-inline-row { display:flex; align-items:flex-start; gap:10px; padding:11px 0; border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer; }
+.kit-inline-row .pl-checkbox { width:24px; height:24px; border-radius:6px; margin-top:0; }
+.kit-inline-row .pl-more-info-btn { padding:6px 10px; font-size:10px; min-height:30px; }
+.kit-inline-submit-btn { width:100%; min-height:44px; background:var(--green); border:none; border-radius:10px; padding:12px; font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:#fff; cursor:pointer; }
 
 /* Build Updates screen */
 .update-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); margin-bottom:12px; overflow:hidden; }
@@ -359,7 +372,7 @@ button, input, select, textarea { font-family:inherit; }
 .pill-green  { background:rgba(16,185,129,0.15); color:#6ee7b7; }
 .pill-purple { background:rgba(139,92,246,0.15); color:#c4b5fd; }
 .pill-white-glove { background:rgba(255,255,255,0.1); color:#f1f5f9; border:1px solid rgba(255,255,255,0.2); }
-.ship-date-row { display:flex; align-items:center; gap:6px; margin-bottom:8px; }
+.ship-date-row { display:flex; align-items:center; justify-content:flex-start; gap:6px; margin-bottom:8px; }
 .ship-date-val { font-size:13px; font-weight:700; }
 .ship-date-val.overdue { color:var(--red); } .ship-date-val.soon { color:var(--yellow); } .ship-date-val.ok { color:var(--green); } .ship-date-val.no-date { color:var(--muted2); }
 .days-away { font-size:10px; color:var(--muted); }
@@ -440,12 +453,16 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:22px; h
 .kit-content { flex:1; padding:14px; overflow-y:auto; padding-bottom:36px; }
 .kit-card { background:var(--surface); border:1px solid var(--border); border-left:3px solid rgba(249,115,22,0.4); border-radius:var(--radius); margin-bottom:11px; overflow:hidden; transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
 .kit-card-partial { border-left-color:rgba(139,92,246,0.6); }
-.kit-card-top { padding:13px 14px 12px; display:flex; gap:11px; align-items:flex-start; }
-.kit-rank-col { flex-shrink:0; padding-top:2px; }
-.kit-body { flex:1; min-width:0; }
-.kit-customer { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--muted2); margin-bottom:2px; }
-.kit-name { font-size:15px; font-weight:700; margin-bottom:5px; line-height:1.3; }
-.kit-meta { display:flex; gap:5px; flex-wrap:wrap; margin-bottom:8px; }
+.kit-card-top { padding:13px 14px 12px; position:relative; }
+.kit-body { width:100%; min-width:0; }
+.kit-rank-chip { position:absolute; top:12px; right:12px; z-index:1; }
+.kit-head-copy { padding-right:40px; margin-bottom:6px; }
+.kit-topline { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:3px; }
+.kit-customer { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--muted2); margin:0; }
+.kit-mainline { display:flex; align-items:baseline; flex-wrap:wrap; gap:8px; }
+.kit-name { font-size:15px; font-weight:700; margin:0; line-height:1.3; }
+.kit-wo-inline { font-size:12px; font-weight:800; color:#f97316; letter-spacing:.02em; white-space:nowrap; }
+.kit-meta { display:flex; gap:5px; flex-wrap:wrap; margin-bottom:8px; justify-content:flex-start; }
 .kit-checklist { border-top:1px solid var(--border); padding:0 14px; display:flex; flex-direction:column; gap:6px; overflow:hidden; max-height:0; transition:max-height .3s ease, padding .3s ease; }
 .kit-checklist.open { max-height:2000px; padding:11px 14px; }
 .kit-checklist-toggle { border-top:1px solid var(--border); padding:11px 14px; display:flex; align-items:center; justify-content:space-between; cursor:pointer; user-select:none; }
@@ -1854,10 +1871,14 @@ async function sbGetTimerHistory(limit = 1000) {
 /* ── Admin: read kit completions ────────────────────────────── */
 async function sbGetKitCompletions(sinceDateStr) {
   const filter = sinceDateStr ? `&date_str=gte.${sinceDateStr}` : "";
-  return await sbFetch(`kit_completions?order=completed_at.desc${filter}`, {
+  const rows = await sbFetch(`kit_completions?order=completed_at.desc${filter}`, {
     method: "GET",
     headers: { "Prefer": "return=representation" },
   }) || [];
+  try {
+    await hydrateKitHistoryBoardItems(rows, getKnownBoardItems());
+  } catch (_) {}
+  return rows;
 }
 
 /* ── Real-time subscription for admin view ──────────────────── */
@@ -2643,7 +2664,7 @@ const pctColor = p => p>=100?"#10b981":p>=60?"#6366f1":p>=30?"#f59e0b":"#ef4444"
 const pctCls   = p => p>=100?"g":p>=30?"y":"r";
 const avgArr   = a => a.length?Math.round(a.reduce((x,y)=>x+y,0)/a.length):0;
 function parsePct(t) { const n=parseFloat(t); return isNaN(n)?0:Math.min(100,Math.max(0,n)); }
-function cv(item,colId) { return item.column_values?.find(c=>c.id===colId)||null; }
+function cv(item,colId) { return item?.column_values?.find(c=>c.id===colId)||null; }
 function cvText(item,colId) { return cv(item,colId)?.text||""; }
 
 function parsePeople(item,colId) {
@@ -3362,18 +3383,101 @@ async function saveInitialKitReferencePhoto(plId, photo, takenBy = "") {
 function renderInitialKitReferencePhoto(pl) {
   const src = updatePhotoSrc(pl?.initial_kit_photo_base64, pl?.initial_kit_photo_mime);
   if (!src) return "";
+  const canRetake = currentUser?.role === KIT_ROLE || currentUser?.role === "admin";
   const photoMeta = [
     pl?.initial_kit_photo_taken_at ? `Taken ${fmtTs(pl.initial_kit_photo_taken_at)}` : "",
     pl?.initial_kit_photo_by ? `by ${pl.initial_kit_photo_by}` : "",
   ].filter(Boolean).join(" · ");
   return `<div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:var(--radius-xs);padding:10px;margin-bottom:10px">
-    <div style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2);margin-bottom:7px">Initial Kit Reference Photo</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px">
+      <div style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2)">Initial Kit Reference Photo</div>
+      ${canRetake ? `<button type="button" onclick="openInitialKitPhotoRetake('${jsArg(pl.id)}',event)"
+        style="background:none;border:none;color:var(--muted);font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;text-decoration:underline;cursor:pointer;padding:0;flex-shrink:0">
+        Retake
+      </button>` : ""}
+    </div>
     <img src="${src}" alt="Initial kit reference" loading="lazy"
       onclick="openLightbox('${jsArg(src)}','${jsArg((pl.customer_name || pl.wo_number || 'Pick List') + ' — Initial Kit Reference')}')"
       style="width:100%;max-height:220px;object-fit:cover;border-radius:10px;border:1px solid var(--border);display:block;cursor:pointer">
     <div style="font-size:10px;color:var(--muted);margin-top:7px;line-height:1.35">${photoMeta ? escHtml(photoMeta) : "Tap to enlarge"}</div>
   </div>`;
 }
+
+function closeInitialKitPhotoRetake() {
+  document.getElementById("pl-photo-retake-modal")?.remove();
+}
+
+function openInitialKitPhotoRetake(plId, e) {
+  if (e) {
+    e.stopPropagation();
+    e.preventDefault();
+  }
+  closeInitialKitPhotoRetake();
+  retakeKitPhoto("pl-retake-" + plId);
+  const pl = (_plAllPicklists || []).find(row => String(row.id) === String(plId)) || {};
+  const label = pl.customer_name && pl.customer_name !== pl.wo_number
+    ? `${pl.customer_name} · ${pl.wo_number || ""}`.trim().replace(/\s+·\s*$/, "")
+    : (pl.wo_number || "Pick List");
+  const modal = document.createElement("div");
+  modal.id = "pl-photo-retake-modal";
+  modal.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.84);z-index:1005;display:flex;align-items:flex-end;justify-content:center;padding:0";
+  modal.innerHTML = `
+    <div style="background:var(--surface);border-top:1px solid var(--border);border-radius:var(--radius) var(--radius) 0 0;padding:22px 18px calc(28px + env(safe-area-inset-bottom));width:100%;max-width:480px">
+      <div style="font-size:16px;font-weight:800;margin-bottom:4px">Retake Initial Kit Photo</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.45;margin-bottom:14px">
+        Replace Pete’s original kit photo for ${escHtml(label)}.
+      </div>
+      ${buildKitPhotoCaptureHtml("pl-retake-" + plId, "Initial Kit Reference Photo", true)}
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button type="button" onclick="closeInitialKitPhotoRetake()"
+          style="flex:1;background:none;border:1px solid var(--border2);border-radius:var(--radius-xs);padding:13px;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);cursor:pointer">
+          Cancel
+        </button>
+        <button type="button" id="pl-photo-retake-save" onclick="saveRetakenInitialKitPhoto('${jsArg(plId)}',event)"
+          style="flex:1.4;background:var(--accent);border:none;border-radius:var(--radius-xs);padding:13px;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#fff;cursor:pointer">
+          Save New Photo
+        </button>
+      </div>
+    </div>`;
+  modal.addEventListener("click", ev => { if (ev.target === modal) closeInitialKitPhotoRetake(); });
+  document.body.appendChild(modal);
+}
+
+async function saveRetakenInitialKitPhoto(plId, e) {
+  if (e) {
+    e.stopPropagation();
+    e.preventDefault();
+  }
+  const btn = document.getElementById("pl-photo-retake-save");
+  const photo = requireKitPhoto("pl-retake-" + plId);
+  if (!photo) return;
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Saving…";
+  }
+  try {
+    await saveInitialKitReferencePhoto(plId, photo, currentUser?.name || "");
+    const refreshed = await sbFetch(`picklists?id=eq.${encodeURIComponent(plId)}&select=*`, {
+      method: "GET", headers: { "Prefer": "return=representation" }
+    }) || [];
+    if (refreshed[0]) {
+      _plAllPicklists = (_plAllPicklists || []).map(pl =>
+        String(pl.id) === String(plId) ? { ...pl, ...refreshed[0] } : pl
+      );
+    }
+    retakeKitPhoto("pl-retake-" + plId);
+    closeInitialKitPhotoRetake();
+    renderPickLists();
+    showToast("Initial kit photo updated.", "ok");
+  } catch (err) {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "Try Again";
+    }
+    showToast("Could not save the new photo.", "err");
+  }
+}
+
 function openContextSettings() {
   if (currentUser) openSettings();
   else openLoginSettings();
@@ -4564,13 +4668,9 @@ function renderProjectCard(item,listEl,isMS) {
   const sliderIcon=isMS
     ?`<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>`
     :`<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>`;
-  const updateBtnHtml = (!isPrimaryDashItem && !isBuildPaused(item, colType) && !isBuildStuck(item, colType)) ? `<button class="update-pct-btn" onclick="openUpdateSheet('${item.id}','${colType}',event)">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          Update %
-        </button>` : ``;
   const pickListBtnHtml = buildPickListBtn(item, true);
   const resolveBtnHtml = isBuildStuck(item, colType) ? buildResolveStuckBtn(item, colType) : "";
-  const actionRowHtml = (updateBtnHtml || resolveBtnHtml || pickListBtnHtml) ? `<div class="proj-action-row">${resolveBtnHtml || updateBtnHtml}${pickListBtnHtml}</div>` : ``;
+  const actionRowHtml = (resolveBtnHtml || pickListBtnHtml) ? `<div class="proj-action-row">${resolveBtnHtml}${pickListBtnHtml}</div>` : ``;
 
   const card=document.createElement("div"); card.className="proj-card";
   card.innerHTML=`
@@ -5807,7 +5907,7 @@ applyTheme(loadTheme());
 /* ── Drawer ─────────────────────────────────────────────────── */
 function openLoginSettings() {
   /* Login screen — show only appearance */
-  ["settings-team-section","settings-add-member","settings-manage-members","settings-reset-pin",
+  ["settings-team-section","settings-manage-team","settings-add-member","settings-manage-members","settings-reset-pin",
    "change-pin-section","settings-account-section","settings-app-controls-section"].forEach(id=>{
     const el = document.getElementById(id); if(el) el.style.display = "none";
   });
@@ -5827,7 +5927,7 @@ function openSettings() {
   });
   /* Show/hide admin-only rows */
   const isAdmin = currentUser?.role === "admin";
-  ["settings-team-section","settings-add-member","settings-manage-members","settings-reset-pin","settings-app-controls-section"].forEach(id=>{
+  ["settings-team-section","settings-manage-team","settings-add-member","settings-manage-members","settings-reset-pin","settings-app-controls-section"].forEach(id=>{
     const el = document.getElementById(id);
     if (el) el.style.display = isAdmin ? "" : "none";
   });
@@ -6061,17 +6161,13 @@ function persistMemberRole(name, role) {
 }
 
 function openAddMember() {
-  document.getElementById("add-member-name").value  = "";
-  document.getElementById("add-member-error").textContent = "";
-  document.getElementById("add-member-role").value  = "ms";
-  closeSettings();
-  document.getElementById("modal-add-member").style.display = "flex";
+  openManageMembers(true);
 }
 
 async function doAddMember() {
-  const name = document.getElementById("add-member-name").value.trim();
-  const role = document.getElementById("add-member-role").value;
-  const err  = document.getElementById("add-member-error");
+  const name = document.getElementById("manage-member-name")?.value.trim() || "";
+  const role = document.getElementById("manage-member-role")?.value || "ms";
+  const err  = document.getElementById("manage-member-error");
   if (name.length < 2) { err.textContent = "Enter a full name."; return; }
   if (TEAM.find(m=>m.name.toLowerCase()===name.toLowerCase())) {
     err.textContent = "That name is already on the team."; return;
@@ -6081,8 +6177,8 @@ async function doAddMember() {
   const extras = loadExtraMembers(); extras.push(member); saveExtraMembers(extras);
   await saveTeamMemberToSupabase(member).catch(()=>{});
   buildNameList();
-  closeModal("modal-add-member");
-  alert(`${name} added! They can set their PIN on first login.`);
+  openManageMembers();
+  showToast(`${name} added to the team.`, "ok");
 }
 
 /* ═══════════════════════════════════════
@@ -7094,10 +7190,34 @@ async function openAdminAllocationReview(itemId, woNum, e) {
   await openAllocationReviewByWo(woNum, "Admin Allocation Review");
 }
 
-function openManageMembers() {
+async function openManageMembers(focusAdd = false) {
   const list = document.getElementById("manage-members-list");
+  const inactive = document.getElementById("manage-members-inactive");
+  const err = document.getElementById("manage-member-error");
+  const nameInput = document.getElementById("manage-member-name");
+  const roleInput = document.getElementById("manage-member-role");
+  if (err) err.textContent = "";
+  if (nameInput) nameInput.value = "";
+  if (roleInput) roleInput.value = "ms";
   list.innerHTML = "";
-  TEAM.forEach(m=>{
+  if (inactive) inactive.innerHTML = "";
+  let rows = [];
+  try {
+    rows = await sbFetch("team_members?select=name,initials,color,role,active,is_custom&order=active.desc,name.asc", {
+      method: "GET",
+      headers: { "Prefer": "return=representation" },
+    }) || [];
+  } catch (_) {}
+  const activeMembers = rows.filter(r => r && r.active !== false).length
+    ? rows.filter(r => r && r.active !== false).map((r, idx) => ({
+        name: r.name,
+        initials: r.initials || nameToInitials(r.name),
+        color: r.color || ACCENT_COLORS[idx % ACCENT_COLORS.length],
+        role: [MS_ROLE, CHASSIS_ROLE, KIT_ROLE, FLOAT_ROLE].includes(r.role) ? r.role : MS_ROLE,
+        _custom: r.is_custom !== false,
+      }))
+    : TEAM.slice();
+  activeMembers.forEach(m=>{
     const row = document.createElement("div");
     row.style.cssText = "display:flex;align-items:flex-start;gap:10px;padding:12px;background:var(--card);border-radius:12px;border:1px solid var(--border)";
     const floaterNote = m.role === FLOAT_ROLE
@@ -7124,8 +7244,30 @@ function openManageMembers() {
       `;
     list.appendChild(row);
   });
+  if (!activeMembers.length) {
+    list.innerHTML = `<div style="padding:14px;border:1px dashed var(--border2);border-radius:12px;color:var(--muted);font-size:12px;text-align:center">No active team members yet.</div>`;
+  }
+  const inactiveRows = rows.filter(r => r && r.active === false);
+  if (inactive) {
+    inactive.innerHTML = inactiveRows.length
+      ? inactiveRows.map((m, idx) => {
+          const color = m.color || ACCENT_COLORS[idx % ACCENT_COLORS.length];
+          const initials = m.initials || nameToInitials(m.name);
+          const role = [MS_ROLE, CHASSIS_ROLE, KIT_ROLE, FLOAT_ROLE].includes(m.role) ? m.role : MS_ROLE;
+          return `<div style="display:flex;align-items:center;gap:10px;padding:11px 12px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:12px">
+            <div class="av" style="background:${color}25;color:${color};width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0">${initials}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:700">${escHtml(m.name)}</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:2px">${escHtml(roleLabel(role))} · Inactive</div>
+            </div>
+            <button class="member-remove-btn" style="color:var(--green);border-color:rgba(16,185,129,.28)" onclick="reactivateMember('${m.name.replace(/'/g,"\\'")}','${role}')">Reactivate</button>
+          </div>`;
+        }).join("")
+      : `<div style="font-size:12px;color:var(--muted);padding:2px 0 0">No inactive team members.</div>`;
+  }
   closeSettings();
   document.getElementById("modal-manage-members").style.display = "flex";
+  if (focusAdd && nameInput) setTimeout(() => nameInput.focus(), 60);
 }
 
 function updateMemberRole(name, role) {
@@ -7155,6 +7297,37 @@ function removeMember(name) {
   deletePinFromSupabase(name).catch(()=>{});
   buildNameList();
   openManageMembers();
+}
+
+async function reactivateMember(name, role = MS_ROLE) {
+  const rows = await sbFetch(`team_members?name=eq.${encodeURIComponent(name)}&select=name,initials,color,role,active,is_custom`, {
+    method: "GET",
+    headers: { "Prefer": "return=representation" },
+  }).catch(()=>[]) || [];
+  const row = rows[0];
+  if (!row) { showToast("Could not find that team member.", "err"); return; }
+  const member = {
+    name: row.name,
+    initials: row.initials || nameToInitials(row.name),
+    color: row.color || autoColor(),
+    role,
+    _custom: row.is_custom !== false,
+  };
+  if (!TEAM.find(m => m.name === member.name)) TEAM.push(member);
+  await sbFetch(`team_members?name=eq.${encodeURIComponent(name)}`, {
+    method: "PATCH",
+    prefer: "return=minimal",
+    body: JSON.stringify({ active: true, role, updated_at: new Date().toISOString() }),
+  }).catch(()=>{});
+  saveHiddenMembers(loadHiddenMembers().filter(n => n !== name));
+  if (member._custom) {
+    const extras = loadExtraMembers();
+    if (!extras.find(m => m.name === name)) extras.push(member);
+    saveExtraMembers(extras);
+  }
+  buildNameList();
+  openManageMembers();
+  showToast(`${name} reactivated.`, "ok");
 }
 
 /* ── Reset Member PIN ───────────────────────────────────────── */
@@ -8647,10 +8820,20 @@ function getWoNumberFromItem(item) {
 }
 
 function findKnownBoardItemByWo(woNum) {
-  return getKnownBoardItems().find(i => {
+  const targetWo = String(woNum || "").trim().toUpperCase();
+  if (!targetWo) return null;
+
+  const liveMatch = getKnownBoardItems().find(i => {
     const raw = COL.work_order_num ? (cvText(i, COL.work_order_num) || "") : "";
-    return getWoFromText(raw) === woNum;
+    return getWoFromText(raw) === targetWo;
   });
+  if (liveMatch) return liveMatch;
+
+  const historyRows = Object.values(window._kitHistoryItemById || {});
+  return historyRows.find(i => {
+    const raw = COL.work_order_num ? (cvText(i, COL.work_order_num) || "") : "";
+    return getWoFromText(raw) === targetWo;
+  }) || null;
 }
 
 function getNeedKittedSide(item) {
@@ -8763,13 +8946,19 @@ function renderKitScreen(items) {
     const safePickUrl = pickLink ? escHtml(pickLink.url) : "";
     card.innerHTML = `
       <div class="kit-card-top">
-        <div class="kit-rank-col">${rankBadge(item, rank)}</div>
+        <div class="kit-rank-chip">${rankBadge(item, rank)}</div>
         <div class="kit-body">
           ${partialBanner}
-          ${safeProject ? `<div class="kit-customer">${safeProject}</div>` : ""}
-          <div class="kit-name">${safeName}</div>
+          <div class="kit-head-copy">
+            <div class="kit-topline">
+              ${safeProject ? `<div class="kit-customer">${safeProject}</div>` : `<div></div>`}
+            </div>
+            <div class="kit-mainline">
+              <div class="kit-name">${safeName}</div>
+              ${safeWo ? `<div class="kit-wo-inline">${safeWo}</div>` : `<div class="kit-wo-inline" id="wo-badge-${item.id}" style="display:none"></div>`}
+            </div>
+          </div>
           <div class="kit-meta">
-            ${safeWo ? `<span class="meta-pill" style="background:rgba(249,115,22,0.15);color:#f97316;font-weight:800">${safeWo}</span>` : `<span class="meta-pill" id="wo-badge-${item.id}" style="display:none;background:rgba(249,115,22,0.15);color:#f97316;font-weight:800"></span>`}
             ${safeTurnkey ? `<span class="meta-pill pill-blue">${safeTurnkey}</span>` : ""}
             ${safeSize ? `<span class="meta-pill" style="background:rgba(20,184,166,0.15);color:#5eead4">${safeSize}"</span>` : ""}
             ${firmPill}${wgPill}${motionPill}
@@ -8786,6 +8975,7 @@ function renderKitScreen(items) {
           </button>` : ""}
         </div>
       </div>
+      ${safeWo ? `<div id="kit-inline-pl-${item.id}" style="display:none"></div>` : ""}
 `;
     content.appendChild(card);
 
@@ -9021,18 +9211,6 @@ async function triggerPickListChangeNotifications(woNum, newItemCount, mondayIte
   }).catch(() => {});
 }
 
-/* Items that require a second builder confirmation checkbox */
-function isBuilderGrabItem(label) {
-  const l = (label || "").toLowerCase();
-  /* PC: must contain 5060, 5070, 5080, or 5090 followed by "pc" */
-  const isPC = /50[6-9]0\s*pc/.test(l);
-  /* Monitor: 32", 45", or 55" */
-  const isMonitor = l.includes('32"') || l.includes('45"') || l.includes('55"');
-  /* Seat: contains "seat" but NOT "seat slider" or "seat bracket" */
-  const isSeat = l.includes("seat") && !l.includes("seat slider") && !l.includes("seat bracket");
-  return isPC || isMonitor || isSeat;
-}
-
 function isServiceItem(it) {
   const n = (it.item_name || "").toLowerCase();
   return SERVICE_KEYWORDS_PL.some(kw => n.includes(kw));
@@ -9076,12 +9254,47 @@ function pickListOrderLabelKey(it) {
   return `${label}|${qty}`;
 }
 
+function getWorkOrderLookupCandidates(woNum) {
+  const base = String(woNum || "").trim().toUpperCase();
+  if (!base) return [];
+  const candidates = new Set([base]);
+  const digitsOnly = base.replace(/\D/g, "");
+  if (!digitsOnly) return [...candidates];
+
+  const trimmedDigits = String(parseInt(digitsOnly, 10) || 0);
+  const padded4 = digitsOnly.padStart(4, "0");
+  const padded5 = digitsOnly.padStart(5, "0");
+
+  candidates.add(digitsOnly);
+  if (trimmedDigits !== "0") candidates.add(trimmedDigits);
+  candidates.add(`WO${padded4}`);
+  candidates.add(`W${padded5}`);
+  candidates.add(`WO${digitsOnly}`);
+  candidates.add(`W${digitsOnly}`);
+  return [...candidates].filter(Boolean);
+}
+
+async function fetchP1PickListForWorkOrder(woNum) {
+  const candidates = getWorkOrderLookupCandidates(woNum);
+  let lastData = null;
+  for (const candidate of candidates) {
+    try {
+      const data = await p1Api(`/picklist?wo=${encodeURIComponent(candidate)}`);
+      if (Array.isArray(data?.items) && data.items.length) {
+        return { data, matchedWo: candidate };
+      }
+      if (!lastData) lastData = data || null;
+    } catch (_) {}
+  }
+  return { data: lastData, matchedWo: candidates[0] || String(woNum || "").trim().toUpperCase() };
+}
+
 async function getWorkOrderItemOrder(woNum) {
   if (!woNum) return [];
   const cached = PICKLIST_ORDER_CACHE[woNum];
   if (Array.isArray(cached) && cached.length) return cached;
   try {
-    const data = await p1Api(`/picklist?wo=${encodeURIComponent(woNum)}`);
+    const { data } = await fetchP1PickListForWorkOrder(woNum);
     const ordered = (data?.items || [])
       .filter(it => !isServiceItem(it))
       .map(it => ({
@@ -10097,10 +10310,223 @@ let _plCallerScreen  = "screen-dash"; /* for back button */
 let _plCurrentWo     = null;    /* WO number when opened from a card */
 let _plKittedAccessMode = false; /* Pete reviewing already-kitted open lists */
 let _plReviewOnlyMode = false; /* Admin/build review: allocation only, no kitter submit flow */
+let _plRenderSeq = 0; /* guards against stale async tab renders */
+let _plExpandedState = {}; /* overview expand/collapse state by picklist id */
+let _kitInlinePickList = { itemId: null, woNum: null, pl: null, items: [], loading: false, token: 0 }; /* Pete queue inline dropdown */
+
+function isInlineKitPickListContext() {
+  return (document.querySelector(".screen.active")?.id || "") === "screen-kit";
+}
+
+function clearInlineKitPickListContainer(itemId) {
+  const wrap = document.getElementById(`kit-inline-pl-${itemId}`);
+  if (wrap) {
+    wrap.style.display = "none";
+    wrap.innerHTML = "";
+  }
+  const btn = document.getElementById(`pl-btn-${itemId}`);
+  if (btn) btn.classList.remove("active");
+}
+
+function closeInlineKitPickList() {
+  if (_kitInlinePickList.itemId) clearInlineKitPickListContainer(_kitInlinePickList.itemId);
+  _kitInlinePickList = { itemId: null, woNum: null, pl: null, items: [], loading: false, token: 0 };
+}
+
+function renderInlineKitPickList() {
+  const itemId = _kitInlinePickList.itemId;
+  const pl = _kitInlinePickList.pl;
+  if (!itemId || !pl?.id) return;
+  const wrap = document.getElementById(`kit-inline-pl-${itemId}`);
+  if (!wrap) return;
+
+  const checklist = Array.isArray(_kitInlinePickList.items) ? _kitInlinePickList.items : [];
+  const allocatedCount = checklist.filter(it => !!it.allocated).length;
+  const missingCount = checklist.length - allocatedCount;
+  const status = derivePickListStatusFromAllocation(checklist, pl.status);
+  const statusLabel = status === "fully_kitted" ? "Fully Kitted" : status === "missing_items" ? "Missing Items" : "In Queue";
+  const statusColor = status === "fully_kitted" ? "#10b981" : status === "missing_items" ? "var(--accent)" : "#f59e0b";
+  registerPickListItemsForInfo(checklist);
+
+  wrap.style.display = "block";
+  wrap.innerHTML = `
+    <div class="kit-inline-panel">
+      <div class="kit-inline-head">
+        <div>
+          <div class="kit-inline-title">${escHtml(pl.customer_name || _kitInlinePickList.woNum || "Pick List")}</div>
+          <div class="kit-inline-sub">${escHtml(_kitInlinePickList.woNum || "")} · ${allocatedCount}/${checklist.length} allocated</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;background:${statusColor}22;color:${statusColor};padding:3px 8px;border-radius:999px">${statusLabel}</span>
+          <button type="button" class="kit-inline-close" onclick="closeInlineKitPickList();event.stopPropagation();">×</button>
+        </div>
+      </div>
+      ${checklist.length ? `
+      <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.24);border-radius:10px;padding:10px;margin-bottom:10px">
+        <div class="kit-inline-actions">
+          <button type="button" class="kit-inline-action-btn" onclick="inlineCheckAllKitPickList(event)"
+            style="background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);color:#10b981">
+            Check All
+          </button>
+          <button type="button" class="kit-inline-action-btn" onclick="inlineDeselectAllKitPickList(event)"
+            style="background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--muted)">
+            Deselect All
+          </button>
+        </div>
+        <div style="font-size:10px;color:#fbbf24;line-height:1.35;margin-top:7px;text-align:center">
+          Shortcut only — double-check every item before submitting.
+        </div>
+      </div>
+      <div class="kit-inline-list">
+        ${checklist.map(item => `
+          <div class="kit-inline-row" onclick="inlineToggleKitPickListItem('${String(item.id).replace(/\\/g, "\\\\").replace(/'/g, "\\'")}',event)">
+            <div class="pl-checkbox${item.allocated ? " checked" : ""}" style="flex-shrink:0">
+              ${item.allocated ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>` : ""}
+            </div>
+            <div style="font-size:12px;color:${item.allocated ? "var(--muted)" : "var(--text)"};text-decoration:${item.allocated ? "line-through" : "none"};line-height:1.35;flex:1">${escHtml(item.label || buildItemLabel(item))}</div>
+            ${pickListInfoButton(item.id)}
+          </div>
+        `).join("")}
+      </div>
+      <button type="button" class="kit-inline-submit-btn" onclick="submitKitFromPickList('${String(pl.id).replace(/\\/g, "\\\\").replace(/'/g, "\\'")}','${String(_kitInlinePickList.woNum || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'")}',event)">
+        ${escHtml(getAppText("picklist_submit_label", "Submit Kit → Move to Parts Pulled"))}
+      </button>` : `
+      <div style="font-size:12px;color:var(--muted);padding:10px 0 2px">No checklist items found yet.</div>`}
+    </div>`;
+
+  const btn = document.getElementById(`pl-btn-${itemId}`);
+  if (btn) btn.classList.add("active");
+}
+
+async function loadInlineKitPickList(itemId, woNum, token) {
+  const wrap = document.getElementById(`kit-inline-pl-${itemId}`);
+  if (wrap) {
+    wrap.style.display = "block";
+    wrap.innerHTML = `<div class="loading-state" style="padding:12px 0"><div class="spinner"></div>Loading pick list…</div>`;
+  }
+
+  await ensurePickList(woNum);
+  await syncPickListStatusFromMonday(woNum);
+  await syncPickListItems(woNum);
+
+  const plRows = await sbFetch(`picklists?wo_number=eq.${encodeURIComponent(woNum)}&order=updated_at.desc&limit=1`, {
+    method: "GET", headers: { "Prefer": "return=representation" }
+  }) || [];
+  const pl = plRows[0];
+  if (!pl?.id) throw new Error("No pick list found for this work order.");
+  const items = await loadResolvedPickListItems(pl.id, woNum);
+  if (_kitInlinePickList.token !== token || _kitInlinePickList.itemId !== itemId) return;
+  _kitInlinePickList = { itemId, woNum, pl, items, loading: false, token };
+  renderInlineKitPickList();
+}
+
+async function toggleInlineKitPickList(itemId, woNum, e) {
+  if (e) { e.stopPropagation(); e.preventDefault(); }
+  if (_kitInlinePickList.itemId === itemId && _kitInlinePickList.loading) return;
+  if (_kitInlinePickList.itemId === itemId) {
+    closeInlineKitPickList();
+    return;
+  }
+  if (_kitInlinePickList.itemId && _kitInlinePickList.itemId !== itemId) {
+    clearInlineKitPickListContainer(_kitInlinePickList.itemId);
+  }
+  const token = Date.now();
+  _kitInlinePickList = { itemId, woNum, pl: null, items: [], loading: true, token };
+  const btn = document.getElementById(`pl-btn-${itemId}`);
+  if (btn) btn.classList.add("active");
+  try {
+    await loadInlineKitPickList(itemId, woNum, token);
+  } catch (err) {
+    if (_kitInlinePickList.token !== token || _kitInlinePickList.itemId !== itemId) return;
+    const wrap = document.getElementById(`kit-inline-pl-${itemId}`);
+    if (wrap) {
+      wrap.style.display = "block";
+      wrap.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:10px 0">Could not load pick list.<br><small>${escHtml(err.message)}</small></div>`;
+    }
+    _kitInlinePickList = { itemId, woNum, pl: null, items: [], loading: false, token };
+  }
+}
+
+async function inlineToggleKitPickListItem(itemDbId, e) {
+  if (e) { e.stopPropagation(); e.preventDefault(); }
+  const pl = _kitInlinePickList.pl;
+  if (!pl?.id) return;
+  const current = (_kitInlinePickList.items || []).find(item => String(item.id) === String(itemDbId));
+  if (!current) return;
+  const nextAllocated = !current.allocated;
+
+  await sbFetch(`picklist_items?id=eq.${encodeURIComponent(itemDbId)}`, {
+    method: "PATCH",
+    prefer: "return=minimal",
+    body: JSON.stringify({ allocated: nextAllocated }),
+  });
+
+  const items = await loadLivePickListItemsNoRepair(pl.id, _kitInlinePickList.woNum).catch(() => []);
+  const allAllocated = items.length > 0 && items.every(item => item.allocated);
+  await sbFetch(`picklists?id=eq.${encodeURIComponent(pl.id)}&status=neq.complete`, {
+    method: "PATCH",
+    prefer: "return=minimal",
+    body: JSON.stringify({ status: allAllocated ? "fully_kitted" : "missing_items", updated_at: new Date().toISOString() }),
+  });
+
+  _kitInlinePickList = { ..._kitInlinePickList, items, pl: { ...pl, status: allAllocated ? "fully_kitted" : "missing_items" } };
+  renderInlineKitPickList();
+}
+
+async function inlineCheckAllKitPickList(e) {
+  if (e) { e.stopPropagation(); e.preventDefault(); }
+  const pl = _kitInlinePickList.pl;
+  const items = _kitInlinePickList.items || [];
+  if (!pl?.id || !items.length) return;
+  const remaining = items.filter(item => !item.allocated);
+  if (!remaining.length) return;
+
+  await Promise.all(remaining.map(item => sbFetch(`picklist_items?id=eq.${encodeURIComponent(item.id)}`, {
+    method: "PATCH",
+    prefer: "return=minimal",
+    body: JSON.stringify({ allocated: true }),
+  })));
+
+  const liveItems = await loadLivePickListItemsNoRepair(pl.id, _kitInlinePickList.woNum).catch(() => []);
+  await sbFetch(`picklists?id=eq.${encodeURIComponent(pl.id)}&status=neq.complete`, {
+    method: "PATCH",
+    prefer: "return=minimal",
+    body: JSON.stringify({ status: "fully_kitted", updated_at: new Date().toISOString() }),
+  });
+  _kitInlinePickList = { ..._kitInlinePickList, items: liveItems, pl: { ...pl, status: "fully_kitted" } };
+  renderInlineKitPickList();
+}
+
+async function inlineDeselectAllKitPickList(e) {
+  if (e) { e.stopPropagation(); e.preventDefault(); }
+  const pl = _kitInlinePickList.pl;
+  const items = _kitInlinePickList.items || [];
+  if (!pl?.id || !items.length) return;
+  const selected = items.filter(item => item.allocated);
+  if (!selected.length) return;
+
+  await Promise.all(selected.map(item => sbFetch(`picklist_items?id=eq.${encodeURIComponent(item.id)}`, {
+    method: "PATCH",
+    prefer: "return=minimal",
+    body: JSON.stringify({ allocated: false }),
+  })));
+
+  const liveItems = await loadLivePickListItemsNoRepair(pl.id, _kitInlinePickList.woNum).catch(() => []);
+  await sbFetch(`picklists?id=eq.${encodeURIComponent(pl.id)}&status=neq.complete`, {
+    method: "PATCH",
+    prefer: "return=minimal",
+    body: JSON.stringify({ status: "missing_items", updated_at: new Date().toISOString() }),
+  });
+  _kitInlinePickList = { ..._kitInlinePickList, items: liveItems, pl: { ...pl, status: "missing_items" } };
+  renderInlineKitPickList();
+}
 
 /* ── Open pick list screen from a project card button ── */
 async function openPickListForItem(itemId, woNum, e, opts = {}) {
   if (e) { e.stopPropagation(); e.preventDefault(); }
+  if (!opts.forceScreen && isInlineKitPickListContext()) {
+    return toggleInlineKitPickList(itemId, woNum, e);
+  }
   _plKittedAccessMode = !!opts.kittedAccess;
   _plReviewOnlyMode = !!opts.reviewOnly;
   _plCallerScreen = document.querySelector(".screen.active")?.id || "screen-dash";
@@ -10146,6 +10572,22 @@ function setPickListTab(tab, btn) {
   document.querySelectorAll(".pl-status-tab").forEach(t => t.classList.remove("active"));
   btn.classList.add("active");
   renderPickLists();
+}
+
+function togglePickListExpand(plId, e) {
+  if (e) {
+    e.stopPropagation();
+    e.preventDefault();
+  }
+  if (_plCurrentWo) return;
+  const key = String(plId);
+  const nextExpanded = !_plExpandedState[key];
+  _plExpandedState[key] = nextExpanded;
+
+  const body = document.getElementById(`pl-expand-body-${key}`);
+  const caret = document.getElementById(`pl-expand-caret-${key}`);
+  if (body) body.style.display = nextExpanded ? "block" : "none";
+  if (caret) caret.style.transform = nextExpanded ? "rotate(180deg)" : "rotate(0deg)";
 }
 
 /* ── Load pick lists from Supabase ── */
@@ -10218,6 +10660,7 @@ function mondayGroupToPlStatus(groupTitle) {
     g.includes("configuration") ||
     g.includes("quality control") ||
     g.includes("pending shipping") ||
+    g.includes("shipped") ||
     g.includes("hold")
   ) return "missing_items";
   return "missing_items"; /* safe default */
@@ -10226,11 +10669,31 @@ function mondayGroupToPlStatus(groupTitle) {
 function derivePickListStatusFromAllocation(items = [], fallback = "missing_items") {
   const base = String(fallback || "missing_items");
   if (base === "complete" || base === "exclude") return base;
-  if (!Array.isArray(items) || !items.length) return base;
+  if (!Array.isArray(items) || !items.length) return base === "in_queue" ? "in_queue" : "missing_items";
   const allocated = items.filter(item => !!item?.allocated).length;
   if (allocated === 0) return base === "in_queue" ? "in_queue" : "missing_items";
   if (allocated === items.length) return "fully_kitted";
   return "missing_items";
+}
+
+function isManualPickListCompleteEligible(pl, mondayItem = null, items = []) {
+  if (!pl || String(pl.status || "") === "complete") return false;
+  const totalItems = Array.isArray(items) ? items.length : 0;
+  const allocatedItems = Array.isArray(items) ? items.filter(item => !!item?.allocated).length : 0;
+  if (!totalItems || allocatedItems !== totalItems) return false;
+  const item = mondayItem || findKnownBoardItemByWo(pl.wo_number) || null;
+  const groupTitle = String(item?.group?.title || "").trim();
+  const g = groupTitle.toLowerCase();
+
+  if (g.includes("quality control")) return false;
+  if (g.includes("pending shipping")) return true;
+  if (g.includes("shipped")) return true;
+
+  /* If the order is no longer present in the normal open-board flow,
+     let admin close the pick list as a limbo recovery. */
+  if (!item) return true;
+
+  return false;
 }
 
 function formatPickListChangeStamp(ts) {
@@ -10349,8 +10812,8 @@ async function syncPickListStatusFromMonday(woNum) {
 /* ── Sync items from P1 API into picklist_items ── */
 async function syncPickListItems(woNum) {
   try {
-    const data = await p1Api(`/picklist?wo=${encodeURIComponent(woNum)}`);
-    if (!data.items || !data.items.length) return;
+    const { data, matchedWo } = await fetchP1PickListForWorkOrder(woNum);
+    if (!Array.isArray(data?.items) || !data.items.length) return;
 
     const SERVICE_KEYWORDS = ["installation service","install service","delivery service",
       "white glove","extended warranty","service plan","setup service","removal service"];
@@ -10417,7 +10880,7 @@ async function syncPickListItems(woNum) {
         prefer: "return=minimal",
         body: JSON.stringify({
           has_changes:  true,
-          changes_note: `${newItemCount} new item${newItemCount > 1 ? "s" : ""} added`,
+          changes_note: `${newItemCount} new item${newItemCount > 1 ? "s" : ""} added${matchedWo && matchedWo !== String(woNum || "").trim().toUpperCase() ? ` (synced via ${matchedWo})` : ""}`,
           updated_at:   updatedAt,
         }),
       });
@@ -10562,7 +11025,10 @@ async function repairKittedPickListAllocation(woNum, completions = null) {
 async function syncPeteKitCompletionMissing(pl, checklistItems) {
   if (!pl?.wo_number || !Array.isArray(checklistItems)) return;
   const completions = await sbGetKitCompletions();
-  const completion = findPeteKitCompletion(pl, completions);
+  const completion = findPeteKitCompletion({
+    ...pl,
+    mondayItem: pl.mondayItem || findKnownBoardItemByWo(pl.wo_number) || null,
+  }, completions);
   if (!completion?.id) return;
   const missingItems = checklistItems
     .filter(item => !item.allocated)
@@ -10713,29 +11179,36 @@ function renderLeadDashboard() {
 async function renderPickLists() {
   const el = document.getElementById("pl-content");
   if (!el) return;
+  const renderSeq = ++_plRenderSeq;
+  const targetTab = _plCurrentTab;
 
-  const enrichedPicklists = (_plAllPicklists || []).map(pl => {
-    const items = ((window._plItemsByPl || {})[pl.id] || []);
-    return { ...pl, _displayStatus: derivePickListStatusFromAllocation(items, pl.status) };
-  });
-
-  const completions = await sbGetKitCompletions().catch(() => []);
-  const filtered = (_plCurrentTab === "all"
-    ? enrichedPicklists
-    : enrichedPicklists.filter(pl => (pl._displayStatus || pl.status) === _plCurrentTab)
-  ).filter(pl => (pl._displayStatus || pl.status) !== "exclude"); /* never show excluded */
-
-  if (!filtered.length) {
+  const allPicklists = Array.isArray(_plAllPicklists) ? _plAllPicklists : [];
+  if (!allPicklists.length) {
+    if (renderSeq !== _plRenderSeq) return;
     el.innerHTML = `<div class="empty-state" style="padding:40px 0">No pick lists found.</div>`;
     return;
   }
+
+  const completions = await sbGetKitCompletions().catch(() => []);
+  const repairableWos = [...new Set(allPicklists.map(pl => pl?.wo_number).filter(Boolean))];
+
+  if (repairableWos.length) {
+    await Promise.all(repairableWos.map(async woNum => {
+      try {
+        await repairKittedPickListAllocation(woNum, completions);
+      } catch (repairErr) {
+        console.warn(`Pick list allocation sync skipped for ${woNum}:`, repairErr?.message || repairErr);
+      }
+    }));
+  }
+  if (renderSeq !== _plRenderSeq) return;
 
   el.innerHTML = `<div class="loading-state"><div class="spinner"></div>Loading items…</div>`;
 
   /* Load items for each picklist. Some older rows are only tied by WO number,
      so read both paths and group them back to the visible picklist. */
-  const plIds = filtered.map(pl => pl.id);
-  const woNums = filtered.map(pl => pl.wo_number).filter(Boolean);
+  const plIds = [...new Set(allPicklists.map(pl => pl.id).filter(Boolean))];
+  const woNums = [...new Set(allPicklists.map(pl => pl.wo_number).filter(Boolean))];
   const byIdItems = await sbFetch(
     `picklist_items?picklist_id=in.(${plIds.join(",")})&select=*&order=id.asc`,
     { method: "GET", headers: { "Prefer": "return=representation" } }
@@ -10744,31 +11217,79 @@ async function renderPickLists() {
     `picklist_items?wo_number=in.(${woNums.map(encodeURIComponent).join(",")})&select=*&order=id.asc`,
     { method: "GET", headers: { "Prefer": "return=representation" } }
   ) || [] : [];
+  if (renderSeq !== _plRenderSeq) return;
 
-  const itemSeen = new Set();
-  const allItems = [...byIdItems, ...byWoItems].filter(it => {
-    const key = it.id || `${it.wo_number}|${it.label || it.item_name}|${it.quantity}`;
-    if (itemSeen.has(key)) return false;
-    itemSeen.add(key);
-    return true;
-  });
-  const plIdByWo = {};
-  filtered.forEach(pl => { if (pl.wo_number) plIdByWo[pl.wo_number] = pl.id; });
+  const dedupePickListItems = (sourceItems = []) => {
+    const itemSeen = new Set();
+    return sourceItems.filter(it => {
+      const key = it.id || `${it.wo_number}|${it.label || it.item_name}|${it.quantity}`;
+      if (itemSeen.has(key)) return false;
+      itemSeen.add(key);
+      return true;
+    });
+  };
 
-  /* Group items by picklist_id */
-  const itemsByPl = {};
-  allItems.forEach(it => {
-    const ownerId = it.picklist_id || plIdByWo[it.wo_number];
-    if (!ownerId) return;
-    if (!itemsByPl[ownerId]) itemsByPl[ownerId] = [];
-    itemsByPl[ownerId].push(it);
-  });
-  await Promise.all(filtered.map(async pl => {
-    if (!itemsByPl[pl.id]?.length) return;
-    itemsByPl[pl.id] = await sortPickListItemsByWorkOrder(itemsByPl[pl.id], pl.wo_number);
-  }));
+  const buildItemsByPl = async (sourceItems = []) => {
+    const plIdByWo = {};
+    allPicklists.forEach(pl => { if (pl.wo_number) plIdByWo[pl.wo_number] = pl.id; });
+    const grouped = {};
+    sourceItems.forEach(it => {
+      const ownerId = it.picklist_id || plIdByWo[it.wo_number];
+      if (!ownerId) return;
+      if (!grouped[ownerId]) grouped[ownerId] = [];
+      grouped[ownerId].push(it);
+    });
+    await Promise.all(allPicklists.map(async pl => {
+      if (!grouped[pl.id]?.length) return;
+      grouped[pl.id] = await sortPickListItemsByWorkOrder(grouped[pl.id], pl.wo_number);
+    }));
+    return grouped;
+  };
+
+  let allItems = dedupePickListItems([...byIdItems, ...byWoItems]);
+  let itemsByPl = await buildItemsByPl(allItems);
+
+  const missingChecklistPicklists = allPicklists.filter(pl => pl?.wo_number && !(itemsByPl[pl.id] || []).length);
+  if (missingChecklistPicklists.length) {
+    await Promise.all(missingChecklistPicklists.map(async pl => {
+      try {
+        await syncPickListItems(pl.wo_number);
+        await repairKittedPickListAllocation(pl.wo_number, completions);
+      } catch (syncErr) {
+        console.warn(`Pick list item sync skipped for ${pl.wo_number}:`, syncErr?.message || syncErr);
+      }
+    }));
+
+    const missingWos = [...new Set(missingChecklistPicklists.map(pl => pl.wo_number).filter(Boolean))];
+    if (missingWos.length) {
+      const refreshedMissingItems = await sbFetch(
+        `picklist_items?wo_number=in.(${missingWos.map(encodeURIComponent).join(",")})&select=*&order=id.asc`,
+        { method: "GET", headers: { "Prefer": "return=representation" } }
+      ) || [];
+      allItems = dedupePickListItems([...allItems, ...refreshedMissingItems]);
+      itemsByPl = await buildItemsByPl(allItems);
+    }
+  }
+  if (renderSeq !== _plRenderSeq) return;
+
   registerPickListItemsForInfo(allItems);
   window._plItemsByPl = itemsByPl;
+
+  const enrichedPicklists = allPicklists.map(pl => {
+    const items = itemsByPl[pl.id] || [];
+    return { ...pl, _displayStatus: derivePickListStatusFromAllocation(items, pl.status) };
+  });
+
+  const filtered = (targetTab === "all"
+    ? enrichedPicklists
+    : enrichedPicklists.filter(pl => (pl._displayStatus || pl.status) === targetTab)
+  ).filter(pl => (pl._displayStatus || pl.status) !== "exclude"); /* never show excluded */
+
+  if (!filtered.length) {
+    if (renderSeq !== _plRenderSeq) return;
+    el.innerHTML = `<div class="empty-state" style="padding:40px 0">No pick lists found.</div>`;
+    return;
+  }
 
   let html = "";
 
@@ -10789,6 +11310,8 @@ async function renderPickLists() {
     const newestAddedLabel = newestAdded ? (newestAdded.item.label || buildItemLabel(newestAdded.item)) : "";
     const newestAddedStamp = newestAdded ? formatPickListAddedStamp(newestAdded.tsRaw) : "";
     const displayStatus = derivePickListStatusFromAllocation(items, pl._displayStatus || pl.status);
+    const isOverviewMode = !_plCurrentWo;
+    const isExpanded = isOverviewMode ? !!_plExpandedState[String(pl.id)] : true;
     const statusLabel = {
       in_queue:      "In Queue",
       missing_items: "Missing Items",
@@ -10814,7 +11337,7 @@ async function renderPickLists() {
       </div>` : "";
 
     html += `<div class="pl-card status-${displayStatus}${pl.has_changes ? " has-changes" : ""}" id="plcard-${pl.id}">
-      <div class="pl-card-header">
+      <div class="pl-card-header" ${isOverviewMode ? `onclick="togglePickListExpand('${pl.id}',event)" style="cursor:pointer"` : ""}>
         <div style="flex:1;min-width:0">
           <div class="pl-card-title">${escHtml(pl.customer_name && pl.customer_name !== pl.wo_number ? pl.customer_name : pl.wo_number)}</div>
           <div class="pl-card-meta">${pl.customer_name && pl.customer_name !== pl.wo_number ? escHtml(pl.wo_number) + " · " : ""}${allocatedCount}/${items.length} allocated</div>
@@ -10830,47 +11353,19 @@ async function renderPickLists() {
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px">
           <span class="pl-status-pill ${displayStatus}">${statusLabel}</span>
+          ${isOverviewMode ? `<span id="pl-expand-caret-${pl.id}" style="font-size:16px;line-height:1;color:var(--muted2);transform:${isExpanded ? "rotate(180deg)" : "rotate(0deg)"}">⌄</span>` : ``}
         </div>
       </div>
 
+      <div id="pl-expand-body-${pl.id}" style="display:${isExpanded ? "block" : "none"}">
       ${renderInitialKitReferencePhoto(pl)}
 
       ${checkAllHtml}
 
-      ${items.map(it => {
+      ${items.length ? items.map(it => {
         const label = escHtml(it.label || buildItemLabel(it));
-        const rawLabel = it.label || buildItemLabel(it);
         const existedInInitialKitMissing = initialKitMissingContainsItem(it, completionMissingEntries);
         const isNew = !!(newestAdded && String(newestAdded.item?.id) === String(it.id) && !existedInInitialKitMissing);
-        const newStamp = isNew ? formatPickListAddedStamp(getPickListItemFirstSeenTs(it)) : "";
-        const isDual = isBuilderGrabItem(rawLabel) &&
-          (currentUser?.role === "admin" ||
-           /* Chassis lead (Sepan) confirms Seat grabs */
-           (isChassisLead() && /seat/.test(rawLabel.toLowerCase()) && !/seat slider|seat bracket/.test(rawLabel.toLowerCase())) ||
-           /* MS lead (Thomas) confirms Monitor and PC grabs */
-           (isMSLead() && (
-             rawLabel.includes('32"') || rawLabel.includes('45"') || rawLabel.includes('55"') ||
-             /50[6-9]0\s*pc/i.test(rawLabel)
-           )) ||
-           /* Admin sees all dual checkboxes */
-           false);
-
-        if (isDual) {
-          return `<div class="pl-item-row" style="justify-content:space-between;gap:12px">
-            <div class="pl-checkbox${it.allocated ? " checked" : ""}" onclick="togglePickListItem('${it.id}','${pl.id}',event)" style="flex-shrink:0">
-              ${it.allocated ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>` : ""}
-            </div>
-            <span class="pl-item-label${it.allocated ? " allocated" : ""}" style="flex:1" onclick="togglePickListItem('${it.id}','${pl.id}',event)">${label}</span>
-            ${pickListInfoButton(it.id)}
-            ${pl.has_changes && isNew ? `<span class="pl-item-new-badge">Added after kit</span>` : ""}
-            <div style="display:flex;align-items:center;gap:5px;flex-shrink:0" onclick="toggleBuilderConfirm('${it.id}','${pl.id}',event)">
-              <span style="font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#818cf8">Builder</span>
-              <div class="pl-checkbox builder${it.builder_confirmed ? " checked" : ""}">
-                ${it.builder_confirmed ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>` : ""}
-              </div>
-            </div>
-          </div>`;
-        }
 
         return `<div class="pl-item-row" onclick="togglePickListItem('${it.id}','${pl.id}',event)">
           <div class="pl-checkbox${it.allocated ? " checked" : ""}">
@@ -10880,7 +11375,9 @@ async function renderPickLists() {
           ${pickListInfoButton(it.id)}
           ${pl.has_changes && isNew ? `<span class="pl-item-new-badge">Added after kit</span>` : ""}
         </div>`;
-      }).join("")}
+      }).join("") : `<div style="padding:12px;font-size:12px;color:var(--muted);line-height:1.45">
+        No checklist items are loaded for this pick list yet.
+      </div>`}
 
       <div class="pl-action-bar" style="display:flex;gap:8px;flex-direction:column">
         ${displayStatus === "complete"
@@ -10891,6 +11388,11 @@ async function renderPickLists() {
                 ${escHtml(getAppText("picklist_complete_locked_label", "Complete Locked Until QC"))}
               </button>`
         }
+        ${displayStatus !== "complete" && currentUser?.role === "admin" && isManualPickListCompleteEligible(pl, mondayItem, items) ? `
+        <button onclick="confirmManualCompletePickList('${pl.id}',event)"
+          style="width:100%;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);border-radius:var(--radius-xs);padding:13px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#fbbf24;cursor:pointer">
+          Manual Complete
+        </button>` : ""}
         ${displayStatus !== "complete" && currentUser?.role === KIT_ROLE && !isLead() && !_plKittedAccessMode && !_plReviewOnlyMode ? `
         <button onclick="submitKitFromPickList('${pl.id}','${pl.wo_number}',event)"
           style="width:100%;background:var(--green);border:none;border-radius:var(--radius-xs);padding:13px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#fff;cursor:pointer">
@@ -10902,37 +11404,12 @@ async function renderPickLists() {
           Review mode: tap checklist items to update allocation. This will not move the order in Monday.
         </div>` : ""}
       </div>
+      </div>
     </div>`;
   }
 
+  if (renderSeq !== _plRenderSeq) return;
   el.innerHTML = html;
-}
-
-/* ── Toggle builder confirmation (second checkbox for PC/Monitor/Seat) ── */
-async function toggleBuilderConfirm(itemId, plId, e) {
-  if (e) e.stopPropagation();
-  const row  = e?.currentTarget;
-  const cb   = row?.querySelector(".pl-checkbox.builder");
-  const lbl  = row?.querySelector(".pl-item-label");
-  const wasConfirmed = cb?.classList.contains("checked");
-  const nowConfirmed = !wasConfirmed;
-
-  if (cb) {
-    cb.classList.toggle("checked", nowConfirmed);
-    cb.innerHTML = nowConfirmed
-      ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>`
-      : "";
-  }
-  if (lbl) {
-    lbl.classList.toggle("allocated", nowConfirmed);
-    lbl.style.color = nowConfirmed ? "" : "var(--muted)";
-  }
-
-  await sbFetch(`picklist_items?id=eq.${encodeURIComponent(itemId)}`, {
-    method: "PATCH",
-    prefer: "return=minimal",
-    body: JSON.stringify({ builder_confirmed: nowConfirmed }),
-  });
 }
 
 /* ── Toggle item allocated state ── */
@@ -10969,6 +11446,12 @@ async function togglePickListItem(itemId, plId, e) {
     prefer: "return=minimal",
     body: JSON.stringify({ status: newStatus, updated_at: new Date().toISOString() }),
   });
+
+  const pl = (_plAllPicklists || []).find(row => String(row?.id) === String(plId)) || null;
+  const liveItems = await loadLivePickListItemsNoRepair(plId, pl?.wo_number || null).catch(() => []);
+  if (pl?.wo_number && liveItems.length) {
+    await syncPeteKitCompletionMissing(pl, liveItems).catch(()=>{});
+  }
 
   await refreshPickListCard(plId);
 }
@@ -11013,6 +11496,12 @@ async function checkAllPickListItems(plId, e) {
       prefer: "return=minimal",
       body: JSON.stringify({ status: "fully_kitted", updated_at: new Date().toISOString() }),
     });
+
+    const pl = (_plAllPicklists || []).find(row => String(row?.id) === String(plId)) || null;
+    const liveItems = await loadLivePickListItemsNoRepair(plId, pl?.wo_number || null).catch(() => []);
+    if (pl?.wo_number && liveItems.length) {
+      await syncPeteKitCompletionMissing(pl, liveItems).catch(()=>{});
+    }
 
     showToast("All pick list items checked. Double-check before submitting.", "ok");
     await renderPickLists();
@@ -11066,6 +11555,12 @@ async function deselectAllPickListItems(plId, e) {
       body: JSON.stringify({ status: "missing_items", updated_at: new Date().toISOString() }),
     });
 
+    const pl = (_plAllPicklists || []).find(row => String(row?.id) === String(plId)) || null;
+    const liveItems = await loadLivePickListItemsNoRepair(plId, pl?.wo_number || null).catch(() => []);
+    if (pl?.wo_number && liveItems.length) {
+      await syncPeteKitCompletionMissing(pl, liveItems).catch(()=>{});
+    }
+
     showToast("All pick list items unchecked.", "ok");
     await renderPickLists();
   } catch (err) {
@@ -11092,6 +11587,24 @@ async function refreshPickListCard(plId) {
       if (parts.length >= 2) meta.textContent = `${parts[0].trim()} · ${alloc}/${total} allocated`;
     }
   }
+}
+
+async function loadLivePickListItemsNoRepair(plId, woNum = null) {
+  const byPickList = await sbFetch(
+    `picklist_items?picklist_id=eq.${encodeURIComponent(plId)}&order=id.asc`,
+    { method: "GET", headers: { "Prefer": "return=representation" } }
+  ) || [];
+  const byWorkOrder = woNum
+    ? await sbFetch(
+        `picklist_items?wo_number=eq.${encodeURIComponent(woNum)}&order=id.asc`,
+        { method: "GET", headers: { "Prefer": "return=representation" } }
+      )
+    : [];
+  const itemMap = new Map();
+  [...byPickList, ...byWorkOrder].forEach(item => {
+    if (item?.id) itemMap.set(String(item.id), item);
+  });
+  return sortPickListItemsByWorkOrder([...itemMap.values()], woNum);
 }
 
 /* ── Cycle status Open ↔ In Queue ── */
@@ -11329,8 +11842,12 @@ async function confirmSubmitKitFromPickList(plId, woNum, mondayItemId, e) {
     /* Remove from local kit board cache immediately so it doesn't reappear on reload */
     kitBoardItems = kitBoardItems.filter(i => i.id !== (mondayItem?.id));
 
-    /* Go back to kit board */
-    closePicListScreen();
+    if (_kitInlinePickList.pl?.id === plId || _kitInlinePickList.woNum === woNum2) {
+      closeInlineKitPickList();
+    } else {
+      /* Go back to kit board */
+      closePicListScreen();
+    }
     /* Reload kit board after short delay */
     setTimeout(() => loadKitBoard().catch(()=>{}), 2000);
 
@@ -11349,6 +11866,7 @@ function isPeteKittedAccessGroup(groupTitle) {
     g.includes("configuration") ||
     g.includes("quality control") ||
     g.includes("pending shipping") ||
+    g.includes("shipped") ||
     g.includes("hold")
   );
 }
@@ -11883,6 +12401,12 @@ async function saveAllocationReview(plId, woNum, e) {
     }),
   });
 
+  const pl = (_plAllPicklists || []).find(row => String(row?.id) === String(plId)) || { id: plId, wo_number: woNum };
+  const liveItems = await loadLivePickListItemsNoRepair(plId, woNum).catch(() => []);
+  if (woNum && liveItems.length) {
+    await syncPeteKitCompletionMissing(pl, liveItems).catch(()=>{});
+  }
+
   document.getElementById("pete-review-modal")?.remove();
   showToast(allAllocated ? "Allocation saved — all items allocated." : "Allocation saved — missing items remain.", "ok");
 }
@@ -11940,10 +12464,26 @@ async function savePeteAllocationReview(plId, woNum, e) {
 /* ── Confirmation modal before completing pick list ── */
 async function confirmCompletePickList(plId, e) {
   if (e) e.stopPropagation();
+  return openPickListCompleteModal(plId, { force: false });
+}
 
-  const items = await sbFetch(`picklist_items?picklist_id=eq.${encodeURIComponent(plId)}&order=id.asc`, {
-    method: "GET", headers: { "Prefer": "return=representation" }
-  }) || [];
+async function confirmManualCompletePickList(plId, e) {
+  if (e) e.stopPropagation();
+  const pl = (_plAllPicklists || []).find(row => String(row?.id) === String(plId)) || null;
+  const items = await loadResolvedPickListItems(plId, pl?.wo_number || _plCurrentWo || null).catch(() => []);
+  const totalItems = items.length;
+  const allocatedItems = items.filter(item => !!item?.allocated).length;
+  if (!totalItems || allocatedItems !== totalItems) {
+    showToast("Manual complete only works when every pick list item is allocated.", "warn");
+    return;
+  }
+  return openPickListCompleteModal(plId, { force: true });
+}
+
+async function openPickListCompleteModal(plId, opts = {}) {
+  const force = !!opts.force;
+  const pl = (_plAllPicklists || []).find(row => String(row?.id) === String(plId)) || null;
+  const items = await loadResolvedPickListItems(plId, pl?.wo_number || _plCurrentWo || null).catch(() => []);
 
   const allocated   = items.filter(i => i.allocated);
   const unallocated = items.filter(i => !i.allocated);
@@ -11965,13 +12505,19 @@ async function confirmCompletePickList(plId, e) {
           : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`
         }
         <div style="font-size:16px;font-weight:800">
-          ${hasMissing ? "Complete with Missing Items?" : "Complete Pick List?"}
+          ${force
+            ? (hasMissing ? "Manual Complete with Missing Items?" : "Manual Complete Pick List?")
+            : (hasMissing ? "Complete with Missing Items?" : "Complete Pick List?")}
         </div>
       </div>
       <div style="font-size:12px;color:var(--muted);margin-bottom:18px">
-        ${hasMissing
-          ? `<span style="color:var(--accent);font-weight:600">${unallocated.length} item${unallocated.length > 1 ? "s" : ""} not allocated.</span> You can still complete — confirm this is intentional.`
-          : "All items are allocated. Ready to complete."}
+        ${force
+          ? (hasMissing
+              ? `<span style="color:var(--accent);font-weight:600">${unallocated.length} item${unallocated.length > 1 ? "s" : ""} not allocated.</span> This order missed the QC window, so you are manually closing it from admin.`
+              : "All items are allocated. This order missed the QC window, so you are manually closing it from admin.")
+          : (hasMissing
+              ? `<span style="color:var(--accent);font-weight:600">${unallocated.length} item${unallocated.length > 1 ? "s" : ""} not allocated.</span> You can still complete — confirm this is intentional.`
+              : "All items are allocated. Ready to complete.")}
       </div>
 
       <!-- Allocated summary -->
@@ -11998,9 +12544,11 @@ async function confirmCompletePickList(plId, e) {
           style="flex:1;background:none;border:1px solid var(--border2);border-radius:var(--radius-xs);padding:14px;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);cursor:pointer">
           Cancel
         </button>
-        <button onclick="completePickList('${plId}',event)"
+        <button onclick="completePickList('${plId}',event,${force ? "true" : "false"})"
           style="flex:2;background:var(--accent);border:none;border-radius:var(--radius-xs);padding:14px;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#fff;cursor:pointer">
-          ${hasMissing ? "Complete Anyway" : "Confirm Complete"}
+          ${force
+            ? (hasMissing ? "Manual Complete Anyway" : "Confirm Manual Complete")
+            : (hasMissing ? "Complete Anyway" : "Confirm Complete")}
         </button>
       </div>
     </div>`;
@@ -12010,7 +12558,7 @@ async function confirmCompletePickList(plId, e) {
 }
 
 /* ── Complete a pick list ── */
-async function completePickList(plId, e) {
+async function completePickList(plId, e, forcedByAdmin = false) {
   if (e) e.stopPropagation();
   /* Dismiss confirmation modal if open */
   document.getElementById("pl-confirm-modal")?.remove();
@@ -12022,14 +12570,14 @@ async function completePickList(plId, e) {
     body: JSON.stringify({
       status:       "complete",
       completed_at: new Date().toISOString(),
-      completed_by: currentUser?.name || "",
+      completed_by: forcedByAdmin ? `${currentUser?.name || "Admin"} (Manual)` : (currentUser?.name || ""),
       updated_at:   new Date().toISOString(),
     }),
   });
   const woNum = _plCurrentWo;
   if (woNum) await loadPickLists(woNum);
   else await loadPickLists(null);
-  showToast("Pick list completed!", "ok");
+  showToast(forcedByAdmin ? "Pick list manually completed." : "Pick list completed!", "ok");
 }
 
 /* ── Acknowledge changes (dismiss badge) ── */
@@ -12680,19 +13228,11 @@ window.addEventListener("resize", () => {
     <div id="settings-team-section">
       <div class="settings-section-label">Team</div>
       <div style="background:var(--surface);border-radius:12px;border:1px solid var(--border);overflow:hidden;margin-top:6px;display:flex;flex-direction:column;">
-        <button class="srow" id="settings-add-member" onclick="openAddMember()">
-          <div class="srow-icon" style="background:rgba(245,158,11,0.15);color:#f59e0b;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
-          </div>
-          <span class="srow-label">Add Team Member</span>
-          <svg class="srow-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
-        </button>
-        <div style="height:1px;background:var(--border);margin:0 14px;"></div>
-        <button class="srow" id="settings-manage-members" onclick="openManageMembers()">
+        <button class="srow" id="settings-manage-team" onclick="openManageMembers()">
           <div class="srow-icon" style="background:rgba(99,102,241,0.15);color:#818cf8;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           </div>
-          <span class="srow-label">Manage Team Members</span>
+          <span class="srow-label">Team Members</span>
           <svg class="srow-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
         </button>
         <div style="height:1px;background:var(--border);margin:0 14px;"></div>
@@ -12778,9 +13318,25 @@ window.addEventListener("resize", () => {
 
 <!-- Manage Members -->
 <div id="modal-manage-members" class="settings-modal" style="display:none">
-  <div class="settings-modal-box">
+  <div class="settings-modal-box" style="max-width:min(92vw,620px);align-items:stretch;max-height:min(86vh,820px);overflow-y:auto;">
     <div class="settings-modal-title">Team Members</div>
-    <div id="manage-members-list" style="display:flex;flex-direction:column;gap:8px;margin:12px 0;max-height:60vh;overflow-y:auto;"></div>
+    <div class="settings-modal-sub" style="text-align:left">Add a new teammate, update roles, reset PINs, or deactivate/reactivate people without touching code.</div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px;margin:4px 0 12px">
+      <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2);margin-bottom:10px">Add Team Member</div>
+      <input id="manage-member-name" class="auth-input" placeholder="Full name (must match Monday)" style="margin-bottom:10px">
+      <select id="manage-member-role" class="auth-input" style="margin-bottom:10px">
+        <option value="ms">MS Builder</option>
+        <option value="chassis">Chassis Builder</option>
+        <option value="kit">Kitter</option>
+        <option value="float">Floater</option>
+      </select>
+      <div class="pin-error" id="manage-member-error" style="min-height:18px"></div>
+      <button class="btn-primary" onclick="doAddMember()" style="margin-top:4px;max-width:none">Add Member</button>
+    </div>
+    <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2);margin:2px 0 10px">Active Team</div>
+    <div id="manage-members-list" style="display:flex;flex-direction:column;gap:8px;margin:0 0 14px;max-height:none;overflow:visible;"></div>
+    <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2);margin:2px 0 10px">Inactive Team</div>
+    <div id="manage-members-inactive" style="display:flex;flex-direction:column;gap:8px;margin:0 0 10px"></div>
     <button class="auth-back-btn" onclick="closeModal('modal-manage-members')" style="margin-top:4px">Close</button>
   </div>
 </div>
