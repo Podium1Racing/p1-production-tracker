@@ -94,6 +94,7 @@ button:not(:disabled):active, .name-btn:active, .srow:active, .seg-btn:active {
   --chassis-color:#f59e0b; --ms-color:#c0c0c0;
   --radius:12px; --radius-sm:8px; --radius-xs:5px;
   --app-vh:100vh;
+  --bottom-nav-space:0px;
 }
 [data-theme="light"] {
   --bg:#f5f5f5; --surface:#ffffff; --surface2:#ebebeb; --surface3:#f9f9f9;
@@ -172,7 +173,12 @@ button, input, select, textarea { font-family:inherit; }
 @keyframes softPop { 0% { transform:scale(.92); } 70% { transform:scale(1.06); } 100% { transform:scale(1); } }
 
 /* LOGIN */
-#screen-login { align-items:center; justify-content:flex-start; min-height:var(--app-vh); min-height:-webkit-fill-available; padding:calc(2rem + env(safe-area-inset-top)) 1.25rem calc(108px + env(safe-area-inset-bottom)); position:relative; overflow-y:auto; box-sizing:border-box; }
+#screen-login { align-items:center; justify-content:flex-start; min-height:var(--app-vh); min-height:-webkit-fill-available; padding:calc(1.6rem + env(safe-area-inset-top)) 1.25rem calc(28px + env(safe-area-inset-bottom)); position:relative; overflow-y:auto; box-sizing:border-box; }
+#screen-login.login-pin-mode,
+#screen-login.login-floater-mode {
+  justify-content:center;
+  padding:calc(1rem + env(safe-area-inset-top)) 1.25rem calc(20px + env(safe-area-inset-bottom));
+}
 #screen-login::before { content:''; position:fixed; top:0; left:0; right:0; height:3px; background:var(--accent); z-index:100; }
 .login-logo { width:80px; height:80px; background:#fff; border-radius:10px; display:flex; align-items:center; justify-content:center; margin-bottom:1.5rem; box-shadow:0 4px 24px rgba(224,32,32,0.3); overflow:hidden; padding:5px; }
 .login-logo img { width:100%; height:100%; object-fit:contain; display:block; }
@@ -976,11 +982,10 @@ input.photo-file-inp { display:none; }
   .admin-schedule-grid { grid-template-columns:repeat(5, minmax(220px, 1fr)); }
   .admin-capacity-grid { grid-template-columns:1fr 1fr; }
 }
-.bottom-nav { position:fixed; left:10px; right:10px; bottom:calc(10px + env(safe-area-inset-bottom)); z-index:60; display:none; background:rgba(18,18,18,.88); border:1px solid var(--border); border-radius:18px; backdrop-filter:blur(16px); box-shadow:0 14px 40px rgba(0,0,0,.34); padding:6px; gap:4px; }
 .bottom-nav {
   position:fixed;
-  left:max(10px, env(safe-area-inset-left));
-  right:max(10px, env(safe-area-inset-right));
+  left:max(0px, env(safe-area-inset-left));
+  right:max(0px, env(safe-area-inset-right));
   bottom:0;
   z-index:60;
   display:none;
@@ -990,7 +995,7 @@ input.photo-file-inp { display:none; }
   border-radius:18px 18px 0 0;
   backdrop-filter:blur(16px);
   box-shadow:0 -6px 26px rgba(0,0,0,.12), 0 -18px 40px rgba(0,0,0,.28);
-  padding:6px 6px calc(6px + env(safe-area-inset-bottom));
+  padding:8px 8px calc(8px + env(safe-area-inset-bottom));
   gap:4px;
 }
 .bottom-nav-btn { flex:1; border:none; background:none; color:var(--muted); border-radius:13px; padding:7px 4px 6px; font-size:9px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer; }
@@ -998,10 +1003,10 @@ input.photo-file-inp { display:none; }
 .bottom-nav-btn svg { width:15px; height:15px; }
 .bottom-nav-icon-wrap { position:relative; display:inline-flex; align-items:center; justify-content:center; }
 .bottom-nav-badge { position:absolute; top:-7px; right:-11px; min-width:16px; height:16px; padding:0 4px; border-radius:999px; background:var(--accent); color:#fff; font-size:9px; font-weight:900; line-height:16px; text-align:center; box-shadow:0 0 0 2px rgba(18,18,18,.92); display:none; }
-.main-content,.kit-content,.admin-content,.hist-content,.team-screen-content { padding-bottom:calc(96px + env(safe-area-inset-bottom)); }
-@media (max-width:720px) {
+.main-content,.kit-content,.admin-content,.hist-content,.team-screen-content { padding-bottom:calc(var(--bottom-nav-space) + 18px); }
+@media (max-width:1100px) {
   .bottom-nav { display:flex; }
-  .main-content,.kit-content,.admin-content,.hist-content,.team-screen-content { padding-bottom:calc(96px + env(safe-area-inset-bottom)) !important; }
+  .main-content,.kit-content,.admin-content,.hist-content,.team-screen-content { padding-bottom:calc(var(--bottom-nav-space) + 18px) !important; }
   .app-header, .kit-header, .admin-header { align-items:flex-start; padding:calc(10px + env(safe-area-inset-top)) 12px 10px; }
   .header-left, .kit-header-left { min-width:0; }
   .header-right, .admin-header-actions {
@@ -2920,12 +2925,22 @@ function getTeamMemberByName(name) {
 function clearAuthSelection() {
   pendingUser = null;
   pendingFloater = null;
+  setLoginScreenMode("selector");
   document.getElementById("pin-entry-wrap").style.display = "none";
   document.getElementById("floater-role-wrap").style.display = "none";
   document.getElementById("name-list-wrap").style.display = "block";
   document.getElementById("login-device-copy").style.display = "block";
   document.getElementById("admin-login-btn").style.display = "flex";
   document.querySelectorAll(".name-btn").forEach(b=>b.classList.remove("selected"));
+}
+
+function setLoginScreenMode(mode = "selector") {
+  const screen = document.getElementById("screen-login");
+  if (!screen) return;
+  screen.classList.remove("login-selector-mode", "login-pin-mode", "login-floater-mode");
+  if (mode === "pin") screen.classList.add("login-pin-mode");
+  else if (mode === "floater") screen.classList.add("login-floater-mode");
+  else screen.classList.add("login-selector-mode");
 }
 
 function renderLoginSelectorState() {
@@ -3039,6 +3054,7 @@ function buildNameList() {
 function openFloaterRoleChoice(m, fromRememberedDevice = false) {
   pendingFloater = m;
   pendingUser = null;
+  setLoginScreenMode("floater");
   document.querySelectorAll(".name-btn").forEach(b=>b.classList.remove("selected"));
   document.querySelectorAll("#name-list .name-btn").forEach(b=>{ if(b.textContent.includes(m.name)) b.classList.add("selected"); });
   document.getElementById("name-list-wrap").style.display = "none";
@@ -3061,6 +3077,7 @@ function selectUser(m, roleOverride, fromRememberedDevice = false) {
   document.querySelectorAll(".name-btn").forEach(b=>b.classList.remove("selected"));
   document.querySelectorAll(".name-btn").forEach(b=>{ if(b.textContent.includes(m.name)) b.classList.add("selected"); });
   pendingUser = roleOverride && m.role === FLOAT_ROLE ? { ...m, role: roleOverride, baseRole: FLOAT_ROLE } : m;
+  setLoginScreenMode("pin");
   /* Show PIN entry, hide name list + admin button */
   document.getElementById("name-list-wrap").style.display  = "none";
   document.getElementById("floater-role-wrap").style.display = "none";
@@ -3341,6 +3358,15 @@ function showScreen(id) {
   updateBottomNav(id);
 }
 
+function syncBottomNavLayout() {
+  const nav = document.getElementById("bottom-nav");
+  const root = document.documentElement;
+  if (!nav || !root) return;
+  const visible = !!currentUser && window.getComputedStyle(nav).display !== "none";
+  const navSpace = visible ? Math.ceil(nav.getBoundingClientRect().height || 0) : 0;
+  root.style.setProperty("--bottom-nav-space", `${navSpace}px`);
+}
+
 function updateBottomNav(activeId) {
   const nav = document.getElementById("bottom-nav");
   if (!nav) return;
@@ -3350,6 +3376,7 @@ function updateBottomNav(activeId) {
   if (activeId === "screen-queue") document.getElementById("bn-queue")?.classList.add("active");
   if (activeId === "screen-history") document.getElementById("bn-history")?.classList.add("active");
   if (activeId === "screen-updates" && _updatesMode === "history") document.getElementById("bn-updates")?.classList.add("active");
+  requestAnimationFrame(syncBottomNavLayout);
   refreshTeamMessagesBadge().catch(() => {});
 }
 
@@ -13173,6 +13200,7 @@ window.addEventListener("resize", () => {
   clearTimeout(_appResizeTimer);
   _appResizeTimer = setTimeout(() => {
     applyAdminDesktopMode();
+    syncBottomNavLayout();
     if (document.getElementById("screen-admin")?.classList.contains("active") && window._adminItems) {
       loadAdminData();
     }
