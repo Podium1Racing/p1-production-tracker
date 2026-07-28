@@ -65,7 +65,7 @@ button:not(:disabled):active, .name-btn:active, .srow:active, .seg-btn:active {
 }
 html, body { -ms-overflow-style:none; scrollbar-width:none; }
 html::-webkit-scrollbar, body::-webkit-scrollbar { display:none; width:0; height:0; }
-body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif; min-height:100dvh; overflow-x:hidden; }
+body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif; min-height:100dvh; min-height:100svh; overflow-x:hidden; }
 button, input, select, textarea { font-family:inherit; }
 .screen,
 .main-content,
@@ -108,7 +108,7 @@ button, input, select, textarea { font-family:inherit; }
   width:0;
   height:0;
 }
-.screen { display:none; flex-direction:column; min-height:100dvh; }
+.screen { display:none; flex-direction:column; min-height:100dvh; min-height:100svh; }
 .screen.active { display:flex; animation:screenFade .18s ease both; }
 @keyframes screenFade { from { opacity:.88; } to { opacity:1; } }
 @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
@@ -116,7 +116,7 @@ button, input, select, textarea { font-family:inherit; }
 @keyframes softPop { 0% { transform:scale(.92); } 70% { transform:scale(1.06); } 100% { transform:scale(1); } }
 
 /* LOGIN */
-#screen-login { align-items:center; justify-content:flex-start; padding:2rem 1.25rem calc(108px + env(safe-area-inset-bottom)); position:relative; overflow-y:auto; box-sizing:border-box; }
+#screen-login { align-items:center; justify-content:flex-start; min-height:100dvh; min-height:100svh; padding:calc(2rem + env(safe-area-inset-top)) 1.25rem calc(108px + env(safe-area-inset-bottom)); position:relative; overflow-y:auto; box-sizing:border-box; }
 #screen-login::before { content:''; position:fixed; top:0; left:0; right:0; height:3px; background:var(--accent); z-index:100; }
 .login-logo { width:80px; height:80px; background:#fff; border-radius:10px; display:flex; align-items:center; justify-content:center; margin-bottom:1.5rem; box-shadow:0 4px 24px rgba(224,32,32,0.3); overflow:hidden; padding:5px; }
 .login-logo img { width:100%; height:100%; object-fit:contain; display:block; }
@@ -995,25 +995,31 @@ input.photo-file-inp { display:none; }
 }
 .login-loading-overlay {
   position:fixed;
-  inset:0;
+  top:calc(-1 * env(safe-area-inset-top));
+  right:0;
+  bottom:calc(-1 * env(safe-area-inset-bottom));
+  left:0;
+  width:100vw;
+  height:calc(100dvh + env(safe-area-inset-top) + env(safe-area-inset-bottom));
+  min-height:calc(100svh + env(safe-area-inset-top) + env(safe-area-inset-bottom));
   z-index:10050;
   pointer-events:none;
   opacity:0;
   visibility:hidden;
   background-color:#030303;
-  overflow:hidden;
+  overflow:clip;
   transform:translateZ(0);
   will-change:opacity;
   transition:visibility 0s linear .42s;
 }
 .login-loading-img {
   position:absolute;
-  inset:-2%;
-  width:104%;
-  height:104%;
+  inset:-6% 0;
+  width:100%;
+  height:112%;
   object-fit:cover;
   object-position:center;
-  transform:translate3d(-1.6%,0,0) scale(1.045);
+  transform:translate3d(0,0,0) scale(1.04);
   transform-origin:center;
   will-change:transform, opacity;
   backface-visibility:hidden;
@@ -8982,6 +8988,8 @@ function renderKitScreen(items) {
     } catch(err) {
     }
   });
+
+  restoreInlineKitPickListAfterRender(kitItems);
 }
 
 /* Cache of WO numbers: itemId → "W00186" */
@@ -10333,6 +10341,26 @@ function closeInlineKitPickList() {
   _kitInlinePickList = { itemId: null, woNum: null, pl: null, items: [], loading: false, token: 0 };
 }
 
+function restoreInlineKitPickListAfterRender(visibleItems = []) {
+  const state = _kitInlinePickList;
+  if (!state?.itemId) return;
+  const stillVisible = visibleItems.some(item => String(item?.id) === String(state.itemId));
+  if (!stillVisible) {
+    closeInlineKitPickList();
+    return;
+  }
+  const wrap = document.getElementById(`kit-inline-pl-${state.itemId}`);
+  const btn = document.getElementById(`pl-btn-${state.itemId}`);
+  if (btn) btn.classList.add("active");
+  if (!wrap) return;
+  wrap.style.display = "block";
+  if (state.pl?.id) {
+    renderInlineKitPickList();
+  } else if (state.loading) {
+    wrap.innerHTML = `<div class="loading-state" style="padding:12px 0"><div class="spinner"></div>Loading pick list…</div>`;
+  }
+}
+
 function renderInlineKitPickList() {
   const itemId = _kitInlinePickList.itemId;
   const pl = _kitInlinePickList.pl;
@@ -10422,8 +10450,10 @@ async function loadInlineKitPickList(itemId, woNum, token) {
 
 async function toggleInlineKitPickList(itemId, woNum, e) {
   if (e) { e.stopPropagation(); e.preventDefault(); }
-  if (_kitInlinePickList.itemId === itemId && _kitInlinePickList.loading) return;
-  if (_kitInlinePickList.itemId === itemId) {
+  const wrap = document.getElementById(`kit-inline-pl-${itemId}`);
+  const isRenderedOpen = !!(wrap && wrap.style.display !== "none" && String(wrap.innerHTML || "").trim());
+  if (_kitInlinePickList.itemId === itemId && _kitInlinePickList.loading && isRenderedOpen) return;
+  if (_kitInlinePickList.itemId === itemId && isRenderedOpen) {
     closeInlineKitPickList();
     return;
   }
