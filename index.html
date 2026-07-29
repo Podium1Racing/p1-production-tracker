@@ -1805,6 +1805,12 @@ async function sbFetch(path, options = {}) {
   } catch(e) { console.warn("Supabase fetch failed:", e.message); return null; }
 }
 
+async function sbFetchOrThrow(path, options = {}, errMsg = "Supabase request failed.") {
+  const rows = await sbFetch(path, options);
+  if (rows === null) throw new Error(errMsg);
+  return rows;
+}
+
 function urlBase64ToUint8Array(base64String) {
   const padding = "=".repeat((4 - base64String.length % 4) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
@@ -8295,7 +8301,7 @@ async function loadAdminData() {
       sbGetTimerHistory(),
       sbGetKitCompletions(kitSince),
       sbFetch("build_updates?order=created_at.desc&limit=500",{method:"GET",headers:{"Prefer":"return=representation"}}),
-      sbFetch("picklist_items?select=wo_number,allocated,label,item_name,brand,quantity&limit=5000",{method:"GET",headers:{"Prefer":"return=representation"}}),
+      sbFetchOrThrow("picklist_items?select=wo_number,allocated,label,item_name,brand,quantity",{method:"GET",headers:{"Prefer":"return=representation"}}, "Could not load admin pick list allocation summary."),
     ]);
     const board = boardRes.data.boards[0];
     discoverColumns(board.columns);
@@ -10260,6 +10266,88 @@ function pickListOrderLabelKey(it) {
   return `${label}|${qty}`;
 }
 
+function chunkArray(items = [], size = 20) {
+  const out = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
+}
+
+function dedupePickListItemRows(rows = []) {
+  const byId = new Map();
+  (rows || []).forEach(item => {
+    const key = item?.id ? String(item.id) : `${item?.wo_number || ""}|${item?.picklist_id || ""}|${item?.label || item?.item_name || ""}|${item?.quantity || 1}`;
+    if (!key) return;
+    byId.set(key, item);
+  });
+  return [...byId.values()];
+}
+
+async function fetchPickListItemsForPicklists(picklists = []) {
+  const lists = Array.isArray(picklists) ? picklists.filter(Boolean) : [];
+  if (!lists.length) return [];
+
+  const plIds = [...new Set(lists.map(pl => String(pl.id || "").trim()).filter(Boolean))];
+  const woNums = [...new Set(lists.map(pl => pl.wo_number).filter(Boolean))];
+  const woVariants = getWorkOrderQueryVariants(woNums);
+  const rows = [];
+
+  for (const idChunk of chunkArray(plIds, 20)) {
+    const chunkRows = await sbFetchOrThrow(
+      `picklist_items?picklist_id=in.(${idChunk.join(",")})&select=*&order=id.asc`,
+      { method: "GET", headers: { "Prefer": "return=representation" } },
+      "Could not load pick list items by pick list id."
+    );
+    rows.push(...(chunkRows || []));
+  }
+
+  for (const woChunk of chunkArray(woVariants, 25)) {
+    const chunkRows = await sbFetchOrThrow(
+      `picklist_items?wo_number=in.(${woChunk.map(encodeURIComponent).join(",")})&select=*&order=id.asc`,
+      { method: "GET", headers: { "Prefer": "return=representation" } },
+      "Could not load pick list items by work order."
+    );
+    rows.push(...(chunkRows || []));
+  }
+
+  return dedupePickListItemRows(rows);
+}
+
+function pickListLabelMatchCandidates(value = "") {
+  const raw = normalizePickListText(String(value || "").replace(/ \(×\d+\)$/i, ""));
+  if (!raw) return [];
+  const noBrandDash = raw.includes("—") ? normalizePickListText(raw.split("—").slice(1).join("—")) : "";
+  const noBrandHyphen = raw.includes("-") ? normalizePickListText(raw.split("-").slice(1).join("-")) : "";
+  return [...new Set([raw, noBrandDash, noBrandHyphen].filter(Boolean))];
+}
+
+function resolveAllocatedPickListIdsFromLabels(plItems = [], checkedLabels = new Set()) {
+  const normalizedChecked = [...new Set([...checkedLabels].map(label => normalizePickListText(label)).filter(Boolean))];
+  if (!normalizedChecked.length) return new Set();
+
+  const exactMatches = new Set();
+  const looseMatches = new Set();
+
+  (plItems || []).forEach(plItem => {
+    const itemLabel = plItem.label || buildItemLabel(plItem);
+    const candidates = pickListLabelMatchCandidates(itemLabel);
+    const isMatch = candidates.some(candidate => normalizedChecked.includes(candidate));
+    if (isMatch) {
+      exactMatches.add(String(plItem.id));
+      return;
+    }
+
+    const itemName = normalizePickListText(plItem?.item_name || "");
+    const itemMemo = normalizePickListText(plItem?.memo || plItem?.description || "");
+    const looseMatch = normalizedChecked.some(label =>
+      (itemName && (label === itemName || label.includes(itemName) || itemName.includes(label))) ||
+      (itemMemo && (label === itemMemo || label.includes(itemMemo) || itemMemo.includes(label)))
+    );
+    if (looseMatch) looseMatches.add(String(plItem.id));
+  });
+
+  return exactMatches.size ? exactMatches : looseMatches;
+}
+
 function getWorkOrderLookupCandidates(woNum) {
   const base = String(woNum || "").trim().toUpperCase();
   if (!base) return [];
@@ -11375,11 +11463,10 @@ async function kitDoneConfirmed(itemId, e) {
         const plItems = await loadResolvedPickListItems(pl.id, woNum);
 
         /* Match using stored label (exact same format as kit checklist) */
-        const allocatedIds = new Set(
-          plItems
-            .filter(plItem => checkedLabels.has((plItem.label || buildItemLabel(plItem)).toLowerCase().trim()))
-            .map(plItem => String(plItem.id))
-        );
+        const allocatedIds = resolveAllocatedPickListIdsFromLabels(plItems, checkedLabels);
+        if (checkedLabels.size && !allocatedIds.size) {
+          throw new Error("Initial kit items could not be matched back to the pick list.");
+        }
         await saveBatchPickListAllocations(plItems.map(plItem => plItem.id), allocatedIds);
 
         const allPlItems = await loadWorkOrderPickListItems(woNum, pl.id, { sync: false, relink: true });
@@ -11997,7 +12084,7 @@ function findKitCompletionForPickList(pl, completions = []) {
 
 function getInitialKitTimestamp(pl, completions = []) {
   const completion = findKitCompletionForPickList(pl, completions);
-  return completion?.completed_at || completion?.created_at || null;
+  return completion?.completed_at || completion?.created_at || pl?.kittedAt || pl?.kitCompletion?.completed_at || pl?.kitCompletion?.created_at || null;
 }
 
 function getAdminPickListWeekInfo(pl, completions = []) {
@@ -12612,17 +12699,7 @@ async function renderPickLists() {
 
   /* Load items for each picklist. Some older rows are only tied by WO number,
      so read both paths and group them back to the visible picklist. */
-  const plIds = [...new Set(allPicklists.map(pl => pl.id).filter(Boolean))];
-  const woNums = [...new Set(allPicklists.map(pl => pl.wo_number).filter(Boolean))];
-  const woQueryVariants = getWorkOrderQueryVariants(woNums);
-  const byIdItems = await sbFetch(
-    `picklist_items?picklist_id=in.(${plIds.join(",")})&select=*&order=id.asc`,
-    { method: "GET", headers: { "Prefer": "return=representation" } }
-  ) || [];
-  const byWoItems = woQueryVariants.length ? await sbFetch(
-    `picklist_items?wo_number=in.(${woQueryVariants.map(encodeURIComponent).join(",")})&select=*&order=id.asc`,
-    { method: "GET", headers: { "Prefer": "return=representation" } }
-  ) || [] : [];
+  const allItemsFetched = await fetchPickListItemsForPicklists(allPicklists);
   if (renderSeq !== _plRenderSeq) return;
 
   const dedupePickListItems = (sourceItems = []) => {
@@ -12676,7 +12753,7 @@ async function renderPickLists() {
     return grouped;
   };
 
-  let allItems = dedupePickListItems([...byIdItems, ...byWoItems]);
+  let allItems = dedupePickListItems(allItemsFetched);
   let itemsByPl = await buildItemsByPl(allItems);
 
   const missingChecklistPicklists = allPicklists.filter(pl => pl?.wo_number && !(itemsByPl[pl.id] || []).length);
@@ -12721,9 +12798,16 @@ async function renderPickLists() {
     const items = itemsByPl[pl.id] || [];
     return shouldRepairZeroAllocationPickList(pl, items, findKitCompletionForPickList(pl, completions));
   });
-  if (zeroAllocationRepairs.length && _plCurrentWo) {
-    const repairWos = [...new Set(zeroAllocationRepairs.map(pl => pl.wo_number).filter(Boolean))];
-    await Promise.all(repairWos.map(async woNum => {
+  const repairTargets = _plCurrentWo
+    ? [...new Set(zeroAllocationRepairs.map(pl => pl.wo_number).filter(Boolean))]
+    : [...new Set(
+        zeroAllocationRepairs
+          .filter(pl => shouldShowPickListInTab(pl, targetTab, itemsByPl[pl.id] || []))
+          .map(pl => pl.wo_number)
+          .filter(Boolean)
+      )];
+  if (repairTargets.length) {
+    await Promise.all(repairTargets.map(async woNum => {
       try {
         await repairKittedPickListAllocation(woNum, completions);
       } catch (repairErr) {
@@ -12731,7 +12815,7 @@ async function renderPickLists() {
       }
     }));
 
-    const repairWoVariants = getWorkOrderQueryVariants(repairWos);
+    const repairWoVariants = getWorkOrderQueryVariants(repairTargets);
     const repairedItems = repairWoVariants.length ? await sbFetch(
       `picklist_items?wo_number=in.(${repairWoVariants.map(encodeURIComponent).join(",")})&select=*&order=id.asc`,
       { method: "GET", headers: { "Prefer": "return=representation" } }
@@ -13601,6 +13685,7 @@ async function openPeteKittedPickLists(forceRefresh = false, preserveSearch = fa
   /* Load open picklists Pete has kitted from Supabase */
   try {
     const completions = await sbGetKitCompletions();
+    window._kitCompletions = completions;
     const { completedItemIds, completedItemNames } = getKitCompletionSets(completions);
     await ensurePeteKittedPickListsFromKnownItems(completedItemIds, completedItemNames);
 
@@ -13615,11 +13700,7 @@ async function openPeteKittedPickLists(forceRefresh = false, preserveSearch = fa
       const key = canonicalWorkOrderKey(wo);
       if (key && !canonicalWoByKey[key]) canonicalWoByKey[key] = wo;
     });
-    const visibleWoVariants = getWorkOrderQueryVariants(visibleWos);
-    const openItems = visibleWoVariants.length ? await sbFetch(
-      `picklist_items?wo_number=in.(${visibleWoVariants.map(encodeURIComponent).join(",")})&select=*&order=id.asc`,
-      { method: "GET", headers: { "Prefer": "return=representation" } }
-    ) || [] : [];
+    const openItems = await fetchPickListItemsForPicklists(rows);
     const itemStateByWo = {};
     openItems.forEach(it => {
       const ownerWo = canonicalWoByKey[canonicalWorkOrderKey(it.wo_number)] || it.wo_number;
@@ -13715,8 +13796,13 @@ function renderPetePlList() {
   const statusColor = { in_queue:"#f59e0b", missing_items:"var(--accent)", fully_kitted:"#10b981", complete:"var(--muted2)" };
 
   let html = "";
-  const reviewCount = lists.filter(pl => pl.needsReview).length;
-  let lastKitDay = "";
+  const completions = window._kitCompletions || [];
+  const weeklyCounts = {};
+  lists.forEach(pl => {
+    const weekInfo = getAdminPickListWeekInfo(pl, completions);
+    weeklyCounts[weekInfo.key] = (weeklyCounts[weekInfo.key] || 0) + 1;
+  });
+  let lastWeekKey = "";
   lists.forEach(pl => {
     const customer = getPetePickListCustomer(pl);
     const primaryLabel = customer ? `${customer} · ${pl.wo_number}` : pl.wo_number;
@@ -13739,19 +13825,24 @@ function renderPetePlList() {
     const sl = displayStatus === "needs_review" ? "Needs Review" : (statusLabel[displayStatus] || displayStatus);
     const sc = displayStatus === "needs_review" ? "#f59e0b" : (statusColor[displayStatus] || "var(--muted2)");
     const woArg = String(pl.wo_number || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
-    const kitDay = pl.kittedAt
-      ? new Date(pl.kittedAt).toLocaleDateString("en-US", { weekday:"short", month:"short", day:"numeric" })
-      : "Unknown Kitted Date";
-    if (kitDay !== lastKitDay) {
-      html += `<div style="font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);margin:16px 2px 8px">${escHtml(kitDay)}</div>`;
-      lastKitDay = kitDay;
+    const weekInfo = getAdminPickListWeekInfo(pl, completions);
+    const weeklyCount = weeklyCounts[weekInfo.key] || 0;
+    if (weekInfo.key !== lastWeekKey) {
+      lastWeekKey = weekInfo.key;
+      html += `<div class="pl-week-group">
+        <div>
+          <div class="pl-week-title">${escHtml(weekInfo.title)}</div>
+          <div class="pl-week-sub" style="margin-top:3px">${escHtml(weekInfo.sub)}</div>
+        </div>
+        <div class="pl-week-sub">${weeklyCount} project${weeklyCount === 1 ? "" : "s"} kitted</div>
+      </div>`;
     }
     html += `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:8px;overflow:hidden">
       <button type="button" onclick="openPeteKittedPickList('${woArg}',event)"
         style="width:100%;text-align:left;background:none;border:none;padding:14px;cursor:pointer;display:flex;align-items:center;gap:10px;color:inherit;font:inherit">
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(primaryLabel)}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px">Kitted: ${escHtml(kittedStr)} · Ship: ${shipStr}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">Initial kit: ${escHtml(kittedStr)} · Ship: ${shipStr}</div>
           ${newestAdded ? `<div style="font-size:10px;color:#fbbf24;margin-top:3px;line-height:1.35">
             Added after initial kit: ${escHtml(newestAddedLabel)} · ${escHtml(newestAddedStamp)} · needs allocation
           </div>` : ""}
