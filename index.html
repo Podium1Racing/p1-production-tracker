@@ -11375,16 +11375,12 @@ async function kitDoneConfirmed(itemId, e) {
         const plItems = await loadResolvedPickListItems(pl.id, woNum);
 
         /* Match using stored label (exact same format as kit checklist) */
-        for (const plItem of plItems) {
-          /* Use stored label if available, otherwise reconstruct */
-          const plLabel = (plItem.label || buildItemLabel(plItem)).toLowerCase().trim();
-          const isChecked = checkedLabels.has(plLabel);
-          await sbFetch(`picklist_items?id=eq.${encodeURIComponent(plItem.id)}`, {
-            method: "PATCH",
-            prefer: "return=minimal",
-            body: JSON.stringify({ allocated: isChecked }),
-          });
-        }
+        const allocatedIds = new Set(
+          plItems
+            .filter(plItem => checkedLabels.has((plItem.label || buildItemLabel(plItem)).toLowerCase().trim()))
+            .map(plItem => String(plItem.id))
+        );
+        await saveBatchPickListAllocations(plItems.map(plItem => plItem.id), allocatedIds);
 
         const allPlItems = await loadWorkOrderPickListItems(woNum, pl.id, { sync: false, relink: true });
         await syncPickListStatusByWorkOrder(woNum, allPlItems);
@@ -11687,11 +11683,7 @@ async function inlineToggleKitPickListItem(itemDbId, e) {
 
   (async () => {
     try {
-      await sbFetch(`picklist_items?id=eq.${encodeURIComponent(itemDbId)}`, {
-        method: "PATCH",
-        prefer: "return=minimal",
-        body: JSON.stringify({ allocated: nextAllocated }),
-      });
+      await saveSinglePickListAllocation(itemDbId, nextAllocated);
 
       setLocalPickListItemAllocation(pl.id, _kitInlinePickList.woNum, itemDbId, nextAllocated);
       syncPickListStatusByWorkOrder(_kitInlinePickList.woNum, optimisticItems).catch(() => {});
@@ -11721,11 +11713,7 @@ async function inlineCheckAllKitPickList(e) {
   setLocalPickListItemAllocation(pl.id, _kitInlinePickList.woNum, remaining.map(item => item.id), true);
   renderInlineKitPickList();
 
-  Promise.all(remaining.map(item => sbFetch(`picklist_items?id=eq.${encodeURIComponent(item.id)}`, {
-    method: "PATCH",
-    prefer: "return=minimal",
-    body: JSON.stringify({ allocated: true }),
-  }))).then(() => {
+  saveBatchPickListAllocations(remaining.map(item => item.id), new Set(remaining.map(item => String(item.id)))).then(() => {
     syncPickListStatusByWorkOrder(_kitInlinePickList.woNum, optimisticItems).catch(() => {});
   }).catch(() => {
     _kitInlinePickList = { ..._kitInlinePickList, items: previousItems, pl };
@@ -11753,11 +11741,7 @@ async function inlineDeselectAllKitPickList(e) {
   setLocalPickListItemAllocation(pl.id, _kitInlinePickList.woNum, selected.map(item => item.id), false);
   renderInlineKitPickList();
 
-  Promise.all(selected.map(item => sbFetch(`picklist_items?id=eq.${encodeURIComponent(item.id)}`, {
-    method: "PATCH",
-    prefer: "return=minimal",
-    body: JSON.stringify({ allocated: false }),
-  }))).then(() => {
+  saveBatchPickListAllocations(selected.map(item => item.id), new Set()).then(() => {
     syncPickListStatusByWorkOrder(_kitInlinePickList.woNum, optimisticItems).catch(() => {});
   }).catch(() => {
     _kitInlinePickList = { ..._kitInlinePickList, items: previousItems, pl };
@@ -11932,6 +11916,21 @@ function isShippedGroup(groupTitle) {
   return String(groupTitle || "").toLowerCase().includes("shipped");
 }
 
+const PICKLIST_QUEUE_WINDOW_DAYS = 30;
+
+function isPickListQueueEligible(pl) {
+  const item = getPickListMondayItem(pl);
+  if (!item) return false;
+  const groupTitle = item?.group?.title || "";
+  if (isOnHoldOrCanceledGroup(groupTitle) || isShippedGroup(groupTitle)) return false;
+  if (mondayGroupToPlStatus(groupTitle) !== "in_queue") return false;
+
+  const shipDate = parseShipDate(item);
+  const days = daysUntil(shipDate);
+  if (days === null) return false;
+  return days <= PICKLIST_QUEUE_WINDOW_DAYS;
+}
+
 function isActiveMissingItemsPickList(pl) {
   const item = getPickListMondayItem(pl);
   if (!item) return false;
@@ -11956,6 +11955,7 @@ function shouldShowPickListInTab(pl, tab, items = []) {
   const displayStatus = getPickListDisplayStatus(pl, items);
   if (displayStatus === "exclude") return false;
   if (tab === "all") return true;
+  if (tab === "in_queue") return displayStatus === "in_queue" && isPickListQueueEligible(pl);
   if (tab !== "missing_items") return displayStatus === tab;
 
   /* Missing Items is an active-work list, not a history/no-data bucket. */
@@ -12392,28 +12392,8 @@ async function repairKittedPickListAllocation(woNum, completions = null) {
 
   const missingItems = completion ? normalizeMissingItems(completion.missing_items) : null;
   if (!Array.isArray(missingItems)) {
-    /* If there is no exact kit completion for this WO and Monday still shows the
-       order in the pre-kitting stage, clear any inherited allocation state. */
-    if (mondayStageStatus === "in_queue") {
-      const allocatedItems = items.filter(item => !!item.allocated);
-      if (allocatedItems.length) {
-        await Promise.all(allocatedItems.map(item => sbFetch(`picklist_items?id=eq.${encodeURIComponent(item.id)}`, {
-          method: "PATCH",
-          prefer: "return=minimal",
-          body: JSON.stringify({ allocated: false }),
-        })));
-      }
-      const variants = getWorkOrderQueryVariants([woNum]);
-      if (variants.length) await sbFetch(`picklists?wo_number=in.(${variants.map(encodeURIComponent).join(",")})&status=neq.complete`, {
-        method: "PATCH",
-        prefer: "return=minimal",
-        body: JSON.stringify({
-          status: "in_queue",
-          updated_at: new Date().toISOString(),
-        }),
-      });
-      return allocatedItems.length ? "reset_prekit" : "prekit_clean";
-    }
+    /* Never auto-clear allocation history when the completion match is uncertain.
+       A missing or unmatched kit record should pause repair, not overwrite live flags. */
     return "needs_review";
   }
 
@@ -12961,12 +12941,17 @@ async function togglePickListItem(itemId, plId, e) {
   }
   if (lbl) lbl.classList.toggle("allocated", nowAllocated);
 
-  /* Write to Supabase */
-  await sbFetch(`picklist_items?id=eq.${encodeURIComponent(itemId)}`, {
-    method: "PATCH",
-    prefer: "return=minimal",
-    body: JSON.stringify({ allocated: nowAllocated }),
-  });
+  try {
+    await saveSinglePickListAllocation(itemId, nowAllocated);
+  } catch (err) {
+    if (cb) {
+      cb.classList.toggle("checked", wasAllocated);
+      cb.innerHTML = wasAllocated ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>` : "";
+    }
+    if (lbl) lbl.classList.toggle("allocated", wasAllocated);
+    showToast("Could not save that allocation. Try again.", "err");
+    return;
+  }
 
   /* Auto-update picklist status based on allocation state */
   const pl = (_plAllPicklists || []).find(row => String(row?.id) === String(plId)) || null;
@@ -13007,13 +12992,7 @@ async function checkAllPickListItems(plId, e) {
   }
 
   try {
-    await Promise.all(remaining.map(it =>
-      sbFetch(`picklist_items?id=eq.${encodeURIComponent(it.id)}`, {
-        method: "PATCH",
-        prefer: "return=minimal",
-        body: JSON.stringify({ allocated: true }),
-      })
-    ));
+    await saveBatchPickListAllocations(remaining.map(it => it.id), new Set(remaining.map(it => String(it.id))));
 
     const pl = (_plAllPicklists || []).find(row => String(row?.id) === String(plId)) || null;
     invalidatePickListCache(pl?.wo_number || null, plId);
@@ -13061,13 +13040,7 @@ async function deselectAllPickListItems(plId, e) {
   }
 
   try {
-    await Promise.all(selected.map(it =>
-      sbFetch(`picklist_items?id=eq.${encodeURIComponent(it.id)}`, {
-        method: "PATCH",
-        prefer: "return=minimal",
-        body: JSON.stringify({ allocated: false }),
-      })
-    ));
+    await saveBatchPickListAllocations(selected.map(it => it.id), new Set());
 
     const pl = (_plAllPicklists || []).find(row => String(row?.id) === String(plId)) || null;
     invalidatePickListCache(pl?.wo_number || null, plId);
@@ -13143,6 +13116,28 @@ function setLocalPickListItemAllocation(plId, woNum, itemIds = [], allocated) {
     if (ids.has(String(item.id))) item.allocated = !!allocated;
     return item;
   });
+}
+
+async function saveSinglePickListAllocation(itemId, allocated) {
+  const rows = await sbFetch(`picklist_items?id=eq.${encodeURIComponent(itemId)}`, {
+    method: "PATCH",
+    prefer: "return=representation",
+    body: JSON.stringify({ allocated: !!allocated }),
+  });
+  if (!Array.isArray(rows) || !rows.length) {
+    throw new Error("Pick list allocation save failed.");
+  }
+  return rows[0];
+}
+
+async function saveBatchPickListAllocations(itemIds = [], allocatedIds = new Set()) {
+  const ids = (itemIds || []).map(String).filter(Boolean);
+  if (!ids.length) return [];
+  const writes = await Promise.all(ids.map(id => saveSinglePickListAllocation(id, allocatedIds.has(String(id)))));
+  if (writes.length !== ids.length) {
+    throw new Error("Not every pick list allocation saved.");
+  }
+  return writes;
 }
 
 /* ── Cycle status Open ↔ In Queue ── */
@@ -13569,11 +13564,7 @@ async function togglePeteKittedItem(itemId, plId, woNum, e) {
 
   (async () => {
     try {
-      await sbFetch(`picklist_items?id=eq.${encodeURIComponent(itemId)}`, {
-        method: "PATCH",
-        prefer: "return=minimal",
-        body: JSON.stringify({ allocated: nextAllocated }),
-      });
+      await saveSinglePickListAllocation(itemId, nextAllocated);
 
       await sbFetch(`picklists?id=eq.${encodeURIComponent(plId)}&status=neq.complete`, {
         method: "PATCH",
@@ -13957,34 +13948,35 @@ async function saveAllocationReview(plId, woNum, e) {
     .filter(cb => cb.checked)
     .map(cb => cb.dataset.itemId));
 
-  await Promise.all(allIds.map(id => sbFetch(`picklist_items?id=eq.${encodeURIComponent(id)}`, {
-    method: "PATCH",
-    prefer: "return=minimal",
-    body: JSON.stringify({ allocated: allocatedIds.has(String(id)) }),
-  })));
+  try {
+    await saveBatchPickListAllocations(allIds, allocatedIds);
 
-  const allAllocated = allIds.length > 0 && allocatedIds.size === allIds.length;
-  await sbFetch(`picklists?id=eq.${encodeURIComponent(plId)}&status=neq.complete`, {
-    method: "PATCH",
-    prefer: "return=minimal",
-    body: JSON.stringify({
-      status: allAllocated ? "fully_kitted" : "missing_items",
-      updated_at: new Date().toISOString(),
-    }),
-  });
+    const allAllocated = allIds.length > 0 && allocatedIds.size === allIds.length;
+    await sbFetch(`picklists?id=eq.${encodeURIComponent(plId)}&status=neq.complete`, {
+      method: "PATCH",
+      prefer: "return=minimal",
+      body: JSON.stringify({
+        status: allAllocated ? "fully_kitted" : "missing_items",
+        updated_at: new Date().toISOString(),
+      }),
+    });
 
-  const pl = (_plAllPicklists || []).find(row => String(row?.id) === String(plId)) || { id: plId, wo_number: woNum };
-  invalidatePickListCache(woNum, plId);
-  const liveItems = updateLocalPickListItems(plId, woNum, item => ({
-    ...item,
-    allocated: allocatedIds.has(String(item.id)),
-  }));
-  if (woNum && liveItems.length) {
-    syncPeteKitCompletionMissing(pl, liveItems).catch(()=>{});
+    const pl = (_plAllPicklists || []).find(row => String(row?.id) === String(plId)) || { id: plId, wo_number: woNum };
+    invalidatePickListCache(woNum, plId);
+    const liveItems = updateLocalPickListItems(plId, woNum, item => ({
+      ...item,
+      allocated: allocatedIds.has(String(item.id)),
+    }));
+    if (woNum && liveItems.length) {
+      syncPeteKitCompletionMissing(pl, liveItems).catch(()=>{});
+    }
+
+    document.getElementById("pete-review-modal")?.remove();
+    showToast(allAllocated ? "Allocation saved — all items allocated." : "Allocation saved — missing items remain.", "ok");
+  } catch (err) {
+    if (btn) { btn.disabled = false; btn.textContent = "Save Allocation"; }
+    showToast("Could not save allocation review. Try again.", "err");
   }
-
-  document.getElementById("pete-review-modal")?.remove();
-  showToast(allAllocated ? "Allocation saved — all items allocated." : "Allocation saved — missing items remain.", "ok");
 }
 
 async function savePeteAllocationReview(plId, woNum, e) {
@@ -13997,45 +13989,46 @@ async function savePeteAllocationReview(plId, woNum, e) {
   const pl = (window._petePlLists || []).find(p => p.id === plId || p.wo_number === woNum);
   const items = pl?.checklistItems || [];
 
-  await Promise.all(items.map(item => sbFetch(`picklist_items?id=eq.${encodeURIComponent(item.id)}`, {
-    method: "PATCH",
-    prefer: "return=minimal",
-    body: JSON.stringify({ allocated: allocatedIds.has(String(item.id)) }),
-  })));
+  try {
+    await saveBatchPickListAllocations(items.map(item => item.id), allocatedIds);
 
-  const allAllocated = items.length > 0 && allocatedIds.size === items.length;
-  await sbFetch(`picklists?id=eq.${encodeURIComponent(plId)}&status=neq.complete`, {
-    method: "PATCH",
-    prefer: "return=minimal",
-    body: JSON.stringify({
-      status: allAllocated ? "fully_kitted" : "missing_items",
-      updated_at: new Date().toISOString(),
-    }),
-  });
-  await syncPeteKitCompletionMissing(pl || { wo_number: woNum }, items.map(item => ({
-    ...item,
-    allocated: allocatedIds.has(String(item.id)),
-  }))).catch(()=>{});
-  invalidatePickListCache(woNum, plId);
-
-  window._petePlLists = (window._petePlLists || []).map(p => {
-    if (p.id !== plId && p.wo_number !== woNum) return p;
-    const checklistItems = (p.checklistItems || []).map(item => ({
+    const allAllocated = items.length > 0 && allocatedIds.size === items.length;
+    await sbFetch(`picklists?id=eq.${encodeURIComponent(plId)}&status=neq.complete`, {
+      method: "PATCH",
+      prefer: "return=minimal",
+      body: JSON.stringify({
+        status: allAllocated ? "fully_kitted" : "missing_items",
+        updated_at: new Date().toISOString(),
+      }),
+    });
+    await syncPeteKitCompletionMissing(pl || { wo_number: woNum }, items.map(item => ({
       ...item,
       allocated: allocatedIds.has(String(item.id)),
-    }));
-    return {
-      ...p,
-      checklistItems,
-      needsReview: false,
-      status: allAllocated ? "fully_kitted" : "missing_items",
-      displayStatus: allAllocated ? "fully_kitted" : "missing_items",
-    };
-  });
-  saveTimedCache(PETE_KITTED_CACHE_KEY, window._petePlLists || []);
-  document.getElementById("pete-review-modal")?.remove();
-  renderPetePlList();
-  showToast(allAllocated ? "Review saved — all allocated." : "Review saved — missing items marked.", "ok");
+    }))).catch(()=>{});
+    invalidatePickListCache(woNum, plId);
+
+    window._petePlLists = (window._petePlLists || []).map(p => {
+      if (p.id !== plId && p.wo_number !== woNum) return p;
+      const checklistItems = (p.checklistItems || []).map(item => ({
+        ...item,
+        allocated: allocatedIds.has(String(item.id)),
+      }));
+      return {
+        ...p,
+        checklistItems,
+        needsReview: false,
+        status: allAllocated ? "fully_kitted" : "missing_items",
+        displayStatus: allAllocated ? "fully_kitted" : "missing_items",
+      };
+    });
+    saveTimedCache(PETE_KITTED_CACHE_KEY, window._petePlLists || []);
+    document.getElementById("pete-review-modal")?.remove();
+    renderPetePlList();
+    showToast(allAllocated ? "Review saved — all allocated." : "Review saved — missing items marked.", "ok");
+  } catch (err) {
+    if (btn) { btn.disabled = false; btn.textContent = "Save Review"; }
+    showToast("Could not save Pete's allocation review. Try again.", "err");
+  }
 }
 
 /* ── Confirmation modal before completing pick list ── */
