@@ -95,6 +95,7 @@ button:not(:disabled):active, .name-btn:active, .srow:active, .seg-btn:active {
   --radius:12px; --radius-sm:8px; --radius-xs:5px;
   --app-vh:100vh;
   --bottom-nav-space:0px;
+  --bottom-nav-max-width:760px;
 }
 [data-theme="light"] {
   --bg:#f5f5f5; --surface:#ffffff; --surface2:#ebebeb; --surface3:#f9f9f9;
@@ -984,9 +985,13 @@ input.photo-file-inp { display:none; }
 }
 .bottom-nav {
   position:fixed;
-  left:max(0px, env(safe-area-inset-left));
-  right:max(0px, env(safe-area-inset-right));
+  left:50%;
+  right:auto;
   bottom:0;
+  transform:translateX(-50%);
+  width:min(calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right)), var(--bottom-nav-max-width));
+  max-width:100%;
+  box-sizing:border-box;
   z-index:60;
   display:none;
   background:rgba(18,18,18,.92);
@@ -995,18 +1000,19 @@ input.photo-file-inp { display:none; }
   border-radius:18px 18px 0 0;
   backdrop-filter:blur(16px);
   box-shadow:0 -6px 26px rgba(0,0,0,.12), 0 -18px 40px rgba(0,0,0,.28);
-  padding:8px 8px calc(8px + env(safe-area-inset-bottom));
+  padding:8px max(10px, env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
   gap:4px;
+  align-items:stretch;
 }
-.bottom-nav-btn { flex:1; border:none; background:none; color:var(--muted); border-radius:13px; padding:7px 4px 6px; font-size:9px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer; }
+.bottom-nav-btn { flex:1; min-width:0; min-height:56px; border:none; background:none; color:var(--muted); border-radius:13px; padding:7px 4px 6px; font-size:9px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; white-space:nowrap; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; cursor:pointer; }
 .bottom-nav-btn.active { background:rgba(224,32,32,.16); color:#fff; }
 .bottom-nav-btn svg { width:15px; height:15px; }
 .bottom-nav-icon-wrap { position:relative; display:inline-flex; align-items:center; justify-content:center; }
 .bottom-nav-badge { position:absolute; top:-7px; right:-11px; min-width:16px; height:16px; padding:0 4px; border-radius:999px; background:var(--accent); color:#fff; font-size:9px; font-weight:900; line-height:16px; text-align:center; box-shadow:0 0 0 2px rgba(18,18,18,.92); display:none; }
-.main-content,.kit-content,.admin-content,.hist-content,.team-screen-content { padding-bottom:calc(var(--bottom-nav-space) + 18px); }
+.main-content,.kit-content,.admin-content,.hist-content,.team-screen-content { padding-bottom:calc(var(--bottom-nav-space) + max(18px, env(safe-area-inset-bottom))); }
 @media (max-width:1100px) {
   .bottom-nav { display:flex; }
-  .main-content,.kit-content,.admin-content,.hist-content,.team-screen-content { padding-bottom:calc(var(--bottom-nav-space) + 18px) !important; }
+  .main-content,.kit-content,.admin-content,.hist-content,.team-screen-content { padding-bottom:calc(var(--bottom-nav-space) + max(18px, env(safe-area-inset-bottom))) !important; }
   .app-header, .kit-header, .admin-header { align-items:flex-start; padding:max(18px, calc(12px + env(safe-area-inset-top))) 12px 10px; }
   .header-left, .kit-header-left { min-width:0; }
   .header-right, .admin-header-actions {
@@ -1072,19 +1078,15 @@ input.photo-file-inp { display:none; }
 }
 .login-loading-overlay {
   position:fixed;
-  top:calc(-1 * env(safe-area-inset-top));
-  right:0;
-  bottom:auto;
-  left:0;
-  width:100vw;
-  height:calc(var(--app-vh) + env(safe-area-inset-top) + env(safe-area-inset-bottom));
+  inset:calc(-1 * env(safe-area-inset-top)) 0 calc(-1 * env(safe-area-inset-bottom)) 0;
+  width:auto;
+  height:auto;
   min-height:calc(var(--app-vh) + env(safe-area-inset-top) + env(safe-area-inset-bottom));
-  min-height:-webkit-fill-available;
   z-index:10050;
   pointer-events:none;
   opacity:0;
   visibility:hidden;
-  background-color:#030303;
+  background:#030303 url('assets/podium1-login-loading.png') center center / cover no-repeat;
   overflow:hidden;
   transform:translateZ(0);
   will-change:opacity;
@@ -1092,12 +1094,12 @@ input.photo-file-inp { display:none; }
 }
 .login-loading-img {
   position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
+  inset:-2px;
+  width:calc(100% + 4px);
+  height:calc(100% + 4px);
   object-fit:cover;
   object-position:center;
-  transform:translate3d(0,0,0) scale(1.02);
+  transform:translate3d(0,0,0) scale(1.03);
   transform-origin:center;
   will-change:transform, opacity;
   backface-visibility:hidden;
