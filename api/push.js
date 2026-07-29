@@ -263,6 +263,22 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, count: results.length });
     }
 
+    if (req.method === "POST" && action === "notify-production-event") {
+      const recipientNames = Array.isArray(req.body?.recipientNames) ? req.body.recipientNames : [];
+      const eventType = req.body?.eventType || "production_event";
+      const results = await notifyTargets(recipientNames, {
+        eventType,
+        title: req.body?.title || "Production Update",
+        body: req.body?.body || "Open Production Tracker for details.",
+        url: req.body?.url || "/#queue",
+        tag: req.body?.tag || `production-${eventType}`,
+        meta: req.body?.meta || {},
+      }, {
+        excludeSender: req.body?.excludeSender || "",
+      });
+      return res.status(200).json({ ok: true, count: results.length });
+    }
+
     return res.status(400).json({ error: "Unsupported action" });
   } catch (err) {
     return res.status(500).json({ error: err.message || "Push route failed" });

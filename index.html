@@ -283,6 +283,15 @@ button, input, select, textarea { font-family:inherit; }
 .dash-start-btn:disabled { opacity:.45; cursor:not-allowed; box-shadow:none; }
 .dash-start-current { margin-top:9px; font-size:12px; color:var(--muted); line-height:1.4; }
 .dash-start-current strong { color:var(--text); }
+.dash-current-build { margin-top:10px; background:rgba(255,255,255,.035); border:1px solid var(--border); border-radius:12px; padding:12px; }
+.dash-current-build-top { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:8px; }
+.dash-current-build-title { font-size:15px; font-weight:900; line-height:1.2; color:var(--text); }
+.dash-current-build-sub { margin-top:3px; font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--muted2); }
+.dash-current-build-state { flex-shrink:0; border-radius:999px; padding:5px 9px; font-size:10px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; background:rgba(255,255,255,.08); color:var(--muted); }
+.dash-current-build-state.running { background:rgba(16,185,129,.16); color:var(--green); }
+.dash-current-build-state.paused { background:rgba(245,158,11,.16); color:var(--yellow); }
+.dash-current-build-state.stuck { background:rgba(224,32,32,.16); color:var(--accent); }
+.dash-start-panel .sw-bar { margin-top:8px; }
 .dash-focus-row-wrap { border-radius:var(--radius-sm); overflow:hidden; border:1px solid rgba(255,255,255,.04); background:var(--surface2); }
 .dash-focus-row-wrap .dash-focus-row { border:0; border-radius:0; background:transparent; min-height:58px; cursor:pointer; }
 .dash-focus-row-chevron { width:22px; height:22px; display:flex; align-items:center; justify-content:center; color:var(--muted2); transition:transform .16s ease; flex-shrink:0; }
@@ -353,6 +362,9 @@ button, input, select, textarea { font-family:inherit; }
 .pl-status-pill.missing_items { background:rgba(224,32,32,0.15);   color:var(--accent); }
 .pl-status-pill.fully_kitted  { background:rgba(16,185,129,0.15);  color:#10b981; }
 .pl-status-pill.complete      { background:rgba(100,116,139,0.15); color:var(--muted); }
+.pl-week-group { margin:18px 2px 9px; display:flex; align-items:flex-end; justify-content:space-between; gap:10px; }
+.pl-week-title { font-size:12px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; color:var(--text); }
+.pl-week-sub { font-size:10px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--muted2); white-space:nowrap; }
 .pl-changes-badge { display:inline-flex; align-items:center; gap:4px; background:rgba(224,32,32,0.15); color:var(--accent); font-size:10px; font-weight:700; padding:3px 8px; border-radius:4px; margin-top:5px; }
 .pl-item-row { display:flex; align-items:center; gap:10px; padding:9px 14px; border-top:1px solid var(--border); }
 .pl-item-row:first-of-type { border-top:1px solid var(--border); }
@@ -1786,7 +1798,7 @@ async function sbFetch(path, options = {}) {
     ...options.headers,
   };
   try {
-    const r = await fetch(url, { ...options, headers });
+    const r = await fetch(url, { cache: "no-store", ...options, headers });
     if (!r.ok) { const t = await r.text(); console.warn("Supabase error:", t); return null; }
     const text = await r.text();
     return text ? JSON.parse(text) : null;
@@ -1887,6 +1899,15 @@ async function syncPushForActiveSession(forceSubscribe = false) {
 
 function handleInitialHashRoute() {
   const hash = String(location.hash || "").replace(/^#/, "").toLowerCase();
+  if (hash.startsWith("wo=")) {
+    const woNum = decodeURIComponent(String(location.hash || "").replace(/^#wo=/i, "")).trim().toUpperCase();
+    if (!currentUser) {
+      window._pendingProductionDeepLink = location.hash;
+      return false;
+    }
+    openProductionDeepLink(woNum).catch(() => {});
+    return true;
+  }
   if (hash === "messages") {
     showHistory().catch(() => {});
     return true;
@@ -1896,6 +1917,32 @@ function handleInitialHashRoute() {
     return true;
   }
   return false;
+}
+
+async function openProductionDeepLink(woNum) {
+  const wo = String(woNum || "").trim().toUpperCase();
+  if (!wo) return false;
+  const items = await loadSharedBoardItems(false).catch(() => getKnownBoardItems());
+  const item = findKnownBoardItemByWo(wo) || (items || []).find(row => getWoNumberFromItem(row) === wo) || null;
+  if (!item) {
+    await showSharedQueue();
+    return false;
+  }
+  await openPickListForItem(item.id, wo, null, {
+    forceScreen: true,
+    kittedAccess: currentUser?.role === KIT_ROLE,
+    reviewOnly: false,
+  });
+  return true;
+}
+
+function routePendingProductionDeepLink() {
+  const pending = window._pendingProductionDeepLink || location.hash || "";
+  if (!pending) return;
+  if (String(pending).toLowerCase().startsWith("#wo=")) {
+    window._pendingProductionDeepLink = "";
+    setTimeout(() => handleInitialHashRoute(), 250);
+  }
 }
 
 async function clearMessageBadge() {
@@ -1921,20 +1968,22 @@ async function sbUpsertTimer(itemId, colType, entry) {
     duration_ms: entry.totalMs || 0,
     updated_at:  new Date().toISOString(),
   };
-  /* Upsert by user_name + item_id + col_type */
-  await sbFetch(
-    `timer_sessions?user_name=eq.${encodeURIComponent(payload.user_name)}&item_id=eq.${encodeURIComponent(itemId)}&col_type=eq.${encodeURIComponent(colType)}`,
-    { method: "PATCH", body: JSON.stringify(payload) }
-  ).then(async res => {
-    /* If no row existed (PATCH updated 0 rows), INSERT instead */
-    if (res === null) {
-      await sbFetch("timer_sessions", {
-        method: "POST",
-        prefer: "return=minimal",
-        body: JSON.stringify(payload),
-      });
-    }
+  /* Upsert by user_name + item_id + col_type.
+     Supabase returns an empty body for a successful PATCH unless we ask for representation.
+     Without that, every timer save looked like "no row existed" and created duplicates. */
+  const filter = `timer_sessions?user_name=eq.${encodeURIComponent(payload.user_name)}&item_id=eq.${encodeURIComponent(itemId)}&col_type=eq.${encodeURIComponent(colType)}`;
+  const patched = await sbFetch(filter, {
+    method: "PATCH",
+    prefer: "return=representation",
+    body: JSON.stringify(payload)
   });
+  if (Array.isArray(patched) && patched.length === 0) {
+    await sbFetch("timer_sessions", {
+      method: "POST",
+      prefer: "return=minimal",
+      body: JSON.stringify(payload),
+    });
+  }
 }
 
 async function sbEndTimer(itemId, colType, durationMs) {
@@ -1952,7 +2001,7 @@ async function sbEndTimer(itemId, colType, durationMs) {
   };
   await sbFetch(
     `timer_sessions?user_name=eq.${encodeURIComponent(payload.user_name)}&item_id=eq.${encodeURIComponent(itemId)}&col_type=eq.${encodeURIComponent(colType)}`,
-    { method: "PATCH", body: JSON.stringify(payload) }
+    { method: "PATCH", prefer: "return=representation", body: JSON.stringify(payload) }
   );
   /* Also insert a historical record */
   await sbFetch("timer_sessions", {
@@ -1960,6 +2009,13 @@ async function sbEndTimer(itemId, colType, durationMs) {
     prefer: "return=minimal",
     body: JSON.stringify({ ...payload, id: undefined }),
   });
+}
+
+async function sbClearTimerRows(itemId, colType, userName) {
+  const name = userName || currentUser?.name || "";
+  if (!name || !itemId || !colType) return;
+  const filter = `timer_sessions?user_name=eq.${encodeURIComponent(name)}&item_id=eq.${encodeURIComponent(itemId)}&col_type=eq.${encodeURIComponent(colType)}`;
+  await sbFetch(filter, { method: "DELETE", prefer: "return=minimal" });
 }
 
 /* ── Kit completion sync ────────────────────────────────────── */
@@ -2460,7 +2516,155 @@ function fmtMsForMonday(ms) {
   return `${m}m`;
 }
 
-/* Pause any currently running timer that isn't this one */
+/* Builder session guard: assignment counts as an active session, even if the timer is paused. */
+function getAnyRunningTimerForCurrentUser(exceptItemId = "", exceptColType = "") {
+  const timers = loadTimers();
+  const userName = currentUser?.name || "";
+  for (const [key, entry] of Object.entries(timers || {})) {
+    const parts = key.split("|");
+    if (parts[0] !== userName || !entry?.running) continue;
+    const itemId = parts[1] || "";
+    const colType = parts[2] || "";
+    if (exceptItemId && exceptColType && String(itemId) === String(exceptItemId) && colType === exceptColType) continue;
+    const item = boardItems.find(i => String(i.id) === String(itemId));
+    return { key, itemId, colType, entry, item };
+  }
+  return null;
+}
+
+function activeSessionProjectLabel(session) {
+  if (!session) return "your current project";
+  return session.item ? compactProjectLabel(session.item) : `WO ${session.itemId}`;
+}
+
+function runningTimerProjectLabel(running) {
+  return activeSessionProjectLabel(running);
+}
+
+function sideWhoCol(colType) {
+  return colType === "ms" ? COL.ms_who : COL.chassis_who;
+}
+
+function isBuildSideComplete(item, colType) {
+  return getBuildSideState(item, colType) === "complete";
+}
+
+function activeTimerHasWork(entry) {
+  return !!(entry && (entry.running || entry.totalMs > 0));
+}
+
+function getActiveBuilderSessionsForCurrentUser() {
+  const userName = currentUser?.name || "";
+  if (!userName) return [];
+  const timers = loadTimers();
+  const sessions = [];
+  const seen = new Set();
+  const addSession = (session) => {
+    if (!session?.itemId || !session?.colType) return;
+    const key = `${session.itemId}|${session.colType}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    sessions.push(session);
+  };
+
+  ["ms", "chassis"].forEach(colType => {
+    const whoCol = sideWhoCol(colType);
+    (boardItems || []).forEach(item => {
+      if (!item?.id || !isMeInPeople(item, whoCol)) return;
+      if (isBuildSideComplete(item, colType)) return;
+      const entry = timers[`${userName}|${item.id}|${colType}`] || getTimer(item.id, colType);
+      addSession({
+        source: "assignment",
+        itemId: String(item.id),
+        colType,
+        item,
+        entry,
+        assignedCount: parsePeople(item, whoCol).length,
+      });
+    });
+  });
+
+  for (const [key, entry] of Object.entries(timers || {})) {
+    const parts = key.split("|");
+    if (parts[0] !== userName || !activeTimerHasWork(entry)) continue;
+    const itemId = parts[1] || "";
+    const colType = parts[2] || "";
+    if (!["ms", "chassis"].includes(colType)) continue;
+    const item = (boardItems || []).find(i => String(i.id) === String(itemId));
+    if (item && isBuildSideComplete(item, colType) && !entry.running && !entry.totalMs) continue;
+    addSession({
+      source: entry.running ? "timer_running" : "timer_paused",
+      itemId,
+      colType,
+      item,
+      entry,
+      assignedCount: item ? parsePeople(item, sideWhoCol(colType)).length : 0,
+    });
+  }
+
+  return sessions;
+}
+
+function isSameBuildSession(session, itemId, colType) {
+  return String(session?.itemId || "") === String(itemId || "") && session?.colType === colType;
+}
+
+function getActiveBuilderSessionForCurrentUser(exceptItemId = "", exceptColType = "") {
+  const sessions = getActiveBuilderSessionsForCurrentUser();
+  return sessions
+    .filter(s => !(exceptItemId && exceptColType && isSameBuildSession(s, exceptItemId, exceptColType)))
+    .sort((a,b) => Number(!!b.entry?.running) - Number(!!a.entry?.running))[0] || null;
+}
+
+function canStartTimerForBuild(itemId, colType) {
+  const conflict = getActiveBuilderSessionForCurrentUser(itemId, colType);
+  if (!conflict) return { ok:true };
+  return { ok:false, conflict };
+}
+
+function showSessionSwitchPrompt(conflict, targetItemId = "", targetColType = "") {
+  const body = document.getElementById("update-sheet-body");
+  if (!body) {
+    showToast(`End Session on ${activeSessionProjectLabel(conflict)} before starting another project.`, "err");
+    return;
+  }
+  const conflictSide = conflict?.colType === "ms" ? "Monitor Stand" : "Chassis";
+  const targetItem = (boardItems || []).find(i => String(i.id) === String(targetItemId));
+  const targetLabel = targetItem ? compactProjectLabel(targetItem) : "the next project";
+  updateSheetContext = { mode: "session_switch_block", itemId: conflict?.itemId || "", colType: conflict?.colType || "", targetItemId, targetColType };
+  body.innerHTML = `
+    <div class="update-sheet-header">
+      <div class="update-sheet-title">Finish Current Session</div>
+      <button class="update-sheet-close" onclick="closeUpdateSheet()">×</button>
+    </div>
+    <div class="update-sheet-sub">${escHtml(conflictSide)} · ${escHtml(activeSessionProjectLabel(conflict))}</div>
+    <div style="background:rgba(224,32,32,0.08);border:1px solid rgba(224,32,32,0.22);border-radius:var(--radius-xs);padding:12px 13px;font-size:12px;color:var(--text);line-height:1.6;margin-bottom:14px">
+      You are still assigned to this project. Before switching to <strong>${escHtml(targetLabel)}</strong>, update the current progress, upload the required photo, and end this session.
+    </div>
+    <div style="display:grid;gap:9px;margin:12px 0 16px">
+      <div style="display:flex;gap:9px;align-items:flex-start;color:var(--muted);font-size:12px;line-height:1.45"><span style="color:var(--green);font-weight:900">1.</span><span>Update the completion percentage.</span></div>
+      <div style="display:flex;gap:9px;align-items:flex-start;color:var(--muted);font-size:12px;line-height:1.45"><span style="color:var(--green);font-weight:900">2.</span><span>Upload the required progress photo.</span></div>
+      <div style="display:flex;gap:9px;align-items:flex-start;color:var(--muted);font-size:12px;line-height:1.45"><span style="color:var(--green);font-weight:900">3.</span><span>End the current session, then start the new project.</span></div>
+    </div>
+    <button class="save-btn" onclick="beginSwitchProjectHandoff('${escAttr(conflict?.itemId || "")}','${escAttr(conflict?.colType || "")}',event)">
+      Update & End Current Session
+    </button>
+    <button class="btn ghost" style="width:100%;margin-top:10px" onclick="closeUpdateSheet()">Stay on Current Project</button>`;
+  document.getElementById("update-sheet-overlay")?.classList.add("open");
+}
+
+function beginSwitchProjectHandoff(itemId, colType, e) {
+  if (e) e.stopPropagation();
+  openEndDaySheet(itemId, colType, e, { defaultReason: "Switching Projects" });
+}
+
+function ensureBuilderCanUseProject(itemId, colType) {
+  const guard = canStartTimerForBuild(itemId, colType);
+  if (guard.ok) return true;
+  showSessionSwitchPrompt(guard.conflict, itemId, colType);
+  return false;
+}
+
 function pauseOtherTimers(exceptItemId, exceptColType) {
   const timers = loadTimers();
   Object.keys(timers).forEach(k =>{
@@ -2481,7 +2685,7 @@ function pauseOtherTimers(exceptItemId, exceptColType) {
       const btnEl = document.getElementById("sw-main-btn-" + iid + "-" + ct);
       if (btnEl) {
         btnEl.className = "sw-btn sw-btn-resume";
-        btnEl.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg> Resume`;
+        btnEl.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg> Start Timer`;
         btnEl.onclick = (e) =>{ e.stopPropagation(); swStart(iid, ct); };
       }
     }
@@ -2490,11 +2694,16 @@ function pauseOtherTimers(exceptItemId, exceptColType) {
 }
 
 function swStart(itemId, colType) {
-  pauseOtherTimers(itemId, colType);
+  const guard = canStartTimerForBuild(itemId, colType);
+  if (!guard.ok) {
+    showSessionSwitchPrompt(guard.conflict, itemId, colType);
+    return false;
+  }
   const entry = getTimer(itemId, colType);
   const isResuming = entry.totalMs > 0;
   entry.running = true; entry.startedAt = Date.now();
   setTimer(itemId, colType, entry);
+  syncBuildStatusActive(itemId, colType);
   sbUpsertTimer(itemId, colType, entry).catch(()=>{});
   swStartTick(itemId, colType);
   /* Log time event to P1 API */
@@ -2515,6 +2724,10 @@ function swStart(itemId, colType) {
   const dispEl = document.getElementById("sw-time-" + itemId + "-" + colType);
   if (dispEl) dispEl.className = "sw-time running";
   applyProgressLock(itemId, colType);
+  setTimeout(() => {
+    if (document.getElementById("screen-dash")?.classList.contains("active")) renderDash(boardItems || []);
+  }, 60);
+  return true;
 }
 
 function swPause(itemId, colType) {
@@ -2536,7 +2749,7 @@ function swPause(itemId, colType) {
   const btnEl = document.getElementById("sw-main-btn-" + itemId + "-" + colType);
   if (btnEl) {
     btnEl.className = "sw-btn sw-btn-resume";
-    btnEl.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg> Resume`;
+    btnEl.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg> Start Timer`;
     btnEl.onclick = (e) =>{ e.stopPropagation(); swStart(itemId, colType); };
   }
   applyProgressLock(itemId, colType);
@@ -2628,7 +2841,7 @@ async function swEnd(itemId, colType, itemName, opts = {}) {
         const mainBtn2 = document.getElementById("sw-main-btn-" + itemId + "-" + colType);
         if (mainBtn2) {
           mainBtn2.className = "sw-btn sw-btn-resume";
-          mainBtn2.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg> Resume`;
+          mainBtn2.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg> Start Timer`;
           mainBtn2.onclick = (ev) =>{ ev.stopPropagation(); swStart(itemId, colType); };
         }
         updateSwSessions(itemId, colType);
@@ -2704,7 +2917,7 @@ function deleteSession(itemId, colType, sessionIdx) {
 }
 
 /* Clear all sessions for a timer key — callable from admin too */
-function clearAllSessions(itemId, colType, userName) {
+async function clearAllSessions(itemId, colType, userName) {
   const label = userName ? `all time logs for ${userName}` : "all time logs for this build";
   if (!confirm(`Delete ${label}? This cannot be undone.`)) return;
   const timers = loadTimers();
@@ -2717,6 +2930,7 @@ function clearAllSessions(itemId, colType, userName) {
     if (timers[k]) { timers[k].sessions = []; timers[k].totalMs = 0; timers[k].running = false; timers[k].startedAt = null; }
   }
   saveTimers(timers);
+  await sbClearTimerRows(itemId, colType, userName).catch(()=>{});
   if (userName) {
     showToast(`Time logs cleared for ${userName.split(" ")[0]}.`, "");
     loadAdminData();
@@ -2749,20 +2963,20 @@ function buildSwHtml(itemId, colType) {
   const isPausedByMonday = item && isBuildPaused(item, colType);
   const stateLabel = isStuckByMonday
     ? "Stuck — waiting on missing item"
-    : isPausedByMonday
-    ? "Paused — builder switched projects"
     : entry.running
     ? "Working now"
+    : isPausedByMonday
+    ? "Paused — press Start Timer to work"
     : liveMs > 0
-    ? "Ready to resume"
+    ? "Timer paused"
     : "Not started";
-  const stateClass = isStuckByMonday ? "stuck" : isPausedByMonday ? "paused" : entry.running ? "running" : "";
+  const stateClass = isStuckByMonday ? "stuck" : entry.running ? "running" : isPausedByMonday ? "paused" : "";
   const mainBtnClass = entry.running ? "sw-btn-pause" : liveMs > 0 ? "sw-btn-resume" : "sw-btn-start";
   const mainBtnLabel = entry.running
     ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Pause`
     : liveMs > 0
-    ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg> Resume`
-    : `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg> Start`;
+    ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg> Start Timer`
+    : `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg> Start Timer`;
   const mainFn = entry.running ? `swPause` : `swStart`;
   return `<div class="sw-bar" id="sw-bar-${itemId}-${colType}">
     <div class="sw-main">
@@ -3207,7 +3421,10 @@ async function loginSuccess() {
   if (getDeviceMode() === "shared") setDeviceOwnerName("");
   else setDeviceOwnerName((pendingFloater?.name || pendingUser?.name || "").trim());
   syncPushForActiveSession(false);
-  showLoginLoading(showDash);
+  showLoginLoading(async () => {
+    await showDash();
+    routePendingProductionDeepLink();
+  });
 }
 
 /* ── Admin PIN keypad ──────────────────────────────────────── */
@@ -3264,7 +3481,7 @@ async function processAdminPin() {
   showLoginLoading(() => {
     showScreen("screen-admin");
     document.getElementById("admin-date").textContent = new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
-    return loadAdminData();
+    return loadAdminData().then(() => routePendingProductionDeepLink());
   });
 }
 
@@ -4246,23 +4463,32 @@ async function loadBoard() {
 
     const woNums = Array.from(new Set(items.map(getWorkOrderNumber).filter(Boolean)));
     if (woNums.length) {
+      const woVariants = getWorkOrderQueryVariants(woNums);
+      const canonicalWoByKey = {};
+      woNums.forEach(wo => {
+        const key = canonicalWorkOrderKey(wo);
+        if (key && !canonicalWoByKey[key]) canonicalWoByKey[key] = wo;
+      });
       const picklists = await sbFetch(
-        `picklists?wo_number=in.(${woNums.map(encodeURIComponent).join(",")})&select=id,wo_number,status`,
+        `picklists?wo_number=in.(${woVariants.map(encodeURIComponent).join(",")})&select=id,wo_number,status`,
         { method: "GET", headers: { "Prefer": "return=representation" } }
       ).catch(() => []) || [];
       const plItems = await sbFetch(
-        `picklist_items?wo_number=in.(${woNums.map(encodeURIComponent).join(",")})&select=wo_number,allocated`,
+        `picklist_items?wo_number=in.(${woVariants.map(encodeURIComponent).join(",")})&select=wo_number,allocated`,
         { method: "GET", headers: { "Prefer": "return=representation" } }
       ).catch(() => []) || [];
       const itemsByWo = {};
       plItems.forEach(row => {
-        if (!row?.wo_number) return;
-        if (!itemsByWo[row.wo_number]) itemsByWo[row.wo_number] = [];
-        itemsByWo[row.wo_number].push(row);
+        const ownerWo = canonicalWoByKey[canonicalWorkOrderKey(row?.wo_number)] || row?.wo_number;
+        if (!ownerWo) return;
+        if (!itemsByWo[ownerWo]) itemsByWo[ownerWo] = [];
+        itemsByWo[ownerWo].push(row);
       });
       const statusByWo = {};
       picklists.forEach(pl => {
-        statusByWo[pl.wo_number] = derivePickListStatusFromAllocation(itemsByWo[pl.wo_number] || [], pl.status);
+        const ownerWo = canonicalWoByKey[canonicalWorkOrderKey(pl?.wo_number)] || pl.wo_number;
+        if (!ownerWo) return;
+        statusByWo[ownerWo] = derivePickListStatusFromAllocation(itemsByWo[ownerWo] || [], pl.status);
       });
       window._pickListStatusByWo = statusByWo;
     } else {
@@ -4499,8 +4725,46 @@ function startWorkCandidates(items, myItems, isMS, nextAvailable) {
 function renderBuilderStartPanel(items, myItems, isMS, nextAvailable) {
   const colType = isMS ? "ms" : "chassis";
   const roleLabel = isMS ? "Monitor Stand" : "Chassis";
-  const running = dashRunningTimerFor(colType);
+  const activeSession = getActiveBuilderSessionForCurrentUser();
   const candidates = startWorkCandidates(items, myItems, isMS, nextAvailable);
+  if (activeSession) {
+    const activeItem = activeSession.item || (boardItems || []).find(i => String(i.id) === String(activeSession.itemId));
+    const entry = getTimer(activeSession.itemId, activeSession.colType);
+    const timerRunning = !!entry.running;
+    const activeState = activeItem && isBuildStuck(activeItem, activeSession.colType)
+      ? { label:"Stuck", cls:"stuck" }
+      : timerRunning
+        ? { label:"Active", cls:"running" }
+        : activeItem && isBuildPaused(activeItem, activeSession.colType)
+          ? { label:"Paused", cls:"paused" }
+          : { label:"Ready", cls:"" };
+    const sideLabel = activeSession.colType === "ms" ? "Monitor Stand" : "Chassis";
+    return `<div class="dash-focus-card dash-start-panel">
+      <div class="dash-focus-head">
+        <div>
+          <div class="dash-focus-kicker">Project HUD</div>
+          <div class="dash-focus-title">Current session controls</div>
+          <div class="dash-focus-sub">One place for timer, session, and project status.</div>
+        </div>
+      </div>
+      <div class="dash-current-build">
+        <div class="dash-current-build-top">
+          <div style="min-width:0">
+            <div class="dash-current-build-title">${escHtml(activeItem ? compactProjectLabel(activeItem) : activeSessionProjectLabel(activeSession))}</div>
+            <div class="dash-current-build-sub">${escHtml(sideLabel)} Session</div>
+          </div>
+          <div class="dash-current-build-state ${escHtml(activeState.cls)}">${escHtml(activeState.label)}</div>
+        </div>
+        ${buildSwHtml(activeSession.itemId, activeSession.colType)}
+      </div>
+      <div class="dash-start-current">${timerRunning
+        ? `Timer is running. Press Pause or End Session before switching projects.`
+        : activeState.cls === "paused"
+          ? `Project is paused. Press <strong>Start Timer</strong> when work actually resumes.`
+          : `Press <strong>Start Timer</strong> when work begins, or End Session if you are done with this project.`}
+      </div>
+    </div>`;
+  }
   const options = candidates.map(({ item, kind }) => {
     const shipDate = parseShipDate(item);
     const pct = parsePct(cvText(item, isMS ? COL.ms_pct : COL.chassis_pct));
@@ -4510,12 +4774,10 @@ function renderBuilderStartPanel(items, myItems, isMS, nextAvailable) {
       shipDate ? `Ship ${fmtShipDate(shipDate)}` : "",
       kind === "next" ? "Ready to grab" : "Assigned"
     ].filter(Boolean).join(" · ");
-    return `<option value="${escHtml(item.id)}" ${running?.itemId && String(running.itemId) === String(item.id) ? "selected" : ""}>${escHtml(label)}</option>`;
+    return `<option value="${escHtml(item.id)}" ${activeSession?.itemId && String(activeSession.itemId) === String(item.id) ? "selected" : ""}>${escHtml(label)}</option>`;
   }).join("");
 
-  const runningLabel = running?.item
-    ? `Timer running on <strong>${escHtml(compactProjectLabel(running.item))}</strong>. Starting another ${roleLabel.toLowerCase()} timer will pause the current one.`
-    : candidates.length
+  const runningLabel = candidates.length
       ? `Choose the ${roleLabel.toLowerCase()} build you are working on, then hit Start.`
       : `Nothing is assigned to you right now. Use Queue if a lead asks you to help on another build.`;
 
@@ -4531,7 +4793,7 @@ function renderBuilderStartPanel(items, myItems, isMS, nextAvailable) {
       <select id="dash-start-select" class="dash-start-select" ${candidates.length ? "" : "disabled"}>
         ${options || `<option value="">No build selected</option>`}
       </select>
-      <button id="dash-start-btn" class="dash-start-btn" onclick="startSelectedBuildTimer(event)" ${candidates.length ? "" : "disabled"}>${running ? "Switch / Start" : "Start Timer"}</button>
+      <button id="dash-start-btn" class="dash-start-btn" onclick="startSelectedBuildTimer(event)" ${candidates.length ? "" : "disabled"}>Start Timer</button>
     </div>
     <div class="dash-start-current">${runningLabel}</div>
   </div>`;
@@ -4542,6 +4804,11 @@ async function assignCurrentUserToBuildNow(itemId, colType) {
   const colId = isMS ? COL.ms_who : COL.chassis_who;
   const item = boardItems.find(i => String(i.id) === String(itemId));
   if (!item) throw new Error("Could not find that build.");
+  if (!ensureBuilderCanUseProject(itemId, colType)) {
+    const err = new Error("Finish current project session before switching.");
+    err.silent = true;
+    throw err;
+  }
   if (isMeInPeople(item, colId)) return;
 
   buildUserIdCache();
@@ -4580,15 +4847,20 @@ async function startSelectedBuildTimer(e) {
   if (!itemId) return;
   const colType = currentUser.role === MS_ROLE ? "ms" : "chassis";
   try {
+    if (!ensureBuilderCanUseProject(itemId, colType)) return;
     if (btn) { btn.disabled = true; btn.textContent = "Starting…"; }
     await assignCurrentUserToBuildNow(itemId, colType);
-    swStart(itemId, colType);
+    if (!swStart(itemId, colType)) return;
     showToast("Timer started.", "ok");
     renderDash(boardItems || []);
   } catch(err) {
-    showToast("Could not start timer: " + (err.message || err), "err");
+    if (!err?.silent) showToast("Could not start timer: " + (err.message || err), "err");
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = "Start Timer"; }
+    if (btn) {
+      const activeSession = getActiveBuilderSessionForCurrentUser();
+      btn.disabled = false;
+      btn.textContent = "Start Timer";
+    }
   }
 }
 
@@ -4599,11 +4871,12 @@ function renderBuilderNextAction(items, myItems, isMS) {
   const roleLabel = isMS ? "Monitor Stand" : "Chassis";
   const activeBuild = myItems.find(i => !isBuildPaused(i, colType) && !isBuildStuck(i, colType)) || myItems[0] || null;
   const nextAvailable = activeBuild ? null : findNextAvailableBuild(items, isMS);
+  const showLeadWeekQueue = isLead();
   const weekOffset = window._builderWeekOffset === 1 ? 1 : 0;
   const weekItems = getRoleDueForWeek(items, isMS, weekOffset).slice(0, 6);
   const thisWeekCount = getRoleDueForWeek(items, isMS, 0).length;
   const nextWeekCount = getRoleDueForWeek(items, isMS, 1).length;
-  if (!activeBuild && !nextAvailable && !thisWeekCount && !nextWeekCount) {
+  if (!activeBuild && !nextAvailable && (!showLeadWeekQueue || (!thisWeekCount && !nextWeekCount))) {
     el.innerHTML = "";
     return;
   }
@@ -4652,7 +4925,7 @@ function renderBuilderNextAction(items, myItems, isMS) {
   el.innerHTML = `<div class="dash-focus-grid">
     ${startPanel}
     ${primaryCard}
-    <div class="dash-focus-card">
+    ${showLeadWeekQueue ? `<div class="dash-focus-card">
       <div class="dash-focus-head">
         <div>
           <div class="dash-focus-kicker">${weekTitle}</div>
@@ -4671,8 +4944,14 @@ function renderBuilderNextAction(items, myItems, isMS) {
           Full Queue
         </button>
       </div>
-    </div>
+    </div>` : ""}
   </div>`;
+  const activeSession = getActiveBuilderSessionForCurrentUser();
+  if (activeSession) {
+    updateSwSessions(activeSession.itemId, activeSession.colType);
+    const entry = getTimer(activeSession.itemId, activeSession.colType);
+    if (entry.running) swStartTick(activeSession.itemId, activeSession.colType);
+  }
 }
 
 function renderDash(items) {
@@ -4992,8 +5271,8 @@ function buildWoBtn(item) {
 function getCardBuildState(item, colType) {
   const entry = getTimer(item.id, colType);
   if (isBuildStuck(item, colType)) return { label: "Stuck", cls: "stuck" };
-  if (isBuildPaused(item, colType)) return { label: "Paused", cls: "paused" };
   if (entry?.running) return { label: "Working Now", cls: "working" };
+  if (isBuildPaused(item, colType)) return { label: "Paused", cls: "paused" };
   return { label: "Ready", cls: "ready" };
 }
 
@@ -5009,6 +5288,8 @@ function renderProjectCard(item,listEl,isMS) {
   const chassisPeople=parsePeople(item,COL.chassis_who);
   const msPeople=parsePeople(item,COL.ms_who);
   const colType=isMS?"ms":"chassis";
+  const chassisTimerRunning = !!getTimer(item.id, "chassis")?.running;
+  const msTimerRunning = !!getTimer(item.id, "ms")?.running;
   const chassisState = getCardBuildState(item, "chassis");
   const msState = getCardBuildState(item, "ms");
   const isPrimaryDashItem = !!window._dashPrimaryItemId && String(window._dashPrimaryItemId) === String(item.id);
@@ -5075,11 +5356,11 @@ function renderProjectCard(item,listEl,isMS) {
       <div class="proj-meta">${turnkey?`<span class="meta-pill pill-blue">${turnkey}</span>`:""}
         ${msSize ?`<span class="meta-pill" style="background:rgba(20,184,166,0.15);color:#5eead4">${msSize}"</span>`:""}
         ${groupPill}${shipPill}${firmPill}${wgPill}${motionPill}
-        ${isBuildStuck(item,'chassis') ? `<span class="meta-pill" style="background:rgba(224,32,32,0.16);color:var(--accent);">Stuck</span>` : isBuildPaused(item,'chassis') ? `<span class="meta-pill" style="background:rgba(245,158,11,0.18);color:#f59e0b;">Paused</span>` : ""}
-        ${isBuildStuck(item,'ms') ? `<span class="meta-pill" style="background:rgba(224,32,32,0.16);color:var(--accent);">Stuck</span>` : isBuildPaused(item,'ms') ? `<span class="meta-pill" style="background:rgba(245,158,11,0.18);color:#f59e0b;">Paused</span>` : ""}
+        ${isBuildStuck(item,'chassis') ? `<span class="meta-pill" style="background:rgba(224,32,32,0.16);color:var(--accent);">Stuck</span>` : (isBuildPaused(item,'chassis') && !chassisTimerRunning) ? `<span class="meta-pill" style="background:rgba(245,158,11,0.18);color:#f59e0b;">Paused</span>` : ""}
+        ${isBuildStuck(item,'ms') ? `<span class="meta-pill" style="background:rgba(224,32,32,0.16);color:var(--accent);">Stuck</span>` : (isBuildPaused(item,'ms') && !msTimerRunning) ? `<span class="meta-pill" style="background:rgba(245,158,11,0.18);color:#f59e0b;">Paused</span>` : ""}
       </div>
       <div class="build-grid">
-        <div class="build-row" style="${(isBuildPaused(item,'chassis') || isBuildStuck(item,'chassis'))?'opacity:0.6;':''}">
+        <div class="build-row" style="${((isBuildPaused(item,'chassis') && !chassisTimerRunning) || isBuildStuck(item,'chassis'))?'opacity:0.6;':''}">
           <div class="br-top">
             <div class="br-label" style="color:var(--chassis-color)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>Chassis Build</div>
             <div class="br-side">
@@ -5091,7 +5372,7 @@ function renderProjectCard(item,listEl,isMS) {
           ${stateNoteHtml(chassisState)}
           <div class="bar-track"><div class="bar-fill" style="width:${chassisPct}%;background:${pctColor(chassisPct)}"></div></div>
         </div>
-        <div class="build-row" style="${(isBuildPaused(item,'ms') || isBuildStuck(item,'ms'))?'opacity:0.6;':''}">
+        <div class="build-row" style="${((isBuildPaused(item,'ms') && !msTimerRunning) || isBuildStuck(item,'ms'))?'opacity:0.6;':''}">
           <div class="br-top">
             <div class="br-label" style="color:var(--ms-color)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg> Monitor Stand Build</div>
             <div class="br-side">
@@ -5104,14 +5385,10 @@ function renderProjectCard(item,listEl,isMS) {
           <div class="bar-track"><div class="bar-fill" style="width:${msPct}%;background:${pctColor(msPct)}"></div></div>
         </div>
       </div>${lastTs?`<div class="ts-row"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Last updated ${fmtTs(lastTs)}</div>`:""}
-      ${buildSwHtml(item.id, colType)}
       ${actionRowHtml}
     </div>`;
   card.querySelector(".proj-top").addEventListener("click", () => {}); /* no-op — expansion removed */
   listEl.appendChild(card);
-  updateSwSessions(item.id, colType);
-  const entry = getTimer(item.id, colType);
-  if (entry.running) swStartTick(item.id, colType);
 }
 
 /* Toggle the unassign confirmation panel open/closed */
@@ -5487,12 +5764,17 @@ async function unassignCurrentUserFromBuild(itemId, colType, note = "") {
 
 async function grabBuild(itemId, e) {
   e.stopPropagation();
-  const btn = document.getElementById("grab-"+itemId);
-  btn.disabled = true;
-  btn.innerHTML = `<div class="spinner" style="width:16px;height:16px;border-width:2px;margin:0"></div> Assigning…`;
   const isMS  = currentUser.role === MS_ROLE;
+  const colType = isMS ? "ms" : "chassis";
   const colId = isMS ? COL.ms_who : COL.chassis_who;
   const item  = boardItems.find(i => i.id === itemId);
+  if (!ensureBuilderCanUseProject(itemId, colType)) return;
+
+  const btn = document.getElementById("grab-"+itemId);
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<div class="spinner" style="width:16px;height:16px;border-width:2px;margin:0"></div> Assigning…`;
+  }
 
   try {
     /* Build the user ID cache from existing board data */
@@ -5527,9 +5809,11 @@ async function grabBuild(itemId, e) {
     }
 
     addDelta({ user:currentUser.name, itemId, itemName:item?.name||itemId, colType:"grab", date:todayStr(), ts:new Date().toISOString() });
-    btn.innerHTML = "Assigned to You";
-    btn.classList.remove("priority-grab");
-    btn.classList.add("grabbed");
+    if (btn) {
+      btn.innerHTML = "Assigned to You";
+      btn.classList.remove("priority-grab");
+      btn.classList.add("grabbed");
+    }
 
     /* Defer the Monday API write until the 8s undo window closes */
     let undone = false;
@@ -5569,8 +5853,10 @@ async function grabBuild(itemId, e) {
 
   } catch(err) {
     showToast("Error: "+err.message, "err");
-    btn.disabled = false;
-    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v3"/><path d="M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg> Grab This Build`;
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v3"/><path d="M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg> Grab This Build`;
+    }
   }
 }
 
@@ -5651,7 +5937,7 @@ async function uploadPhotoToMonday(itemId, file, label) {
 /* ── UPDATE % BOTTOM SHEET ── */
 let updateSheetContext = null;
 
-function openEndDaySheet(itemId, colType, e) {
+function openEndDaySheet(itemId, colType, e, options = {}) {
   if (e) e.stopPropagation();
   const isMS     = colType === "ms";
   const pctColId = isMS ? COL.ms_pct : COL.chassis_pct;
@@ -5661,6 +5947,7 @@ function openEndDaySheet(itemId, colType, e) {
   const timerEntry = getTimer(itemId, colType);
   const sessionMs = timerLiveMs(timerEntry);
   const hasTrackedTime = sessionMs > 0;
+  const defaultReason = options?.defaultReason || "End Session";
 
   updateSheetContext = { itemId, colType, mode: "endday" };
 
@@ -5707,9 +5994,9 @@ function openEndDaySheet(itemId, colType, e) {
     <div class="upd-section" style="margin-top:12px">
       <div class="upd-label">End Session As</div>
       <select class="note-inp" id="us-endday-reason-${itemId}" style="margin-top:8px" onchange="onEndSessionReasonChange('${itemId}')">
-        <option value="End Session">End Session</option>
-        <option value="Switching Projects">Switching Projects</option>
-        <option value="Mark Stuck">Mark Stuck</option>
+        <option value="End Session" ${defaultReason === "End Session" ? "selected" : ""}>End Session</option>
+        <option value="Switching Projects" ${defaultReason === "Switching Projects" ? "selected" : ""}>Switching Projects</option>
+        <option value="Mark Stuck" ${defaultReason === "Mark Stuck" ? "selected" : ""}>Mark Stuck</option>
       </select>
     </div>
     <div class="upd-section" id="us-stuck-item-wrap-${itemId}" style="margin-top:12px;display:none">
@@ -5822,19 +6109,8 @@ async function loadStuckItemOptions(itemId) {
     const woNum = getWorkOrderNumber(item);
     if (!woNum) throw new Error("No work order is linked to this project yet.");
 
-    let picklists = await sbFetch(
-      `picklists?wo_number=eq.${encodeURIComponent(woNum)}&select=id&order=updated_at.desc&limit=1`,
-      { method: "GET", headers: { "Prefer": "return=representation" } }
-    );
-    if (!picklists || !picklists[0]) {
-      await ensurePickList(woNum);
-      picklists = await sbFetch(
-        `picklists?wo_number=eq.${encodeURIComponent(woNum)}&select=id&order=updated_at.desc&limit=1`,
-        { method: "GET", headers: { "Prefer": "return=representation" } }
-      );
-    }
-
-    const plId = picklists?.[0]?.id;
+    const pl = await ensurePrimaryPickListForWorkOrder(woNum);
+    const plId = pl?.id;
     if (!plId) throw new Error("This order does not have a synced pick list yet.");
 
     const resolvedItems = await loadResolvedPickListItems(plId, woNum);
@@ -5889,19 +6165,8 @@ async function loadResolveStuckOptions(itemId) {
     const woNum = getWorkOrderNumber(item);
     if (!woNum) throw new Error("No work order is linked to this build yet.");
 
-    let picklists = await sbFetch(
-      `picklists?wo_number=eq.${encodeURIComponent(woNum)}&select=id&order=updated_at.desc&limit=1`,
-      { method: "GET", headers: { "Prefer": "return=representation" } }
-    );
-    if (!picklists || !picklists[0]) {
-      await ensurePickList(woNum);
-      picklists = await sbFetch(
-        `picklists?wo_number=eq.${encodeURIComponent(woNum)}&select=id&order=updated_at.desc&limit=1`,
-        { method: "GET", headers: { "Prefer": "return=representation" } }
-      );
-    }
-
-    const plId = picklists?.[0]?.id;
+    const pl = await ensurePrimaryPickListForWorkOrder(woNum);
+    const plId = pl?.id;
     if (!plId) throw new Error("This order does not have a synced pick list yet.");
     select.dataset.plId = String(plId);
 
@@ -5962,18 +6227,10 @@ async function resumeStuckBuild(itemId, colType, e) {
       prefer: "return=minimal",
       body: JSON.stringify({ allocated: true }),
     });
-    const allItems = await sbFetch(`picklist_items?picklist_id=eq.${encodeURIComponent(plId)}&select=id,allocated`, {
-      method: "GET", headers: { "Prefer": "return=representation" }
-    }) || [];
-    const allAllocated = allItems.length > 0 && allItems.every(i => i.allocated);
-    await sbFetch(`picklists?id=eq.${encodeURIComponent(plId)}&status=neq.complete`, {
-      method: "PATCH",
-      prefer: "return=minimal",
-      body: JSON.stringify({
-        status: allAllocated ? "fully_kitted" : "missing_items",
-        updated_at: new Date().toISOString(),
-      }),
-    });
+    const currentItem = boardItems.find(i => i.id === itemId) || null;
+    const woNum = getWorkOrderNumber(currentItem);
+    const allItems = await loadWorkOrderPickListItems(woNum, plId, { sync: false, relink: true });
+    if (woNum) await syncPickListStatusByWorkOrder(woNum, allItems);
     await setBuildStatusLabel(itemId, colType, "In Progress");
     const local = boardItems.find(i => i.id === itemId);
     if (local) {
@@ -5992,6 +6249,21 @@ async function resumeStuckBuild(itemId, colType, e) {
     await mondayQuery(`mutation {
       create_update(item_id:${itemId}, body:"${bodyParts.join(" | ").replace(/"/g,"'").replace(/\n/g," ")}") { id }
     }`);
+    triggerProductionEvent({
+      recipientNames: productionEventRecipients(item, { admin: true, leads: true, assigned: true, kitters: true }),
+      eventType: "build_unstuck",
+      title: `${colType === "ms" ? "Monitor Stand" : "Chassis"} Ready Again`,
+      body: `${productionEventProjectName(item, itemId)}${woNum ? ` · ${woNum}` : ""} moved back to In Progress. ${selectedItemLabel ? `${selectedItemLabel} was allocated.` : "Blocking item was cleared."}`,
+      url: productionEventUrl(item, woNum),
+      tag: `build-unstuck-${woNum || itemId}-${colType}`,
+      meta: productionEventMeta(item, {
+        event_action: "build_unstuck",
+        side: colType,
+        resolved_item: selectedItemLabel || "",
+        note,
+      }),
+      excludeSender: currentUser?.name || "",
+    });
     closeUpdateSheet();
     showToast("Build moved back to In Progress.", "ok");
     if (document.getElementById("screen-team")?.classList.contains("active")) renderTeamScreen();
@@ -6073,6 +6345,29 @@ async function setBuildStatusLabel(itemId, colType, labelText) {
 
 async function setPausedStatus(itemId, colType) {
   await setBuildStatusLabel(itemId, colType, "Paused");
+}
+
+function setLocalBuildStatusText(itemId, colType, labelText) {
+  const item = (boardItems || []).find(i => String(i.id) === String(itemId));
+  const statColId = colType === "ms" ? COL.ms_status : COL.chassis_status;
+  if (!item || !statColId) return;
+  const colObj = item.column_values?.find(c => c.id === statColId);
+  if (colObj) colObj.text = labelText;
+}
+
+async function setActiveStatus(itemId, colType) {
+  setLocalBuildStatusText(itemId, colType, "In Progress");
+  await setBuildStatusLabel(itemId, colType, "In Progress");
+}
+
+function syncBuildStatusActive(itemId, colType) {
+  const item = (boardItems || []).find(i => String(i.id) === String(itemId));
+  if (!item || isBuildStuck(item, colType)) return;
+  if (!isBuildPaused(item, colType)) return;
+  setLocalBuildStatusText(itemId, colType, "In Progress");
+  setActiveStatus(itemId, colType).catch(err => {
+    console.warn("Could not sync build status active:", err.message || err);
+  });
 }
 
 async function setStuckStatus(itemId, colType) {
@@ -6176,6 +6471,59 @@ async function saveUpdate(itemId,e,forceEndDay=false) {
       }
     }
 
+    const sideLabel = colType === "ms" ? "Monitor Stand" : "Chassis";
+    const otherPct = local ? parsePct(cvText(local, isMS ? COL.chassis_pct : COL.ms_pct)) : 0;
+    const sideComplete = newPct >= 100;
+    const bothSidesComplete = sideComplete && otherPct >= 100;
+    const projectLabel = productionEventProjectName(local, itemId);
+    const woLabel = productionEventWo(local, "");
+    let eventType = "build_update";
+    let title = "Build Updated";
+    let actionText = `${sideLabel} updated by ${currentUser?.name || "Builder"}: ${prevPct}% → ${newPct}%.`;
+    let includeKitters = false;
+    if (isEndDayMode && endDayReason === "Mark Stuck") {
+      eventType = "build_stuck";
+      title = `${sideLabel} Marked Stuck`;
+      actionText = `${projectLabel}${woLabel ? ` · ${woLabel}` : ""} is stuck at ${newPct}%. ${stuckItemLabel ? `Blocking item: ${stuckItemLabel}.` : "A blocking item is missing."}`;
+      includeKitters = true;
+    } else if (bothSidesComplete) {
+      eventType = "build_ready_for_qc";
+      title = "Build Ready for QC";
+      actionText = `${projectLabel}${woLabel ? ` · ${woLabel}` : ""} has MS and Chassis complete. Ready for the next production stage.`;
+    } else if (sideComplete) {
+      eventType = "build_side_complete";
+      title = `${sideLabel} Complete`;
+      actionText = `${projectLabel}${woLabel ? ` · ${woLabel}` : ""} ${sideLabel} hit 100%. Ready for the next team.`;
+    } else if (isEndDayMode && endDayReason === "Switching Projects") {
+      eventType = "builder_switching_project";
+      title = "Builder Switching Projects";
+      actionText = `${currentUser?.name || "Builder"} ended their ${sideLabel} session on ${projectLabel}${woLabel ? ` · ${woLabel}` : ""} at ${newPct}%.`;
+    } else if (isEndDayMode) {
+      eventType = "build_paused";
+      title = `${sideLabel} Paused`;
+      actionText = `${projectLabel}${woLabel ? ` · ${woLabel}` : ""} was paused at ${newPct}%.`;
+    } else {
+      actionText = `${projectLabel}${woLabel ? ` · ${woLabel}` : ""} ${sideLabel} updated by ${currentUser?.name || "Builder"}: ${prevPct}% → ${newPct}%.`;
+    }
+    triggerProductionEvent({
+      recipientNames: productionEventRecipients(local, { admin: true, leads: true, assigned: true, kitters: includeKitters }),
+      eventType,
+      title,
+      body: actionText,
+      url: productionEventUrl(local, woLabel),
+      tag: `${eventType}-${woLabel || itemId}-${colType}`,
+      meta: productionEventMeta(local, {
+        event_action: eventType,
+        side: colType,
+        previous_percent: prevPct,
+        new_percent: newPct,
+        builder_name: currentUser?.name || "",
+        end_session_reason: endDayReason || "",
+        blocking_item: stuckItemLabel || "",
+      }),
+      excludeSender: currentUser?.name || "",
+    });
+
     /* Upload photo to Monday — attach to the update comment */
     btn.textContent = "Uploading photo…";
     try {
@@ -6251,10 +6599,20 @@ async function saveUpdate(itemId,e,forceEndDay=false) {
     };
     if (isEndDayMode) {
       await swEnd(itemId, colType, local?.name || itemId, { silentNoTime: true, suppressToast: true, manualMs });
+      if (endDayReason === "Switching Projects") {
+        try {
+          await unassignCurrentUserFromBuild(itemId, colType, note);
+        } catch (unassignErr) {
+          console.warn("Unassign after switching projects failed:", unassignErr.message);
+          showToast("Session ended, but assignment did not clear. Refresh and try Switch again if needed.", "err");
+        }
+      }
     }
     showToast(
       isEndDayMode
-        ? (overCredit>0 ? `Saved and ended session. +${overCredit}% over 100` : "Saved and ended session.")
+        ? (endDayReason === "Switching Projects"
+            ? "Session ended. You can start the next project now."
+            : (overCredit>0 ? `Saved and ended session. +${overCredit}% over 100` : "Saved and ended session."))
         : (overCredit>0?`Saved! +${overCredit}% over 100`:"Saved!"),
       overCredit>0?"":"ok",
       isEndDayMode ? null : undoSave
@@ -6618,19 +6976,30 @@ showLoginEntryPoint();
 function buildAllocationSummaryByWo(items = []) {
   const summary = {};
   (items || []).forEach(row => {
-    const wo = row?.wo_number;
+    const wo = canonicalWorkOrderKey(row?.wo_number) || String(row?.wo_number || "").trim().toUpperCase();
     if (!wo) return;
-    if (!summary[wo]) summary[wo] = { total: 0, allocated: 0 };
+    if (!summary[wo]) summary[wo] = { total: 0, allocated: 0, missingItems: [] };
     summary[wo].total++;
-    if (row.allocated) summary[wo].allocated++;
+    if (row.allocated) {
+      summary[wo].allocated++;
+    } else {
+      const label = row?.label || buildItemLabel(row) || row?.item_name || "";
+      if (label) summary[wo].missingItems.push(label);
+    }
   });
   return summary;
+}
+
+function getAllocationSummaryForWo(allocationSummaryByWo = {}, woNum = "") {
+  if (!woNum) return null;
+  const canonical = canonicalWorkOrderKey(woNum);
+  return allocationSummaryByWo[canonical] || allocationSummaryByWo[String(woNum || "").trim().toUpperCase()] || null;
 }
 
 function isAllocationOpenForAdmin(item, allocationSummaryByWo = {}) {
   const wo = getWoNumberFromItem(item);
   if (!wo) return true;
-  const state = allocationSummaryByWo[wo];
+  const state = getAllocationSummaryForWo(allocationSummaryByWo, wo);
   if (!state || !state.total) return true;
   return state.allocated < state.total;
 }
@@ -6721,16 +7090,70 @@ function effectiveInstallDate(item) {
   return parseInstallDate(item) || parseShipDate(item);
 }
 
+const ADMIN_PAUSED_TIMER_MIN_MS = 60000;
+
+function adminTimerLiveMs(t) {
+  const base = Number(t?.duration_ms || 0);
+  if (t?.state === "running") {
+    const updated = new Date(t.updated_at || Date.now()).getTime();
+    return base + Math.max(0, Date.now() - updated);
+  }
+  return base;
+}
+
+function adminTimerKey(t) {
+  return [
+    String(t?.user_name || "").trim().toLowerCase(),
+    String(t?.item_id || t?.item_name || "").trim().toLowerCase(),
+    String(t?.col_type || "").trim().toLowerCase()
+  ].join("|");
+}
+
+function adminTimerDomId(t) {
+  const raw = adminTimerKey(t) || String(t?.id || t?.user_name || "timer");
+  return "admin-sb-timer-" + raw.replace(/[^a-z0-9_-]+/gi, "-");
+}
+
+function shouldShowAdminLiveTimer(t) {
+  if (!t || (t.state !== "running" && t.state !== "paused")) return false;
+  if (t.state === "running") return true;
+  return adminTimerLiveMs(t) >= ADMIN_PAUSED_TIMER_MIN_MS;
+}
+
+function cleanAdminLiveTimers(sbTimers = []) {
+  const byKey = new Map();
+  (sbTimers || []).forEach(t => {
+    if (!shouldShowAdminLiveTimer(t)) return;
+    const key = adminTimerKey(t);
+    const existing = byKey.get(key);
+    if (!existing) {
+      byKey.set(key, t);
+      return;
+    }
+    const existingRunning = existing.state === "running";
+    const nextRunning = t.state === "running";
+    const existingUpdated = new Date(existing.updated_at || existing.started_at || 0).getTime();
+    const nextUpdated = new Date(t.updated_at || t.started_at || 0).getTime();
+    const nextIsBetter =
+      (nextRunning && !existingRunning) ||
+      (nextRunning === existingRunning && nextUpdated > existingUpdated) ||
+      (nextRunning === existingRunning && nextUpdated === existingUpdated && adminTimerLiveMs(t) > adminTimerLiveMs(existing));
+    if (nextIsBetter) byKey.set(key, t);
+  });
+  return [...byKey.values()].sort((a,b) => {
+    if (a.state !== b.state) return a.state === "running" ? -1 : 1;
+    return new Date(b.updated_at || b.started_at || 0) - new Date(a.updated_at || a.started_at || 0);
+  });
+}
+
 function adminLiveTimerRows(sbTimers = []) {
-  const timers = (sbTimers || []).filter(t => t.state === "running" || t.state === "paused");
+  const timers = cleanAdminLiveTimers(sbTimers);
   if (!timers.length) {
     return `<div class="admin-mini-meta">No one has a live or paused production timer right now.</div>`;
   }
   return timers.map(t => {
     const isPaused = t.state === "paused";
-    const liveMs = t.state === "running"
-      ? (t.duration_ms || 0) + (Date.now() - new Date(t.updated_at).getTime())
-      : (t.duration_ms || 0);
+    const liveMs = adminTimerLiveMs(t);
     const pausedToday = isPaused ? liveMs : 0;
     return `<div class="admin-live-row">
       <div class="admin-live-dot ${isPaused ? "paused" : ""}"></div>
@@ -6740,7 +7163,7 @@ function adminLiveTimerRows(sbTimers = []) {
         ${isPaused ? `<div class="admin-mini-meta">Paused today: ${escHtml(fmtMs(pausedToday))}</div>` : ""}
       </div>
       <div>
-        <div class="admin-live-time ${isPaused ? "paused" : ""}" id="admin-sb-timer-${String(t.user_name || "").replace(/\s+/g,"-")}">${escHtml(fmtMs(liveMs))}</div>
+        <div class="admin-live-time ${isPaused ? "paused" : ""}" id="${escHtml(adminTimerDomId(t))}">${escHtml(fmtMs(liveMs))}</div>
         <div class="admin-live-state">${isPaused ? "Paused" : "Running"}</div>
       </div>
     </div>`;
@@ -7803,7 +8226,7 @@ async function loadAdminData() {
       sbGetTimerHistory(),
       sbGetKitCompletions(kitSince),
       sbFetch("build_updates?order=created_at.desc&limit=500",{method:"GET",headers:{"Prefer":"return=representation"}}),
-      sbFetch("picklist_items?select=wo_number,allocated&limit=5000",{method:"GET",headers:{"Prefer":"return=representation"}}),
+      sbFetch("picklist_items?select=wo_number,allocated,label,item_name,brand,quantity&limit=5000",{method:"GET",headers:{"Prefer":"return=representation"}}),
     ]);
     const board = boardRes.data.boards[0];
     discoverColumns(board.columns);
@@ -7933,9 +8356,16 @@ function renderAdminDesktop(items, sbTimers, sbKits, sbUpdates, allocationSummar
   const kitInRange = sbKits.filter(k => k.date_str >= rangeStart);
   const kitToday   = sbKits.filter(k => k.date_str === today);
   const missingCounts = {};
-  sbKits.forEach(k => (k.missing_items||[]).filter(Boolean).forEach(item => {
-    missingCounts[item] = (missingCounts[item]||0) + 1;
-  }));
+  Object.values(allocationSummaryByWo || {}).forEach(state => {
+    (state?.missingItems || []).filter(Boolean).forEach(item => {
+      missingCounts[item] = (missingCounts[item] || 0) + 1;
+    });
+  });
+  if (!Object.keys(missingCounts).length) {
+    sbKits.forEach(k => normalizeMissingItems(k.missing_items).filter(Boolean).forEach(item => {
+      missingCounts[item] = (missingCounts[item] || 0) + 1;
+    }));
+  }
   const topMissing = Object.entries(missingCounts).sort((a,b)=>b[1]-a[1]).slice(0,5);
 
   /* ── Board health counts ── */
@@ -8071,7 +8501,7 @@ function renderAdminDesktop(items, sbTimers, sbKits, sbUpdates, allocationSummar
         const total = sbKits.filter(k => k.user_name === m.name).length;
         const inR   = kitInRange.filter(k => k.user_name === m.name).length;
         const tod   = kitToday.filter(k => k.user_name === m.name).length;
-        const full  = sbKits.filter(k => k.user_name === m.name && !(k.missing_items||[]).filter(Boolean).length).length;
+        const full  = sbKits.filter(k => k.user_name === m.name && !getLiveMissingItemsForKit(k, allocationSummaryByWo).length).length;
         const fullPct = total > 0 ? Math.round(full/total*100) : 0;
         return `<div style="margin-bottom:12px">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
@@ -8128,7 +8558,7 @@ function renderAdminDesktop(items, sbTimers, sbKits, sbUpdates, allocationSummar
       <thead><tr><th>Project</th><th>Kitter</th><th>Time</th><th>Status</th></tr></thead>
       <tbody>
         ${uniqueKitHistoryRows(sbKits).slice(0,20).map(k => {
-          const missing = normalizeMissingItems(k.missing_items).filter(Boolean);
+          const missing = getLiveMissingItemsForKit(k, allocationSummaryByWo);
           const ts = new Date(k.completed_at);
           return `<tr>
             <td style="font-weight:600">${escHtml(kitHistoryProjectLabel(k))}</td>
@@ -8550,7 +8980,7 @@ function renderAdminDash(items, sbTimers = [], sbKits = [], sbUpdates = [], allo
         const ts = new Date(k.completed_at);
         const timeStr = ts.toLocaleDateString("en-US",{month:"short",day:"numeric"}) + " " +
                         ts.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"});
-        const missing = normalizeMissingItems(k.missing_items).filter(Boolean);
+        const missing = getLiveMissingItemsForKit(k, allocationSummaryByWo);
         return `<div class="kit-history-row">
           <div class="kit-history-main">
             <div class="kit-history-project">${escHtml(kitHistoryProjectLabel(k))}</div>
@@ -9500,6 +9930,34 @@ async function hydrateKitHistoryBoardItems(kits = [], currentItems = []) {
   }
 }
 
+async function hydrateMondayItemById(itemId) {
+  const id = String(itemId || "").trim();
+  if (!/^\d{8,}$/.test(id)) return null;
+  const cached =
+    getKnownBoardItems().find(item => String(item?.id) === id) ||
+    window._kitHistoryItemById?.[id];
+  if (cached) return cached;
+
+  try {
+    const res = await mondayQuery(`{
+      items(ids:[${id}]) {
+        id name
+        group { id title }
+        column_values { id type text value }
+      }
+    }`);
+    const item = res?.data?.items?.[0] || null;
+    if (item) {
+      window._kitHistoryItemById = window._kitHistoryItemById || {};
+      window._kitHistoryItemById[id] = item;
+    }
+    return item;
+  } catch(e) {
+    console.warn("Could not hydrate Monday item:", e.message);
+    return null;
+  }
+}
+
 function findKnownBoardItemForKitCompletion(k) {
   const rows = getKnownBoardItems();
   const itemId = String(k?.item_id || "");
@@ -9577,6 +10035,82 @@ function pickListChangeRecipientsForItem(mondayItem = null) {
   return uniqueNameList(recipients);
 }
 
+function productionLeadNames() {
+  return uniqueNameList([getAppSetting("ms_lead_name"), getAppSetting("chassis_lead_name")]);
+}
+
+function kitterNames() {
+  return uniqueNameList(TEAM.filter(member => member.role === KIT_ROLE).map(member => member.name));
+}
+
+function assignedProductionNames(mondayItem = null) {
+  const recipients = [];
+  [COL.chassis_who, COL.ms_who].forEach(colId => {
+    parsePeople(mondayItem, colId).forEach(person => recipients.push(adminDisplayPersonName(person.name)));
+  });
+  return uniqueNameList(recipients);
+}
+
+function productionEventRecipients(mondayItem = null, opts = {}) {
+  const {
+    admin = true,
+    leads = true,
+    assigned = true,
+    kitters = false,
+  } = opts || {};
+  const recipients = [];
+  if (admin) recipients.push(ADMIN_NAME);
+  if (leads) recipients.push(...productionLeadNames());
+  if (assigned) recipients.push(...assignedProductionNames(mondayItem));
+  if (kitters) recipients.push(...kitterNames());
+  return uniqueNameList(recipients);
+}
+
+function productionEventWo(mondayItem = null, fallbackWo = "") {
+  return String(getWoNumberFromItem(mondayItem) || fallbackWo || "").trim().toUpperCase();
+}
+
+function productionEventProjectName(mondayItem = null, fallback = "") {
+  return cleanMondayName(mondayItem?.name || fallback || "") || "Production order";
+}
+
+function productionEventUrl(mondayItem = null, fallbackWo = "") {
+  const wo = productionEventWo(mondayItem, fallbackWo);
+  return wo ? `/#wo=${encodeURIComponent(wo)}` : "/#queue";
+}
+
+function productionEventMeta(mondayItem = null, extra = {}) {
+  const wo = productionEventWo(mondayItem, extra.wo_number || "");
+  return {
+    ...extra,
+    wo_number: wo,
+    customer_name: productionEventProjectName(mondayItem, extra.customer_name || ""),
+    project_name: productionEventProjectName(mondayItem, extra.project_name || extra.customer_name || ""),
+    monday_item_id: mondayItem?.id || extra.monday_item_id || "",
+    group: mondayItem?.group?.title || extra.group || "",
+  };
+}
+
+async function triggerProductionEvent(opts = {}) {
+  const recipientNames = uniqueNameList(opts.recipientNames || []);
+  if (!recipientNames.length) return;
+  fetch("/api/push", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action: "notify-production-event",
+      recipientNames,
+      eventType: opts.eventType || "production_event",
+      title: opts.title || "Production Update",
+      body: opts.body || "Open Production Tracker for details.",
+      url: opts.url || "/#queue",
+      tag: opts.tag || "production-event",
+      meta: opts.meta || {},
+      excludeSender: opts.excludeSender || "",
+    }),
+  }).catch(() => {});
+}
+
 async function triggerPickListChangeNotifications(woNum, newItemCount, mondayItem = null) {
   if (!newItemCount) return;
   const item = mondayItem || findKnownBoardItemByWo(woNum) || null;
@@ -9593,7 +10127,7 @@ async function triggerPickListChangeNotifications(woNum, newItemCount, mondayIte
       recipientNames: recipients,
       title: "Pick List Updated",
       body,
-      url: "/#queue",
+      url: productionEventUrl(item, woNum),
       tag: "picklist-change",
       meta: {
         wo_number: woNum || "",
@@ -9621,6 +10155,15 @@ function buildItemLabel(it) {
 }
 
 const PICKLIST_ORDER_CACHE = {};
+const PICKLIST_ORDER_INFLIGHT = {};
+const PICKLIST_ITEMS_CACHE = {};
+const PICKLIST_ITEMS_INFLIGHT = {};
+const PICKLIST_HEADER_CACHE = {};
+const PICKLIST_HEADER_INFLIGHT = {};
+const PICKLIST_BACKGROUND_SYNC_INFLIGHT = {};
+const PICKLIST_ITEMS_CACHE_MS = 8000;
+const PICKLIST_HEADER_CACHE_MS = 30000;
+const PICKLIST_BACKGROUND_SYNC_MS = 45000;
 
 function normalizePickListText(value) {
   return String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
@@ -9667,6 +10210,47 @@ function getWorkOrderLookupCandidates(woNum) {
   return [...candidates].filter(Boolean);
 }
 
+function canonicalWorkOrderKey(woNum) {
+  const digits = String(woNum || "").replace(/\D/g, "");
+  if (!digits) return "";
+  const n = parseInt(digits, 10);
+  if (!Number.isFinite(n) || n <= 0) return digits.padStart(5, "0");
+  return String(n).padStart(5, "0");
+}
+
+function pickListCacheKey(woNum, plId = "") {
+  const woKey = canonicalWorkOrderKey(woNum);
+  return `${woKey || "no-wo"}|${String(plId || "").trim()}`;
+}
+
+function clonePickListItems(items = []) {
+  return Array.isArray(items) ? items.map(item => ({ ...item })) : [];
+}
+
+function invalidatePickListCache(woNum = null, plId = null) {
+  const woKey = canonicalWorkOrderKey(woNum);
+  const idKey = String(plId || "").trim();
+  Object.keys(PICKLIST_ITEMS_CACHE).forEach(key => {
+    const [cachedWo, cachedPl] = key.split("|");
+    if ((woKey && cachedWo === woKey) || (idKey && cachedPl === idKey) || (!woKey && !idKey)) {
+      delete PICKLIST_ITEMS_CACHE[key];
+    }
+  });
+  if (woKey) {
+    Object.keys(PICKLIST_HEADER_CACHE).forEach(key => {
+      if (key === woKey) delete PICKLIST_HEADER_CACHE[key];
+    });
+  }
+}
+
+function getWorkOrderQueryVariants(woNums = []) {
+  const variants = new Set();
+  (Array.isArray(woNums) ? woNums : [woNums]).forEach(wo => {
+    getWorkOrderLookupCandidates(wo).forEach(candidate => variants.add(candidate));
+  });
+  return [...variants].filter(Boolean);
+}
+
 async function fetchP1PickListForWorkOrder(woNum) {
   const candidates = getWorkOrderLookupCandidates(woNum);
   let lastData = null;
@@ -9682,21 +10266,201 @@ async function fetchP1PickListForWorkOrder(woNum) {
   return { data: lastData, matchedWo: candidates[0] || String(woNum || "").trim().toUpperCase() };
 }
 
-async function getWorkOrderItemOrder(woNum) {
+async function getPrimaryPickListForWorkOrder(woNum) {
+  const variants = getWorkOrderQueryVariants([woNum]);
+  if (!variants.length) return null;
+  const cacheKey = canonicalWorkOrderKey(woNum);
+  const cached = cacheKey ? PICKLIST_HEADER_CACHE[cacheKey] : null;
+  if (cached && Date.now() - cached.ts < PICKLIST_HEADER_CACHE_MS) return cached.value ? { ...cached.value } : null;
+  if (cacheKey && PICKLIST_HEADER_INFLIGHT[cacheKey]) return PICKLIST_HEADER_INFLIGHT[cacheKey];
+
+  const request = sbFetch(
+    `picklists?wo_number=in.(${variants.map(encodeURIComponent).join(",")})&order=updated_at.desc&limit=1`,
+    { method: "GET", headers: { "Prefer": "return=representation" } }
+  ).catch(() => []).then(rows => {
+    const value = rows?.[0] || null;
+    if (cacheKey) PICKLIST_HEADER_CACHE[cacheKey] = { ts: Date.now(), value };
+    return value ? { ...value } : null;
+  }).finally(() => {
+    if (cacheKey) delete PICKLIST_HEADER_INFLIGHT[cacheKey];
+  });
+  if (cacheKey) PICKLIST_HEADER_INFLIGHT[cacheKey] = request;
+  return request;
+}
+
+async function ensurePrimaryPickListForWorkOrder(woNum) {
+  let pl = await getPrimaryPickListForWorkOrder(woNum);
+  if (pl?.id) return pl;
+  await ensurePickList(woNum);
+  return await getPrimaryPickListForWorkOrder(woNum);
+}
+
+async function loadWorkOrderPickListItems(woNum, plId = null, opts = {}) {
+  const options = {
+    sync: false,
+    relink: false,
+    useCache: true,
+    force: false,
+    maxAgeMs: PICKLIST_ITEMS_CACHE_MS,
+    backgroundSync: false,
+    ...opts,
+  };
+  if (options.sync && woNum) await syncPickListItems(woNum).catch(() => {});
+
+  const cacheKey = pickListCacheKey(woNum, plId);
+  const cached = PICKLIST_ITEMS_CACHE[cacheKey];
+  if (!options.force && options.useCache && cached && Date.now() - cached.ts < options.maxAgeMs) {
+    return clonePickListItems(cached.items);
+  }
+  if (!options.force && PICKLIST_ITEMS_INFLIGHT[cacheKey]) {
+    return clonePickListItems(await PICKLIST_ITEMS_INFLIGHT[cacheKey]);
+  }
+
+  const variants = getWorkOrderQueryVariants([woNum]);
+  const request = (async () => {
+    const requests = [];
+    if (plId) {
+      requests.push(sbFetch(
+        `picklist_items?picklist_id=eq.${encodeURIComponent(plId)}&select=*&order=id.asc`,
+        { method: "GET", headers: { "Prefer": "return=representation" } }
+      ).catch(() => []));
+    }
+    if (variants.length) {
+      requests.push(sbFetch(
+        `picklist_items?wo_number=in.(${variants.map(encodeURIComponent).join(",")})&select=*&order=id.asc`,
+        { method: "GET", headers: { "Prefer": "return=representation" } }
+      ).catch(() => []));
+    }
+
+    const chunks = requests.length ? await Promise.all(requests) : [];
+    const byId = new Map();
+    chunks.flat().forEach(item => {
+      if (item?.id) byId.set(String(item.id), item);
+    });
+
+    const targetWoKey = canonicalWorkOrderKey(woNum);
+    let items = [...byId.values()].filter(item => {
+      if (!targetWoKey) return true;
+      const itemWoKey = canonicalWorkOrderKey(item?.wo_number);
+      /* Rows with an explicit different WO belong to another order, even if
+         a stale picklist_id points here. This protects repeat customers. */
+      if (itemWoKey && itemWoKey !== targetWoKey) return false;
+      return true;
+    });
+    if (options.relink && items.length && woNum) {
+      const pl = plId ? ((_plAllPicklists || []).find(row => String(row?.id) === String(plId)) || await getPrimaryPickListForWorkOrder(woNum)) : await getPrimaryPickListForWorkOrder(woNum);
+      if (pl?.id) {
+        await Promise.all(items.map(item => {
+          if (!item?.id) return null;
+          const itemWoKey = canonicalWorkOrderKey(item.wo_number);
+          if (itemWoKey && itemWoKey !== canonicalWorkOrderKey(woNum)) return null;
+          const needsRelink =
+            String(item.picklist_id || "") !== String(pl.id) ||
+            canonicalWorkOrderKey(item.wo_number) !== canonicalWorkOrderKey(woNum) ||
+            String(item.wo_number || "") !== String(pl.wo_number || woNum);
+          if (!needsRelink) return null;
+          item.picklist_id = pl.id;
+          item.wo_number = pl.wo_number || woNum;
+          return sbFetch(`picklist_items?id=eq.${encodeURIComponent(item.id)}`, {
+            method: "PATCH",
+            prefer: "return=minimal",
+            body: JSON.stringify({ picklist_id: pl.id, wo_number: pl.wo_number || woNum }),
+          }).catch(() => {});
+        }).filter(Boolean));
+      }
+    }
+
+    const sorted = await sortPickListItemsByWorkOrder(items, woNum);
+    PICKLIST_ITEMS_CACHE[cacheKey] = { ts: Date.now(), items: clonePickListItems(sorted) };
+    if (options.backgroundSync && woNum) maybeBackgroundSyncPickList(woNum, plId);
+    return sorted;
+  })().finally(() => {
+    delete PICKLIST_ITEMS_INFLIGHT[cacheKey];
+  });
+
+  PICKLIST_ITEMS_INFLIGHT[cacheKey] = request;
+  return clonePickListItems(await request);
+}
+
+async function syncPickListStatusByWorkOrder(woNum, items = null) {
+  if (!woNum) return "missing_items";
+  const liveItems = Array.isArray(items) ? items : await loadWorkOrderPickListItems(woNum, null, { sync: false, relink: true });
+  const newStatus = derivePickListStatusFromAllocation(liveItems, "missing_items");
+  const variants = getWorkOrderQueryVariants([woNum]);
+  const updatedAt = new Date().toISOString();
+  if (variants.length) {
+    await sbFetch(`picklists?wo_number=in.(${variants.map(encodeURIComponent).join(",")})&status=neq.complete`, {
+      method: "PATCH",
+      prefer: "return=minimal",
+      body: JSON.stringify({ status: newStatus, updated_at: updatedAt }),
+    }).catch(() => {});
+  }
+  const cacheKey = canonicalWorkOrderKey(woNum);
+  if (cacheKey && PICKLIST_HEADER_CACHE[cacheKey]?.value) {
+    PICKLIST_HEADER_CACHE[cacheKey].value = {
+      ...PICKLIST_HEADER_CACHE[cacheKey].value,
+      status: newStatus,
+      updated_at: updatedAt,
+    };
+    PICKLIST_HEADER_CACHE[cacheKey].ts = Date.now();
+  }
+  return newStatus;
+}
+
+function maybeBackgroundSyncPickList(woNum, plId = null) {
+  const key = canonicalWorkOrderKey(woNum);
+  if (!key) return;
+  const existing = PICKLIST_BACKGROUND_SYNC_INFLIGHT[key];
+  if (existing && Date.now() - existing.started < PICKLIST_BACKGROUND_SYNC_MS) return;
+  PICKLIST_BACKGROUND_SYNC_INFLIGHT[key] = {
+    started: Date.now(),
+    promise: syncPickListItems(woNum)
+      .then(() => {
+        invalidatePickListCache(woNum, plId);
+      })
+      .catch(() => {})
+      .finally(() => {
+        setTimeout(() => {
+          if (PICKLIST_BACKGROUND_SYNC_INFLIGHT[key]?.started && Date.now() - PICKLIST_BACKGROUND_SYNC_INFLIGHT[key].started >= PICKLIST_BACKGROUND_SYNC_MS) {
+            delete PICKLIST_BACKGROUND_SYNC_INFLIGHT[key];
+          }
+        }, PICKLIST_BACKGROUND_SYNC_MS);
+      }),
+  };
+}
+
+async function getWorkOrderItemOrder(woNum, opts = {}) {
   if (!woNum) return [];
-  const cached = PICKLIST_ORDER_CACHE[woNum];
+  const options = { blocking: true, ...opts };
+  const key = canonicalWorkOrderKey(woNum) || String(woNum || "").trim().toUpperCase();
+  const cached = PICKLIST_ORDER_CACHE[key] || PICKLIST_ORDER_CACHE[woNum];
   if (Array.isArray(cached) && cached.length) return cached;
+  if (PICKLIST_ORDER_INFLIGHT[key]) {
+    return options.blocking ? await PICKLIST_ORDER_INFLIGHT[key] : [];
+  }
+  const request = (async () => {
+    try {
+      const { data } = await fetchP1PickListForWorkOrder(woNum);
+      const ordered = (data?.items || [])
+        .filter(it => !isServiceItem(it))
+        .map(it => ({
+          strict: pickListOrderKey(it),
+          loose: pickListOrderLooseKey(it),
+          label: pickListOrderLabelKey(it),
+        }));
+      PICKLIST_ORDER_CACHE[key] = ordered;
+      PICKLIST_ORDER_CACHE[woNum] = ordered;
+      return ordered;
+    } catch {
+      return [];
+    } finally {
+      delete PICKLIST_ORDER_INFLIGHT[key];
+    }
+  })();
+  PICKLIST_ORDER_INFLIGHT[key] = request;
+  if (!options.blocking) return [];
   try {
-    const { data } = await fetchP1PickListForWorkOrder(woNum);
-    const ordered = (data?.items || [])
-      .filter(it => !isServiceItem(it))
-      .map(it => ({
-        strict: pickListOrderKey(it),
-        loose: pickListOrderLooseKey(it),
-        label: pickListOrderLabelKey(it),
-      }));
-    PICKLIST_ORDER_CACHE[woNum] = ordered;
-    return ordered;
+    return await request;
   } catch {
     return [];
   }
@@ -9704,7 +10468,7 @@ async function getWorkOrderItemOrder(woNum) {
 
 async function sortPickListItemsByWorkOrder(items = [], woNum = "") {
   if (!Array.isArray(items) || items.length < 2 || !woNum) return Array.isArray(items) ? items : [];
-  const orderEntries = await getWorkOrderItemOrder(woNum);
+  const orderEntries = await getWorkOrderItemOrder(woNum, { blocking: false });
   if (!orderEntries.length) return items;
 
   const positionsByStrict = {};
@@ -9837,26 +10601,11 @@ async function fetchPickListFromApi(itemId, woNum) {
        then read back from Supabase so the kit checklist and pick list
        are literally the same data. */
 
-    /* 1. Make sure a picklist header exists for this WO */
-    let pl = await sbFetch(
-      `picklists?wo_number=eq.${encodeURIComponent(woNum)}&select=id`,
-      { method: "GET", headers: { "Prefer": "return=representation" } }
-    );
-    if (!pl || !pl[0]) {
-      await ensurePickList(woNum);
-      pl = await sbFetch(
-        `picklists?wo_number=eq.${encodeURIComponent(woNum)}&select=id`,
-        { method: "GET", headers: { "Prefer": "return=representation" } }
-      );
-    }
-    const plId = pl?.[0]?.id;
-    if (!plId) return;
+    const pl = await ensurePrimaryPickListForWorkOrder(woNum);
+    if (!pl?.id) return;
 
-    /* 2. Read items from Supabase — these ARE the pick list */
-    const sbItems = await sbFetch(
-      `picklist_items?picklist_id=eq.${encodeURIComponent(plId)}&order=id.asc`,
-      { method: "GET", headers: { "Prefer": "return=representation" } }
-    ) || [];
+    /* Read items through the shared WO source of truth — these ARE the pick list */
+    const sbItems = await loadResolvedPickListItems(pl.id, woNum);
 
     /* 3. Build kit lines from Supabase items using shared label builder */
     const lines = sbItems
@@ -10138,29 +10887,12 @@ async function buildKitChecklistAsync(item) {
 
   if (woNum) {
     /* Ensure picklist exists and items are synced from P1 API */
-    let pl = await sbFetch(
-      `picklists?wo_number=eq.${encodeURIComponent(woNum)}&select=id`,
-      { method: "GET", headers: { "Prefer": "return=representation" } }
-    ).catch(() => null);
+    const pl = await ensurePrimaryPickListForWorkOrder(woNum).catch(() => null);
 
-    if (!pl || !pl[0]) {
-      await ensurePickList(woNum).catch(() => {});
-      pl = await sbFetch(
-        `picklists?wo_number=eq.${encodeURIComponent(woNum)}&select=id`,
-        { method: "GET", headers: { "Prefer": "return=representation" } }
-      ).catch(() => null);
-    }
-
-    const plId = pl?.[0]?.id;
-    if (plId) {
-      const sbItems = await sbFetch(
-        `picklist_items?picklist_id=eq.${encodeURIComponent(plId)}&order=id.asc`,
-        { method: "GET", headers: { "Prefer": "return=representation" } }
-      ).catch(() => null);
-
+    if (pl?.id) {
+      const sbItems = await loadResolvedPickListItems(pl.id, woNum).catch(() => null);
       if (sbItems && sbItems.length > 0) {
-        const orderedSbItems = await sortPickListItemsByWorkOrder(sbItems, woNum);
-        const lines = orderedSbItems
+        const lines = sbItems
           .filter(it => !isServiceItem(it))
           .map(it => it.label || buildItemLabel(it))
           .filter(l => l.length > 2);
@@ -10480,11 +11212,8 @@ async function kitDoneConfirmed(itemId, e) {
 
     if (woNum) {
       try {
-        const plRows = await sbFetch(`picklists?wo_number=eq.${encodeURIComponent(woNum)}&select=id&limit=1`, {
-          method: "GET", headers: { "Prefer": "return=representation" }
-        }) || [];
-        const plId = plRows?.[0]?.id;
-        if (plId) await saveInitialKitReferencePhoto(plId, photo, currentUser.name);
+        const pl = await ensurePrimaryPickListForWorkOrder(woNum);
+        if (pl?.id) await saveInitialKitReferencePhoto(pl.id, photo, currentUser.name);
       } catch (photoSaveErr) {
         console.warn("Initial kit photo save skipped:", photoSaveErr.message);
       }
@@ -10536,6 +11265,25 @@ async function kitDoneConfirmed(itemId, e) {
     /* Write to Supabase so admin sees it cross-device */
     sbRecordKitCompletion(itemId, kitHistoryName, missing2).catch(()=>{});
 
+    triggerProductionEvent({
+      recipientNames: productionEventRecipients(item, { admin: true, leads: true, assigned: true, kitters: false }),
+      eventType: isPartialKit ? "partial_kit_complete" : "initial_kit_complete",
+      title: isPartialKit ? "Partial Kit Complete" : "Initial Kit Complete",
+      body: `${productionEventProjectName(item, kitHistoryName)}${woNum ? ` · ${woNum}` : ""} — ${missing.length ? `${missing.length} missing item${missing.length === 1 ? "" : "s"}` : "full kit"}.${isPartialKit ? " Need-kitted status cleared." : " Moved to Parts Pulled."}`,
+      url: productionEventUrl(item, woNum),
+      tag: `kit-complete-${woNum || itemId}`,
+      meta: productionEventMeta(item, {
+        event_action: isPartialKit ? "partial_kit_complete" : "initial_kit_complete",
+        wo_number: woNum || "",
+        missing_count: missing.length,
+        picked_count: Math.max(0, kitLines.length - missing.length),
+        total_items: kitLines.length,
+        kit_type: isPartialKit ? `partial-${needKittedSide}` : "full",
+        moved_to: isPartialKit ? "" : KIT_TARGET_GROUP,
+      }),
+      excludeSender: currentUser?.name || "",
+    });
+
     /* ── Sync kit allocation to pick list in Supabase ──
        Items Pete checked = allocated, unchecked = not allocated */
     (async () => {
@@ -10550,11 +11298,11 @@ async function kitDoneConfirmed(itemId, e) {
             .map(l => l.toLowerCase().trim())
         );
 
-        /* Get all picklist_items for this WO */
-        const plItems = await sbFetch(
-          `picklist_items?wo_number=eq.${encodeURIComponent(woNum)}&select=id,item_name,brand,quantity,label`,
-          { method: "GET", headers: { "Prefer": "return=representation" } }
-        ) || [];
+        const pl = await ensurePrimaryPickListForWorkOrder(woNum);
+        if (!pl?.id) return;
+
+        /* Get all picklist_items for this WO through the shared source-of-truth path */
+        const plItems = await loadResolvedPickListItems(pl.id, woNum);
 
         /* Match using stored label (exact same format as kit checklist) */
         for (const plItem of plItems) {
@@ -10568,20 +11316,8 @@ async function kitDoneConfirmed(itemId, e) {
           });
         }
 
-        /* Update picklist status based on allocation */
-        const allPlItems = await sbFetch(
-          `picklist_items?wo_number=eq.${encodeURIComponent(woNum)}&select=allocated`,
-          { method: "GET", headers: { "Prefer": "return=representation" } }
-        ) || [];
-        const allAllocated = allPlItems.length > 0 && allPlItems.every(i => i.allocated);
-        await sbFetch(`picklists?wo_number=eq.${encodeURIComponent(woNum)}&status=neq.complete`, {
-          method: "PATCH",
-          prefer: "return=minimal",
-          body: JSON.stringify({
-            status:     allAllocated ? "fully_kitted" : "missing_items",
-            updated_at: new Date().toISOString(),
-          }),
-        });
+        const allPlItems = await loadWorkOrderPickListItems(woNum, pl.id, { sync: false, relink: true });
+        await syncPickListStatusByWorkOrder(woNum, allPlItems);
       } catch(syncErr) {
         console.warn("Pick list allocation sync failed:", syncErr.message);
       }
@@ -10822,14 +11558,7 @@ async function loadInlineKitPickList(itemId, woNum, token) {
     wrap.innerHTML = `<div class="loading-state" style="padding:12px 0"><div class="spinner"></div>Loading pick list…</div>`;
   }
 
-  await ensurePickList(woNum);
-  await syncPickListStatusFromMonday(woNum);
-  await syncPickListItems(woNum);
-
-  const plRows = await sbFetch(`picklists?wo_number=eq.${encodeURIComponent(woNum)}&order=updated_at.desc&limit=1`, {
-    method: "GET", headers: { "Prefer": "return=representation" }
-  }) || [];
-  const pl = plRows[0];
+  const pl = await ensurePrimaryPickListForWorkOrder(woNum);
   if (!pl?.id) throw new Error("No pick list found for this work order.");
   const items = await loadResolvedPickListItems(pl.id, woNum);
   if (_kitInlinePickList.token !== token || _kitInlinePickList.itemId !== itemId) return;
@@ -10894,11 +11623,8 @@ async function inlineToggleKitPickListItem(itemDbId, e) {
         body: JSON.stringify({ allocated: nextAllocated }),
       });
 
-      await sbFetch(`picklists?id=eq.${encodeURIComponent(pl.id)}&status=neq.complete`, {
-        method: "PATCH",
-        prefer: "return=minimal",
-        body: JSON.stringify({ status: allAllocated ? "fully_kitted" : "missing_items", updated_at: new Date().toISOString() }),
-      });
+      setLocalPickListItemAllocation(pl.id, _kitInlinePickList.woNum, itemDbId, nextAllocated);
+      syncPickListStatusByWorkOrder(_kitInlinePickList.woNum, optimisticItems).catch(() => {});
     } catch(err) {
       _kitInlinePickList = { ..._kitInlinePickList, items: previousItems, pl };
       renderInlineKitPickList();
@@ -10915,20 +11641,28 @@ async function inlineCheckAllKitPickList(e) {
   const remaining = items.filter(item => !item.allocated);
   if (!remaining.length) return;
 
-  await Promise.all(remaining.map(item => sbFetch(`picklist_items?id=eq.${encodeURIComponent(item.id)}`, {
+  const previousItems = items.map(item => ({ ...item }));
+  const optimisticItems = items.map(item => ({ ...item, allocated: true }));
+  _kitInlinePickList = {
+    ..._kitInlinePickList,
+    items: optimisticItems,
+    pl: { ...pl, status: "fully_kitted" },
+  };
+  setLocalPickListItemAllocation(pl.id, _kitInlinePickList.woNum, remaining.map(item => item.id), true);
+  renderInlineKitPickList();
+
+  Promise.all(remaining.map(item => sbFetch(`picklist_items?id=eq.${encodeURIComponent(item.id)}`, {
     method: "PATCH",
     prefer: "return=minimal",
     body: JSON.stringify({ allocated: true }),
-  })));
-
-  const liveItems = await loadLivePickListItemsNoRepair(pl.id, _kitInlinePickList.woNum).catch(() => []);
-  await sbFetch(`picklists?id=eq.${encodeURIComponent(pl.id)}&status=neq.complete`, {
-    method: "PATCH",
-    prefer: "return=minimal",
-    body: JSON.stringify({ status: "fully_kitted", updated_at: new Date().toISOString() }),
+  }))).then(() => {
+    syncPickListStatusByWorkOrder(_kitInlinePickList.woNum, optimisticItems).catch(() => {});
+  }).catch(() => {
+    _kitInlinePickList = { ..._kitInlinePickList, items: previousItems, pl };
+    setLocalPickListItemAllocation(pl.id, _kitInlinePickList.woNum, remaining.map(item => item.id), false);
+    renderInlineKitPickList();
+    showToast("Could not check all items. Try again.", "err");
   });
-  _kitInlinePickList = { ..._kitInlinePickList, items: liveItems, pl: { ...pl, status: "fully_kitted" } };
-  renderInlineKitPickList();
 }
 
 async function inlineDeselectAllKitPickList(e) {
@@ -10939,20 +11673,28 @@ async function inlineDeselectAllKitPickList(e) {
   const selected = items.filter(item => item.allocated);
   if (!selected.length) return;
 
-  await Promise.all(selected.map(item => sbFetch(`picklist_items?id=eq.${encodeURIComponent(item.id)}`, {
+  const previousItems = items.map(item => ({ ...item }));
+  const optimisticItems = items.map(item => ({ ...item, allocated: false }));
+  _kitInlinePickList = {
+    ..._kitInlinePickList,
+    items: optimisticItems,
+    pl: { ...pl, status: "missing_items" },
+  };
+  setLocalPickListItemAllocation(pl.id, _kitInlinePickList.woNum, selected.map(item => item.id), false);
+  renderInlineKitPickList();
+
+  Promise.all(selected.map(item => sbFetch(`picklist_items?id=eq.${encodeURIComponent(item.id)}`, {
     method: "PATCH",
     prefer: "return=minimal",
     body: JSON.stringify({ allocated: false }),
-  })));
-
-  const liveItems = await loadLivePickListItemsNoRepair(pl.id, _kitInlinePickList.woNum).catch(() => []);
-  await sbFetch(`picklists?id=eq.${encodeURIComponent(pl.id)}&status=neq.complete`, {
-    method: "PATCH",
-    prefer: "return=minimal",
-    body: JSON.stringify({ status: "missing_items", updated_at: new Date().toISOString() }),
+  }))).then(() => {
+    syncPickListStatusByWorkOrder(_kitInlinePickList.woNum, optimisticItems).catch(() => {});
+  }).catch(() => {
+    _kitInlinePickList = { ..._kitInlinePickList, items: previousItems, pl };
+    setLocalPickListItemAllocation(pl.id, _kitInlinePickList.woNum, selected.map(item => item.id), true);
+    renderInlineKitPickList();
+    showToast("Could not deselect all items. Try again.", "err");
   });
-  _kitInlinePickList = { ..._kitInlinePickList, items: liveItems, pl: { ...pl, status: "missing_items" } };
-  renderInlineKitPickList();
 }
 
 /* ── Open pick list screen from a project card button ── */
@@ -11029,10 +11771,24 @@ async function loadPickLists(woNum) {
   const el = document.getElementById("pl-content");
   el.innerHTML = `<div class="loading-state"><div class="spinner"></div>Loading…</div>`;
   try {
-    const filter = woNum ? `?wo_number=eq.${encodeURIComponent(woNum)}` : `?order=created_at.desc`;
-    const rows = await sbFetch(`picklists${filter}&order=updated_at.desc`, {
+    const woVariants = getWorkOrderQueryVariants([woNum]);
+    const filter = woNum && woVariants.length
+      ? `?wo_number=in.(${woVariants.map(encodeURIComponent).join(",")})&order=updated_at.desc`
+      : `?order=updated_at.desc`;
+    let rows = await sbFetch(`picklists${filter}`, {
       method: "GET", headers: { "Prefer": "return=representation" }
     }) || [];
+
+    if (!woNum) {
+      const completions = await sbGetKitCompletions().catch(() => []);
+      const createdFromKits = await ensureAdminPickListsFromKitCompletions(completions, rows);
+      if (createdFromKits) {
+        rows = await sbFetch("picklists?order=updated_at.desc", {
+          method: "GET", headers: { "Prefer": "return=representation" }
+        }) || [];
+      }
+    }
+
     _plAllPicklists = rows;
 
     /* Backfill customer_name for any rows that only have the WO number */
@@ -11056,25 +11812,13 @@ async function loadPickLists(woNum) {
     /* If no picklist exists yet for this WO, auto-create it */
     if (woNum && rows.length === 0) {
       await ensurePickList(woNum);
-      await repairKittedPickListAllocation(woNum);
-      const fresh = await sbFetch(`picklists?wo_number=eq.${encodeURIComponent(woNum)}&order=updated_at.desc`, {
-        method: "GET", headers: { "Prefer": "return=representation" }
-      }) || [];
-      _plAllPicklists = fresh;
-    } else if (woNum && rows.length > 0) {
-      /* Sync status from Monday group on every open (except complete) */
-      await syncPickListStatusFromMonday(woNum);
-      await syncPickListItems(woNum);
-      await repairKittedPickListAllocation(woNum);
-      const refreshed = await sbFetch(`picklists?wo_number=eq.${encodeURIComponent(woNum)}&order=updated_at.desc`, {
-        method: "GET", headers: { "Prefer": "return=representation" }
-      }) || [];
-      _plAllPicklists = refreshed;
+      const fresh = await getPrimaryPickListForWorkOrder(woNum);
+      _plAllPicklists = fresh ? [fresh] : [];
     }
 
     renderPickLists();
-    /* Also check for changes against P1 API */
-    if (woNum) checkPickListChanges(woNum);
+    /* Quietly check P1/Monday after the screen opens; do not block the tap. */
+    if (woNum) maybeBackgroundSyncPickList(woNum);
   } catch(err) {
     el.innerHTML = `<div class="empty-state">Failed to load pick lists.<br><small>${err.message}</small></div>`;
   }
@@ -11100,6 +11844,56 @@ function mondayGroupToPlStatus(groupTitle) {
   return "missing_items"; /* safe default */
 }
 
+function getPickListMondayItem(pl) {
+  if (!pl) return null;
+  return pl.mondayItem || findKnownBoardItemByWo(pl.wo_number) || null;
+}
+
+function pickListGroupText(pl) {
+  return String(getPickListMondayItem(pl)?.group?.title || "").trim();
+}
+
+function isOnHoldOrCanceledGroup(groupTitle) {
+  const g = String(groupTitle || "").toLowerCase();
+  return g.includes("hold") || g.includes("cancel");
+}
+
+function isShippedGroup(groupTitle) {
+  return String(groupTitle || "").toLowerCase().includes("shipped");
+}
+
+function isActiveMissingItemsPickList(pl) {
+  const item = getPickListMondayItem(pl);
+  if (!item) return false;
+  const groupTitle = item?.group?.title || "";
+  const mappedStatus = mondayGroupToPlStatus(groupTitle);
+  if (mappedStatus === "exclude" || mappedStatus === "in_queue") return false;
+  if (isOnHoldOrCanceledGroup(groupTitle)) return false;
+  if (isShippedGroup(groupTitle)) return false;
+  if (String(pl?.status || "") === "complete" || String(pl?.status || "") === "exclude") return false;
+  return true;
+}
+
+function getPickListDisplayStatus(pl, items = []) {
+  const savedStatus = String(pl?._displayStatus || pl?.status || "missing_items");
+  if (savedStatus === "complete" || savedStatus === "exclude") return savedStatus;
+  const mondayStatus = mondayGroupToPlStatus(pickListGroupText(pl));
+  if (mondayStatus === "exclude" || mondayStatus === "in_queue") return mondayStatus;
+  return derivePickListStatusFromAllocation(items, savedStatus);
+}
+
+function shouldShowPickListInTab(pl, tab, items = []) {
+  const displayStatus = getPickListDisplayStatus(pl, items);
+  if (displayStatus === "exclude") return false;
+  if (tab === "all") return true;
+  if (tab !== "missing_items") return displayStatus === tab;
+
+  /* Missing Items is an active-work list, not a history/no-data bucket. */
+  if (!isActiveMissingItemsPickList(pl)) return false;
+  if (!Array.isArray(items) || !items.length) return false;
+  return items.some(item => !item?.allocated);
+}
+
 function derivePickListStatusFromAllocation(items = [], fallback = "missing_items") {
   const base = String(fallback || "missing_items");
   if (base === "complete" || base === "exclude") return base;
@@ -11108,6 +11902,94 @@ function derivePickListStatusFromAllocation(items = [], fallback = "missing_item
   if (allocated === 0) return base === "in_queue" ? "in_queue" : "missing_items";
   if (allocated === items.length) return "fully_kitted";
   return "missing_items";
+}
+
+function hasUsableKitCompletionMissingData(completion) {
+  if (!completion) return false;
+  if (Array.isArray(completion.missing_items)) return true;
+  if (completion.missing_items === null || typeof completion.missing_items === "undefined") return false;
+  return true;
+}
+
+function getKitCompletionWo(k) {
+  const directWo = getWoFromText(k?.item_id) || getWoFromText(k?.item_name);
+  if (directWo) return directWo;
+  const savedId = String(k?.item_id || "").trim();
+  const historyItem = savedId ? window._kitHistoryItemById?.[savedId] : null;
+  return historyItem ? getWoNumberFromItem(historyItem) : "";
+}
+
+function findKitCompletionForPickList(pl, completions = []) {
+  if (!pl?.wo_number) return null;
+  const mondayItem = pl.mondayItem || findKnownBoardItemByWo(pl.wo_number);
+  return (completions || []).find(k => kitCompletionMatchesOrder(k, pl.wo_number, mondayItem)) || null;
+}
+
+function getInitialKitTimestamp(pl, completions = []) {
+  const completion = findKitCompletionForPickList(pl, completions);
+  return completion?.completed_at || completion?.created_at || null;
+}
+
+function getAdminPickListWeekInfo(pl, completions = []) {
+  const ts = getInitialKitTimestamp(pl, completions);
+  if (!ts) {
+    return {
+      key: "no-initial-kit",
+      sort: -1,
+      title: "No Initial Kit Recorded",
+      sub: "Needs review",
+    };
+  }
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) {
+    return {
+      key: "no-initial-kit",
+      sort: -1,
+      title: "No Initial Kit Recorded",
+      sub: "Needs review",
+    };
+  }
+  const start = startOfWeekDate(d);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  const key = start.toISOString().slice(0, 10);
+  return {
+    key,
+    sort: start.getTime(),
+    title: `Week of ${start.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`,
+    sub: `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${end.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
+  };
+}
+
+async function ensureAdminPickListsFromKitCompletions(completions = [], existingPicklists = []) {
+  const existingWos = new Set((existingPicklists || []).map(pl => String(pl?.wo_number || "").trim().toUpperCase()).filter(Boolean));
+  const completionWos = [...new Set((completions || [])
+    .map(getKitCompletionWo)
+    .map(wo => String(wo || "").trim().toUpperCase())
+    .filter(Boolean))];
+  const missingWos = completionWos.filter(wo => !existingWos.has(wo));
+  if (!missingWos.length) return 0;
+
+  let created = 0;
+  for (const woNum of missingWos) {
+    try {
+      await ensurePickList(woNum);
+      created++;
+    } catch (err) {
+      console.warn(`Admin pick list backfill skipped for ${woNum}:`, err?.message || err);
+    }
+  }
+  return created;
+}
+
+function shouldRepairZeroAllocationPickList(pl, items = [], completion = null) {
+  if (!pl?.wo_number || !Array.isArray(items) || !items.length) return false;
+  if (!hasUsableKitCompletionMissingData(completion)) return false;
+  const allocatedCount = items.filter(item => !!item?.allocated).length;
+  if (allocatedCount !== 0) return false;
+  const mondayItem = findKnownBoardItemByWo(pl.wo_number);
+  const mondayStageStatus = mondayGroupToPlStatus(mondayItem?.group?.title || "");
+  return mondayStageStatus !== "in_queue" && mondayStageStatus !== "exclude";
 }
 
 function isManualPickListCompleteEligible(pl, mondayItem = null, items = []) {
@@ -11219,11 +12101,13 @@ async function syncPickListStatusFromMonday(woNum) {
   if (!mondayItem) return;
   const groupTitle = mondayItem?.group?.title || "";
   const newStatus  = mondayGroupToPlStatus(groupTitle);
+  const variants = getWorkOrderQueryVariants([woNum]);
+  if (!variants.length) return;
 
   /* If now in an excluded group, mark as excluded so it doesn't show */
   if (newStatus === "exclude") {
     await sbFetch(
-      `picklists?wo_number=eq.${encodeURIComponent(woNum)}`,
+      `picklists?wo_number=in.(${variants.map(encodeURIComponent).join(",")})`,
       {
         method: "PATCH", prefer: "return=minimal",
         body: JSON.stringify({ status: "exclude", updated_at: new Date().toISOString() }),
@@ -11234,7 +12118,7 @@ async function syncPickListStatusFromMonday(woNum) {
 
   /* Only update if not already complete (complete is terminal — only set by button) */
   await sbFetch(
-    `picklists?wo_number=eq.${encodeURIComponent(woNum)}&status=neq.complete&status=neq.exclude`,
+    `picklists?wo_number=in.(${variants.map(encodeURIComponent).join(",")})&status=neq.complete&status=neq.exclude`,
     {
       method: "PATCH",
       prefer: "return=minimal",
@@ -11243,32 +12127,79 @@ async function syncPickListStatusFromMonday(woNum) {
   );
 }
 
+function pickListLabelToSourceItem(label) {
+  let raw = String(label || "").trim();
+  if (!raw) return null;
+  let quantity = 1;
+  const qtyMatch = raw.match(/\s*\(×(\d+)\)\s*$/i);
+  if (qtyMatch) {
+    quantity = parseInt(qtyMatch[1], 10) || 1;
+    raw = raw.replace(/\s*\(×\d+\)\s*$/i, "").trim();
+  }
+  const dashParts = raw.split(/\s+—\s+/);
+  const brand = dashParts.length > 1 ? dashParts.shift().trim() : "";
+  const itemName = dashParts.join(" — ").trim() || raw;
+  if (!itemName) return null;
+  return {
+    brand,
+    item_name: itemName,
+    memo: "",
+    quantity,
+    label,
+  };
+}
+
+async function fetchMondayPickListItemsForWorkOrder(woNum) {
+  let mondayItem = findKnownBoardItemByWo(woNum);
+  if (!mondayItem) {
+    const variants = getWorkOrderQueryVariants([woNum]);
+    const rows = variants.length ? await sbFetch(
+      `picklists?wo_number=in.(${variants.map(encodeURIComponent).join(",")})&select=monday_item_id&limit=1`,
+      { method: "GET", headers: { "Prefer": "return=representation" } }
+    ).catch(() => []) : [];
+    const mondayItemId = rows?.[0]?.monday_item_id;
+    if (mondayItemId) mondayItem = await hydrateMondayItemById(mondayItemId);
+  }
+  if (!mondayItem) return [];
+  const pickLink = parseLink(mondayItem, COL.pick_list);
+  const lines = await fetchPickListLines(pickLink?.url || "", mondayItem).catch(() => []);
+  return (lines || [])
+    .map(pickListLabelToSourceItem)
+    .filter(Boolean);
+}
+
 /* ── Sync items from P1 API into picklist_items ── */
 async function syncPickListItems(woNum) {
   try {
     const { data, matchedWo } = await fetchP1PickListForWorkOrder(woNum);
-    if (!Array.isArray(data?.items) || !data.items.length) return;
+    let sourceItems = Array.isArray(data?.items) ? data.items : [];
+    let sourceMatchedWo = matchedWo;
+    if (!sourceItems.length) {
+      sourceItems = await fetchMondayPickListItemsForWorkOrder(woNum);
+      sourceMatchedWo = "Monday pick-list file";
+    }
+    if (!sourceItems.length) return;
 
     const SERVICE_KEYWORDS = ["installation service","install service","delivery service",
       "white glove","extended warranty","service plan","setup service","removal service"];
 
     /* Get picklist id */
-    const pl = await sbFetch(`picklists?wo_number=eq.${encodeURIComponent(woNum)}&select=id`, {
-      method: "GET", headers: { "Prefer": "return=representation" }
-    });
-    if (!pl || !pl[0]) return;
-    const plId = pl[0].id;
+    const pl = await getPrimaryPickListForWorkOrder(woNum);
+    if (!pl?.id) return;
+    const plId = pl.id;
     const mondayItem = findKnownBoardItemByWo(woNum) || null;
 
-    /* Get existing items for this WO */
-    const existing = await sbFetch(`picklist_items?wo_number=eq.${encodeURIComponent(woNum)}&select=id,item_name,brand,quantity,memo,label,last_synced_at,first_seen_at`, {
+    /* Get existing items for this WO. Older rows may be saved as WO0271 vs W00271,
+       so load all equivalent formats and relink them to this exact pick list. */
+    const woVariants = getWorkOrderQueryVariants([woNum]);
+    const existing = await sbFetch(`picklist_items?wo_number=in.(${woVariants.map(encodeURIComponent).join(",")})&select=id,item_name,brand,quantity,memo,label,last_synced_at,first_seen_at,wo_number,picklist_id,allocated`, {
       method: "GET", headers: { "Prefer": "return=representation" }
     }) || [];
 
     const existingByKey = new Map(existing.map(e => [`${e.brand||""}|${e.item_name}|${e.quantity}`, e]));
     let newItemCount = 0;
 
-    for (const it of data.items) {
+    for (const it of sourceItems) {
       if (isServiceItem(it)) continue;
       const key = `${(it.brand||"").trim()}|${(it.item_name||"").trim()}|${parseInt(it.quantity)||1}`;
       const label = buildItemLabel(it); /* identical to kit checklist label */
@@ -11299,6 +12230,7 @@ async function syncPickListItems(woNum) {
           prefer: "return=minimal",
           body: JSON.stringify({
             picklist_id: plId,
+            wo_number:   woNum,
             memo:        (it.memo || "").trim(),
             label,
           }),
@@ -11309,12 +12241,13 @@ async function syncPickListItems(woNum) {
     /* If new items were added, mark picklist as having changes */
     if (newItemCount > 0) {
       const updatedAt = new Date().toISOString();
-      await sbFetch(`picklists?wo_number=eq.${encodeURIComponent(woNum)}`, {
+      const updateVariants = getWorkOrderQueryVariants([woNum]);
+      if (updateVariants.length) await sbFetch(`picklists?wo_number=in.(${updateVariants.map(encodeURIComponent).join(",")})`, {
         method: "PATCH",
         prefer: "return=minimal",
         body: JSON.stringify({
           has_changes:  true,
-          changes_note: `${newItemCount} new item${newItemCount > 1 ? "s" : ""} added${matchedWo && matchedWo !== String(woNum || "").trim().toUpperCase() ? ` (synced via ${matchedWo})` : ""}`,
+          changes_note: `${newItemCount} new item${newItemCount > 1 ? "s" : ""} added${sourceMatchedWo && sourceMatchedWo !== String(woNum || "").trim().toUpperCase() ? ` (synced via ${sourceMatchedWo})` : ""}`,
           updated_at:   updatedAt,
         }),
       });
@@ -11323,6 +12256,7 @@ async function syncPickListItems(woNum) {
       const dot = document.getElementById(`pl-changes-dot-${_plCallerScreen}`);
       updatePickListChangeDots();
     }
+    invalidatePickListCache(woNum, plId);
   } catch(e) {
     console.warn("syncPickListItems error:", e.message);
   }
@@ -11337,6 +12271,13 @@ function normalizeMissingItems(missingItems) {
   } catch(e) {
     return String(missingItems).split(/\n|,/).map(s => s.trim()).filter(Boolean);
   }
+}
+
+function getLiveMissingItemsForKit(k, allocationSummaryByWo = window._adminAllocationSummary || {}) {
+  const wo = getKitCompletionWo(k) || getWoFromText(k?.item_name) || getWoFromText(k?.item_id);
+  const state = getAllocationSummaryForWo(allocationSummaryByWo, wo);
+  if (state?.total) return state.missingItems || [];
+  return normalizeMissingItems(k?.missing_items).filter(Boolean);
 }
 
 function normalizeKitMissingLabel(label) {
@@ -11375,10 +12316,8 @@ async function repairKittedPickListAllocation(woNum, completions = null) {
   const completion = completionRows.find(k => kitCompletionMatchesOrder(k, woNum, mondayItem));
   const mondayStageStatus = mondayGroupToPlStatus(mondayItem?.group?.title || "");
 
-  const items = await sbFetch(
-    `picklist_items?wo_number=eq.${encodeURIComponent(woNum)}&select=id,item_name,brand,quantity,label,allocated`,
-    { method: "GET", headers: { "Prefer": "return=representation" } }
-  ) || [];
+  const pl = await getPrimaryPickListForWorkOrder(woNum);
+  const items = await loadWorkOrderPickListItems(woNum, pl?.id || null, { sync: false, relink: true });
   if (!items.length) return "no_items";
 
   const missingItems = completion ? normalizeMissingItems(completion.missing_items) : null;
@@ -11394,7 +12333,8 @@ async function repairKittedPickListAllocation(woNum, completions = null) {
           body: JSON.stringify({ allocated: false }),
         })));
       }
-      await sbFetch(`picklists?wo_number=eq.${encodeURIComponent(woNum)}&status=neq.complete`, {
+      const variants = getWorkOrderQueryVariants([woNum]);
+      if (variants.length) await sbFetch(`picklists?wo_number=in.(${variants.map(encodeURIComponent).join(",")})&status=neq.complete`, {
         method: "PATCH",
         prefer: "return=minimal",
         body: JSON.stringify({
@@ -11407,6 +12347,11 @@ async function repairKittedPickListAllocation(woNum, completions = null) {
     return "needs_review";
   }
 
+  /* Once any live allocation exists, the database is the source of truth.
+     Do not re-apply old kit-history guesses on every refresh. */
+  const allocatedCount = items.filter(item => !!item.allocated).length;
+  if (allocatedCount > 0) return "live_allocations_preserved";
+
   /* A recorded Full Kit means every checklist row should be allocated.
      This repairs older pick lists where the completion history existed
      before allocation rows were kept in sync. */
@@ -11416,17 +12361,10 @@ async function repairKittedPickListAllocation(woNum, completions = null) {
       await Promise.all(unallocated.map(item => sbFetch(`picklist_items?id=eq.${encodeURIComponent(item.id)}`, {
         method: "PATCH",
         prefer: "return=minimal",
-        body: JSON.stringify({ allocated: true }),
+          body: JSON.stringify({ allocated: true }),
       })));
     }
-    await sbFetch(`picklists?wo_number=eq.${encodeURIComponent(woNum)}&status=neq.complete`, {
-      method: "PATCH",
-      prefer: "return=minimal",
-      body: JSON.stringify({
-        status: "fully_kitted",
-        updated_at: new Date().toISOString(),
-      }),
-    });
+    await syncPickListStatusByWorkOrder(woNum, items.map(item => ({ ...item, allocated: true })));
     return unallocated.length ? "repaired_full" : "full_confirmed";
   }
 
@@ -11445,14 +12383,11 @@ async function repairKittedPickListAllocation(woNum, completions = null) {
     });
   }));
 
-  await sbFetch(`picklists?wo_number=eq.${encodeURIComponent(woNum)}&status=neq.complete`, {
-      method: "PATCH",
-      prefer: "return=minimal",
-      body: JSON.stringify({
-      status: missingLabels.length ? "missing_items" : "fully_kitted",
-        updated_at: new Date().toISOString(),
-      }),
-    });
+  const repairedItems = items.map(item => ({
+    ...item,
+    allocated: !initialKitMissingContainsItem(item, missingLabels),
+  }));
+  await syncPickListStatusByWorkOrder(woNum, repairedItems);
   return changed ? "repaired" : "already_matched";
 }
 
@@ -11479,10 +12414,8 @@ async function syncPeteKitCompletionMissing(pl, checklistItems) {
 async function checkPickListChanges(woNum) {
   await syncPickListItems(woNum);
   /* Refresh display after sync */
-  const fresh = await sbFetch(`picklists?wo_number=eq.${encodeURIComponent(woNum)}&order=updated_at.desc`, {
-    method: "GET", headers: { "Prefer": "return=representation" }
-  }) || [];
-  _plAllPicklists = fresh;
+  const fresh = await getPrimaryPickListForWorkOrder(woNum);
+  _plAllPicklists = fresh ? [fresh] : [];
   renderPickLists();
   updatePickListChangeDots();
 }
@@ -11624,18 +12557,6 @@ async function renderPickLists() {
   }
 
   const completions = await sbGetKitCompletions().catch(() => []);
-  const repairableWos = [...new Set(allPicklists.map(pl => pl?.wo_number).filter(Boolean))];
-
-  if (repairableWos.length) {
-    await Promise.all(repairableWos.map(async woNum => {
-      try {
-        await repairKittedPickListAllocation(woNum, completions);
-      } catch (repairErr) {
-        console.warn(`Pick list allocation sync skipped for ${woNum}:`, repairErr?.message || repairErr);
-      }
-    }));
-  }
-  if (renderSeq !== _plRenderSeq) return;
 
   el.innerHTML = `<div class="loading-state"><div class="spinner"></div>Loading items…</div>`;
 
@@ -11643,12 +12564,13 @@ async function renderPickLists() {
      so read both paths and group them back to the visible picklist. */
   const plIds = [...new Set(allPicklists.map(pl => pl.id).filter(Boolean))];
   const woNums = [...new Set(allPicklists.map(pl => pl.wo_number).filter(Boolean))];
+  const woQueryVariants = getWorkOrderQueryVariants(woNums);
   const byIdItems = await sbFetch(
     `picklist_items?picklist_id=in.(${plIds.join(",")})&select=*&order=id.asc`,
     { method: "GET", headers: { "Prefer": "return=representation" } }
   ) || [];
-  const byWoItems = woNums.length ? await sbFetch(
-    `picklist_items?wo_number=in.(${woNums.map(encodeURIComponent).join(",")})&select=*&order=id.asc`,
+  const byWoItems = woQueryVariants.length ? await sbFetch(
+    `picklist_items?wo_number=in.(${woQueryVariants.map(encodeURIComponent).join(",")})&select=*&order=id.asc`,
     { method: "GET", headers: { "Prefer": "return=representation" } }
   ) || [] : [];
   if (renderSeq !== _plRenderSeq) return;
@@ -11665,14 +12587,38 @@ async function renderPickLists() {
 
   const buildItemsByPl = async (sourceItems = []) => {
     const plIdByWo = {};
-    allPicklists.forEach(pl => { if (pl.wo_number) plIdByWo[pl.wo_number] = pl.id; });
+    const plIdByCanonicalWo = {};
+    const plById = {};
+    allPicklists.forEach(pl => {
+      if (pl.id) plById[String(pl.id)] = pl;
+      if (!pl.wo_number) return;
+      getWorkOrderQueryVariants([pl.wo_number]).forEach(candidate => { plIdByWo[candidate] = pl.id; });
+      const canonical = canonicalWorkOrderKey(pl.wo_number);
+      if (canonical) plIdByCanonicalWo[canonical] = pl.id;
+    });
     const grouped = {};
+    const relinkWrites = [];
     sourceItems.forEach(it => {
-      const ownerId = it.picklist_id || plIdByWo[it.wo_number];
+      const canonical = canonicalWorkOrderKey(it.wo_number);
+      const canonicalOwnerId = canonical ? plIdByCanonicalWo[canonical] : null;
+      const linkedPickList = it.picklist_id ? plById[String(it.picklist_id)] : null;
+      const ownerId = canonicalOwnerId || (linkedPickList ? it.picklist_id : plIdByWo[it.wo_number]);
       if (!ownerId) return;
       if (!grouped[ownerId]) grouped[ownerId] = [];
       grouped[ownerId].push(it);
+      const ownerPickList = plById[String(ownerId)];
+      if (it.id && ownerPickList && (String(it.picklist_id || "") !== String(ownerId) || String(it.wo_number || "") !== String(ownerPickList.wo_number || ""))) {
+        relinkWrites.push(sbFetch(`picklist_items?id=eq.${encodeURIComponent(it.id)}`, {
+          method: "PATCH",
+          prefer: "return=minimal",
+          body: JSON.stringify({
+            picklist_id: ownerId,
+            wo_number: ownerPickList.wo_number,
+          }),
+        }).catch(() => {}));
+      }
     });
+    if (relinkWrites.length) Promise.all(relinkWrites).catch(() => {});
     await Promise.all(allPicklists.map(async pl => {
       if (!grouped[pl.id]?.length) return;
       grouped[pl.id] = await sortPickListItemsByWorkOrder(grouped[pl.id], pl.wo_number);
@@ -11684,8 +12630,20 @@ async function renderPickLists() {
   let itemsByPl = await buildItemsByPl(allItems);
 
   const missingChecklistPicklists = allPicklists.filter(pl => pl?.wo_number && !(itemsByPl[pl.id] || []).length);
-  if (missingChecklistPicklists.length) {
-    await Promise.all(missingChecklistPicklists.map(async pl => {
+  const shouldSyncMissingChecklistNow =
+    missingChecklistPicklists.length &&
+    (_plCurrentWo || (currentUser?.role === "admin" && !_plCurrentWo && ["missing_items", "fully_kitted", "complete"].includes(targetTab)));
+  if (shouldSyncMissingChecklistNow) {
+    const syncTargets = _plCurrentWo
+      ? missingChecklistPicklists
+      : missingChecklistPicklists.filter(pl => {
+          const display = getPickListDisplayStatus(pl, []);
+          if (targetTab === "missing_items") return isActiveMissingItemsPickList(pl);
+          if (targetTab === "fully_kitted") return display === "fully_kitted" || String(pl?.status || "") === "fully_kitted";
+          if (targetTab === "complete") return display === "complete";
+          return false;
+        });
+    await Promise.all(syncTargets.map(async pl => {
       try {
         await syncPickListItems(pl.wo_number);
         await repairKittedPickListAllocation(pl.wo_number, completions);
@@ -11694,15 +12652,47 @@ async function renderPickLists() {
       }
     }));
 
-    const missingWos = [...new Set(missingChecklistPicklists.map(pl => pl.wo_number).filter(Boolean))];
-    if (missingWos.length) {
+    const missingWos = [...new Set(syncTargets.map(pl => pl.wo_number).filter(Boolean))];
+    const missingWoVariants = getWorkOrderQueryVariants(missingWos);
+    if (missingWoVariants.length) {
       const refreshedMissingItems = await sbFetch(
-        `picklist_items?wo_number=in.(${missingWos.map(encodeURIComponent).join(",")})&select=*&order=id.asc`,
+        `picklist_items?wo_number=in.(${missingWoVariants.map(encodeURIComponent).join(",")})&select=*&order=id.asc`,
         { method: "GET", headers: { "Prefer": "return=representation" } }
       ) || [];
       allItems = dedupePickListItems([...allItems, ...refreshedMissingItems]);
       itemsByPl = await buildItemsByPl(allItems);
     }
+  } else if (missingChecklistPicklists.length) {
+    missingChecklistPicklists.forEach(pl => maybeBackgroundSyncPickList(pl.wo_number, pl.id));
+  }
+  if (renderSeq !== _plRenderSeq) return;
+
+  const zeroAllocationRepairs = allPicklists.filter(pl => {
+    const items = itemsByPl[pl.id] || [];
+    return shouldRepairZeroAllocationPickList(pl, items, findKitCompletionForPickList(pl, completions));
+  });
+  if (zeroAllocationRepairs.length && _plCurrentWo) {
+    const repairWos = [...new Set(zeroAllocationRepairs.map(pl => pl.wo_number).filter(Boolean))];
+    await Promise.all(repairWos.map(async woNum => {
+      try {
+        await repairKittedPickListAllocation(woNum, completions);
+      } catch (repairErr) {
+        console.warn(`Zero-allocation pick list repair skipped for ${woNum}:`, repairErr?.message || repairErr);
+      }
+    }));
+
+    const repairWoVariants = getWorkOrderQueryVariants(repairWos);
+    const repairedItems = repairWoVariants.length ? await sbFetch(
+      `picklist_items?wo_number=in.(${repairWoVariants.map(encodeURIComponent).join(",")})&select=*&order=id.asc`,
+      { method: "GET", headers: { "Prefer": "return=representation" } }
+    ) || [] : [];
+    const byItemId = new Map();
+    allItems.forEach(item => { if (item?.id) byItemId.set(String(item.id), item); });
+    repairedItems.forEach(item => { if (item?.id) byItemId.set(String(item.id), item); });
+    allItems = [...byItemId.values()];
+    itemsByPl = await buildItemsByPl(allItems);
+  } else if (zeroAllocationRepairs.length) {
+    zeroAllocationRepairs.forEach(pl => maybeBackgroundSyncPickList(pl.wo_number, pl.id));
   }
   if (renderSeq !== _plRenderSeq) return;
 
@@ -11711,21 +12701,42 @@ async function renderPickLists() {
 
   const enrichedPicklists = allPicklists.map(pl => {
     const items = itemsByPl[pl.id] || [];
-    return { ...pl, _displayStatus: derivePickListStatusFromAllocation(items, pl.status) };
+    return { ...pl, _displayStatus: getPickListDisplayStatus(pl, items) };
   });
 
-  const filtered = (targetTab === "all"
-    ? enrichedPicklists
-    : enrichedPicklists.filter(pl => (pl._displayStatus || pl.status) === targetTab)
-  ).filter(pl => (pl._displayStatus || pl.status) !== "exclude"); /* never show excluded */
+  let filtered = enrichedPicklists
+    .filter(pl => shouldShowPickListInTab(pl, targetTab, itemsByPl[pl.id] || []));
+
+  const adminOverviewMode = currentUser?.role === "admin" && !_plCurrentWo;
+  if (adminOverviewMode) {
+    filtered = [...filtered].sort((a, b) => {
+      const aWeek = getAdminPickListWeekInfo(a, completions);
+      const bWeek = getAdminPickListWeekInfo(b, completions);
+      if (aWeek.sort !== bWeek.sort) return bWeek.sort - aWeek.sort;
+      const aKit = new Date(getInitialKitTimestamp(a, completions) || a.updated_at || a.created_at || 0).getTime() || 0;
+      const bKit = new Date(getInitialKitTimestamp(b, completions) || b.updated_at || b.created_at || 0).getTime() || 0;
+      return bKit - aKit;
+    });
+  }
 
   if (!filtered.length) {
     if (renderSeq !== _plRenderSeq) return;
-    el.innerHTML = `<div class="empty-state" style="padding:40px 0">No pick lists found.</div>`;
+    const emptyCopy = targetTab === "missing_items"
+      ? "No active pick lists with missing items."
+      : "No pick lists found.";
+    el.innerHTML = `<div class="empty-state" style="padding:40px 0">${escHtml(emptyCopy)}</div>`;
     return;
   }
 
   let html = "";
+  const adminWeekCounts = {};
+  if (adminOverviewMode) {
+    filtered.forEach(pl => {
+      const info = getAdminPickListWeekInfo(pl, completions);
+      adminWeekCounts[info.key] = (adminWeekCounts[info.key] || 0) + 1;
+    });
+  }
+  let lastAdminWeekKey = "";
 
   /* ── Lead dashboard — team builds + next up (shown above pick lists in overview) ── */
   if (isLead() && !_plCurrentWo) {
@@ -11737,13 +12748,27 @@ async function renderPickLists() {
     const mondayItem = findKnownBoardItemByWo(pl.wo_number);
     const kitCompletion = completions.find(k => kitCompletionMatchesOrder(k, pl.wo_number, mondayItem));
     const completionMissingEntries = normalizeMissingItems(kitCompletion?.missing_items);
+    if (adminOverviewMode) {
+      const weekInfo = getAdminPickListWeekInfo(pl, completions);
+      if (weekInfo.key !== lastAdminWeekKey) {
+        lastAdminWeekKey = weekInfo.key;
+        const count = adminWeekCounts[weekInfo.key] || 0;
+        html += `<div class="pl-week-group">
+          <div>
+            <div class="pl-week-title">${escHtml(weekInfo.title)}</div>
+            <div class="pl-week-sub" style="margin-top:3px">${escHtml(weekInfo.sub)}</div>
+          </div>
+          <div class="pl-week-sub">${count} order${count === 1 ? "" : "s"}</div>
+        </div>`;
+      }
+    }
     pl._inQC = (mondayItem?.group?.title || "").toLowerCase().includes("quality control");
     const items = itemsByPl[pl.id] || [];
     const allocatedCount = items.filter(i => i.allocated).length;
     const newestAdded = getNewestRelevantAddedPickListItem(items, pl.created_at || null, completionMissingEntries);
     const newestAddedLabel = newestAdded ? (newestAdded.item.label || buildItemLabel(newestAdded.item)) : "";
     const newestAddedStamp = newestAdded ? formatPickListAddedStamp(newestAdded.tsRaw) : "";
-    const displayStatus = derivePickListStatusFromAllocation(items, pl._displayStatus || pl.status);
+    const displayStatus = getPickListDisplayStatus(pl, items);
     const isOverviewMode = !_plCurrentWo;
     const isExpanded = isOverviewMode ? !!_plExpandedState[String(pl.id)] : true;
     const statusLabel = {
@@ -11815,7 +12840,11 @@ async function renderPickLists() {
 
       <div class="pl-action-bar" style="display:flex;gap:8px;flex-direction:column">
         ${displayStatus === "complete"
-          ? `<div style="padding:10px;font-size:11px;color:var(--muted);text-align:center">Completed${pl.completed_by ? " by " + escHtml(pl.completed_by) : ""}</div>`
+          ? `<div style="padding:10px;font-size:11px;color:var(--muted);text-align:center">Completed${pl.completed_by ? " by " + escHtml(pl.completed_by) : ""}</div>
+             ${currentUser?.role === "admin" ? `<button onclick="confirmReopenPickList('${pl.id}',event)"
+              style="width:100%;background:rgba(224,32,32,0.1);border:1px solid rgba(224,32,32,0.28);border-radius:var(--radius-xs);padding:13px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);cursor:pointer">
+              Reopen Pick List
+            </button>` : ""}`
           : pl._inQC
             ? `<button class="pl-complete-btn" onclick="confirmCompletePickList('${pl.id}',event)">✓ ${escHtml(getAppText("picklist_complete_label", "Complete Pick List"))}</button>`
             : `<button disabled style="width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:var(--radius-xs);padding:13px;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);cursor:not-allowed;opacity:.5">
@@ -11870,24 +12899,15 @@ async function togglePickListItem(itemId, plId, e) {
   });
 
   /* Auto-update picklist status based on allocation state */
-  const allItems = await sbFetch(`picklist_items?picklist_id=eq.${encodeURIComponent(plId)}&select=allocated`, {
-    method: "GET", headers: { "Prefer": "return=representation" }
-  }) || [];
-  const allAllocated = allItems.length > 0 && allItems.every(i => i.allocated);
-  const newStatus = allAllocated ? "fully_kitted" : "missing_items";
-  await sbFetch(`picklists?id=eq.${encodeURIComponent(plId)}&status=neq.complete`, {
-    method: "PATCH",
-    prefer: "return=minimal",
-    body: JSON.stringify({ status: newStatus, updated_at: new Date().toISOString() }),
-  });
-
   const pl = (_plAllPicklists || []).find(row => String(row?.id) === String(plId)) || null;
-  const liveItems = await loadLivePickListItemsNoRepair(plId, pl?.wo_number || null).catch(() => []);
+  invalidatePickListCache(pl?.wo_number || null, plId);
+  const liveItems = setLocalPickListItemAllocation(plId, pl?.wo_number || null, itemId, nowAllocated);
+  if (pl?.wo_number) syncPickListStatusByWorkOrder(pl.wo_number, liveItems).catch(() => {});
   if (pl?.wo_number && liveItems.length) {
-    await syncPeteKitCompletionMissing(pl, liveItems).catch(()=>{});
+    syncPeteKitCompletionMissing(pl, liveItems).catch(()=>{});
   }
 
-  await refreshPickListCard(plId);
+  refreshPickListCard(plId, liveItems);
 }
 
 /* ── Pete shortcut: check every item on an initial kit pick list ── */
@@ -11925,20 +12945,16 @@ async function checkAllPickListItems(plId, e) {
       })
     ));
 
-    await sbFetch(`picklists?id=eq.${encodeURIComponent(plId)}&status=neq.complete`, {
-      method: "PATCH",
-      prefer: "return=minimal",
-      body: JSON.stringify({ status: "fully_kitted", updated_at: new Date().toISOString() }),
-    });
-
     const pl = (_plAllPicklists || []).find(row => String(row?.id) === String(plId)) || null;
-    const liveItems = await loadLivePickListItemsNoRepair(plId, pl?.wo_number || null).catch(() => []);
+    invalidatePickListCache(pl?.wo_number || null, plId);
+    const liveItems = setLocalPickListItemAllocation(plId, pl?.wo_number || null, remaining.map(it => it.id), true);
+    if (pl?.wo_number) await syncPickListStatusByWorkOrder(pl.wo_number, liveItems).catch(() => {});
     if (pl?.wo_number && liveItems.length) {
       await syncPeteKitCompletionMissing(pl, liveItems).catch(()=>{});
     }
 
     showToast("All pick list items checked. Double-check before submitting.", "ok");
-    await renderPickLists();
+    refreshPickListCard(plId, liveItems);
   } catch (err) {
     if (btn) {
       btn.disabled = false;
@@ -11983,20 +12999,16 @@ async function deselectAllPickListItems(plId, e) {
       })
     ));
 
-    await sbFetch(`picklists?id=eq.${encodeURIComponent(plId)}&status=neq.complete`, {
-      method: "PATCH",
-      prefer: "return=minimal",
-      body: JSON.stringify({ status: "missing_items", updated_at: new Date().toISOString() }),
-    });
-
     const pl = (_plAllPicklists || []).find(row => String(row?.id) === String(plId)) || null;
-    const liveItems = await loadLivePickListItemsNoRepair(plId, pl?.wo_number || null).catch(() => []);
+    invalidatePickListCache(pl?.wo_number || null, plId);
+    const liveItems = setLocalPickListItemAllocation(plId, pl?.wo_number || null, selected.map(it => it.id), false);
+    if (pl?.wo_number) await syncPickListStatusByWorkOrder(pl.wo_number, liveItems).catch(() => {});
     if (pl?.wo_number && liveItems.length) {
       await syncPeteKitCompletionMissing(pl, liveItems).catch(()=>{});
     }
 
     showToast("All pick list items unchecked.", "ok");
-    await renderPickLists();
+    refreshPickListCard(plId, liveItems);
   } catch (err) {
     if (btn) {
       btn.disabled = false;
@@ -12007,10 +13019,11 @@ async function deselectAllPickListItems(plId, e) {
 }
 
 /* ── Refresh a single card's meta after item changes ── */
-async function refreshPickListCard(plId) {
-  const items = await sbFetch(`picklist_items?picklist_id=eq.${encodeURIComponent(plId)}&select=allocated`, {
-    method: "GET", headers: { "Prefer": "return=representation" }
-  }) || [];
+async function refreshPickListCard(plId, knownItems = null) {
+  const pl = (_plAllPicklists || []).find(row => String(row?.id) === String(plId)) || null;
+  const items = Array.isArray(knownItems)
+    ? knownItems
+    : await loadWorkOrderPickListItems(pl?.wo_number || null, plId, { sync: false, relink: false }).catch(() => []);
   const alloc = items.filter(i => i.allocated).length;
   const total = items.length;
   const card = document.getElementById("plcard-" + plId);
@@ -12024,21 +13037,42 @@ async function refreshPickListCard(plId) {
 }
 
 async function loadLivePickListItemsNoRepair(plId, woNum = null) {
-  const byPickList = await sbFetch(
-    `picklist_items?picklist_id=eq.${encodeURIComponent(plId)}&order=id.asc`,
-    { method: "GET", headers: { "Prefer": "return=representation" } }
-  ) || [];
-  const byWorkOrder = woNum
-    ? await sbFetch(
-        `picklist_items?wo_number=eq.${encodeURIComponent(woNum)}&order=id.asc`,
-        { method: "GET", headers: { "Prefer": "return=representation" } }
-      )
-    : [];
-  const itemMap = new Map();
-  [...byPickList, ...byWorkOrder].forEach(item => {
-    if (item?.id) itemMap.set(String(item.id), item);
+  return loadWorkOrderPickListItems(woNum, plId, { sync: false, relink: true });
+}
+
+function updateLocalPickListItems(plId, woNum, updater) {
+  const idKey = String(plId || "");
+  let updated = [];
+  if (idKey && window._plItemsByPl?.[idKey]) {
+    window._plItemsByPl[idKey] = window._plItemsByPl[idKey].map(item => updater({ ...item }));
+    updated = window._plItemsByPl[idKey];
+  }
+
+  Object.keys(PICKLIST_ITEMS_CACHE).forEach(key => {
+    const [cachedWo, cachedPl] = key.split("|");
+    const woMatches = woNum && cachedWo === canonicalWorkOrderKey(woNum);
+    const plMatches = idKey && cachedPl === idKey;
+    if (!woMatches && !plMatches) return;
+    const cached = PICKLIST_ITEMS_CACHE[key];
+    if (!cached?.items) return;
+    cached.items = cached.items.map(item => updater({ ...item }));
+    cached.ts = Date.now();
+    if (!updated.length) updated = cached.items;
   });
-  return sortPickListItemsByWorkOrder([...itemMap.values()], woNum);
+
+  if (_kitInlinePickList?.pl?.id && String(_kitInlinePickList.pl.id) === idKey) {
+    _kitInlinePickList.items = (_kitInlinePickList.items || []).map(item => updater({ ...item }));
+    if (!updated.length) updated = _kitInlinePickList.items;
+  }
+  return clonePickListItems(updated);
+}
+
+function setLocalPickListItemAllocation(plId, woNum, itemIds = [], allocated) {
+  const ids = new Set((Array.isArray(itemIds) ? itemIds : [itemIds]).map(String));
+  return updateLocalPickListItems(plId, woNum, item => {
+    if (ids.has(String(item.id))) item.allocated = !!allocated;
+    return item;
+  });
 }
 
 /* ── Cycle status Open ↔ In Queue ── */
@@ -12058,37 +13092,25 @@ async function cyclePickListStatus(plId, currentStatus, e) {
 }
 
 async function loadResolvedPickListItems(plId, woNum) {
-  if (woNum) {
-    try {
-      const completions = await sbGetKitCompletions();
-      await repairKittedPickListAllocation(woNum, completions);
-    } catch (repairErr) {
-      console.warn("Pick list allocation repair skipped:", repairErr.message);
-    }
-  }
-
-  const byPickList = await sbFetch(
-    `picklist_items?picklist_id=eq.${encodeURIComponent(plId)}&order=id.asc`,
-    { method: "GET", headers: { "Prefer": "return=representation" } }
-  );
-  const byWorkOrder = woNum
-    ? await sbFetch(
-        `picklist_items?wo_number=eq.${encodeURIComponent(woNum)}&order=id.asc`,
-        { method: "GET", headers: { "Prefer": "return=representation" } }
-      )
-    : [];
-
-  const itemMap = new Map();
-  [...(Array.isArray(byPickList) ? byPickList : []), ...(Array.isArray(byWorkOrder) ? byWorkOrder : [])].forEach(item => {
-    if (item?.id) itemMap.set(String(item.id), item);
+  let merged = await loadWorkOrderPickListItems(woNum, plId, {
+    sync: false,
+    relink: false,
+    useCache: true,
+    backgroundSync: true,
   });
-
-  const merged = [...itemMap.values()];
   const cached = ((window._plItemsByPl || {})[plId] || []).filter(item => item?.id);
 
   if (!merged.length && cached.length) return cached;
+  if (!merged.length && woNum) {
+    merged = await loadWorkOrderPickListItems(woNum, plId, {
+      sync: true,
+      relink: true,
+      useCache: false,
+      force: true,
+    });
+  }
   if (!merged.length) throw new Error("Could not load pick list items from Supabase.");
-  return sortPickListItemsByWorkOrder(merged, woNum);
+  return merged;
 }
 
 function getInlineSubmitPickListItems(plId, woNum) {
@@ -12308,6 +13330,24 @@ async function confirmSubmitKitFromPickList(plId, woNum, mondayItemId, e) {
       body: JSON.stringify({ status: allAllocated ? "fully_kitted" : "missing_items", updated_at: new Date().toISOString() }),
     });
 
+    triggerProductionEvent({
+      recipientNames: productionEventRecipients(mondayItem, { admin: true, leads: true, assigned: true, kitters: false }),
+      eventType: "initial_kit_complete",
+      title: "Initial Kit Complete",
+      body: `${productionEventProjectName(mondayItem, woNum2)}${woNum2 ? ` · ${woNum2}` : ""} — ${allAllocated ? "full kit" : `${missing.length} missing item${missing.length === 1 ? "" : "s"}`}. Moved to Parts Pulled.`,
+      url: productionEventUrl(mondayItem, woNum2),
+      tag: `initial-kit-${woNum2 || mondayItem.id}`,
+      meta: productionEventMeta(mondayItem, {
+        wo_number: woNum2 || "",
+        event_action: "initial_kit_complete",
+        missing_count: missing.length,
+        picked_count: items.filter(i => i.allocated).length,
+        total_items: items.length,
+        moved_to: KIT_TARGET_GROUP,
+      }),
+      excludeSender: currentUser?.name || "",
+    });
+
     closePickListKitSubmitModal(plId);
     showToast("Kitting submitted!", "ok");
 
@@ -12375,14 +13415,11 @@ async function ensurePeteKittedPickListsFromKnownItems(completedItemIds, complet
   )];
 
   await Promise.all(kittedWos.map(async woNum => {
-    const existing = await sbFetch(
-      `picklists?wo_number=eq.${encodeURIComponent(woNum)}&select=id,status&limit=1`,
-      { method: "GET", headers: { "Prefer": "return=representation" } }
-    ) || [];
+    const existing = await getPrimaryPickListForWorkOrder(woNum);
 
-    if (!existing.length) {
+    if (!existing?.id) {
       await ensurePickList(woNum);
-    } else if (existing[0].status !== "complete") {
+    } else if (existing.status !== "complete") {
       await syncPickListStatusFromMonday(woNum);
     }
   }));
@@ -12511,29 +13548,25 @@ async function openPeteKittedPickLists(forceRefresh = false, preserveSearch = fa
     }) || [];
     const reviewByWo = {};
 
-    await Promise.all(rows.map(async pl => {
-      const mondayItem = findKnownBoardItemByWo(pl.wo_number);
-      const groupMatch = isPeteKittedAccessGroup(mondayItem?.group?.title);
-      const completionMatch =
-        completedItemIds.has(String(pl.wo_number || "")) ||
-        (mondayItem?.id && completedItemIds.has(String(mondayItem.id)));
-      if (groupMatch && (completionMatch || pl.status === "fully_kitted")) {
-        const repairState = await repairKittedPickListAllocation(pl.wo_number, completions);
-        if (repairState === "needs_review") reviewByWo[pl.wo_number] = true;
-      }
-    }));
-
     const visibleWos = rows.map(pl => pl.wo_number).filter(Boolean);
-    const openItems = visibleWos.length ? await sbFetch(
-      `picklist_items?wo_number=in.(${visibleWos.map(encodeURIComponent).join(",")})&select=*&order=id.asc`,
+    const canonicalWoByKey = {};
+    visibleWos.forEach(wo => {
+      const key = canonicalWorkOrderKey(wo);
+      if (key && !canonicalWoByKey[key]) canonicalWoByKey[key] = wo;
+    });
+    const visibleWoVariants = getWorkOrderQueryVariants(visibleWos);
+    const openItems = visibleWoVariants.length ? await sbFetch(
+      `picklist_items?wo_number=in.(${visibleWoVariants.map(encodeURIComponent).join(",")})&select=*&order=id.asc`,
       { method: "GET", headers: { "Prefer": "return=representation" } }
     ) || [] : [];
     const itemStateByWo = {};
     openItems.forEach(it => {
-      if (!itemStateByWo[it.wo_number]) itemStateByWo[it.wo_number] = { total: 0, allocated: 0, items: [] };
-      itemStateByWo[it.wo_number].total++;
-      if (it.allocated) itemStateByWo[it.wo_number].allocated++;
-      itemStateByWo[it.wo_number].items.push(it);
+      const ownerWo = canonicalWoByKey[canonicalWorkOrderKey(it.wo_number)] || it.wo_number;
+      if (!ownerWo) return;
+      if (!itemStateByWo[ownerWo]) itemStateByWo[ownerWo] = { total: 0, allocated: 0, items: [] };
+      itemStateByWo[ownerWo].total++;
+      if (it.allocated) itemStateByWo[ownerWo].allocated++;
+      itemStateByWo[ownerWo].items.push(it);
     });
     await Promise.all(Object.keys(itemStateByWo).map(async wo => {
       itemStateByWo[wo].items = await sortPickListItemsByWorkOrder(itemStateByWo[wo].items, wo);
@@ -12544,7 +13577,8 @@ async function openPeteKittedPickLists(forceRefresh = false, preserveSearch = fa
       .map(pl => {
         const mondayItem = findKnownBoardItemByWo(pl.wo_number);
         const shipDate = mondayItem ? parseShipDate(mondayItem) : null;
-        const itemState = itemStateByWo[pl.wo_number] || null;
+        const canonicalWo = canonicalWoByKey[canonicalWorkOrderKey(pl.wo_number)] || pl.wo_number;
+        const itemState = itemStateByWo[canonicalWo] || null;
         const displayStatus = itemState?.total && itemState.allocated === itemState.total
           ? "fully_kitted"
           : pl.status;
@@ -12558,11 +13592,11 @@ async function openPeteKittedPickLists(forceRefresh = false, preserveSearch = fa
           !kitCompletion &&
           !hasExplicitMissingHistory &&
           !hasConfirmedFullKitHistory;
-        const needsReview = !!reviewByWo[pl.wo_number] || (
+        const needsReview = !!reviewByWo[canonicalWo] || (
           !!itemState?.total &&
           itemState.allocated === 0 &&
           !kitCompletion
-        ) || allAllocatedNoExplicitHistory;
+        ) || allAllocatedNoExplicitHistory || (!itemState?.total && !!kitCompletion);
         return { ...pl, shipDate, mondayItem, displayStatus, kitCompletion, kittedAt, checklistItems: itemState?.items || [], needsReview };
       })
       .filter(pl => {
@@ -12791,25 +13825,9 @@ async function openAllocationReviewByWo(woNum, heading = "Review Allocation") {
   document.body.appendChild(modal);
 
   try {
-    await ensurePickList(woNum);
-    const plRows = await sbFetch(`picklists?wo_number=eq.${encodeURIComponent(woNum)}&order=updated_at.desc&limit=1`, {
-      method: "GET", headers: { "Prefer": "return=representation" }
-    }) || [];
-    const pl = plRows[0];
+    const pl = await ensurePrimaryPickListForWorkOrder(woNum);
     if (!pl?.id) throw new Error("No pick list found for this work order.");
-    const byPickList = await sbFetch(
-      `picklist_items?picklist_id=eq.${encodeURIComponent(pl.id)}&order=id.asc`,
-      { method: "GET", headers: { "Prefer": "return=representation" } }
-    ) || [];
-    const byWorkOrder = await sbFetch(
-      `picklist_items?wo_number=eq.${encodeURIComponent(woNum)}&order=id.asc`,
-      { method: "GET", headers: { "Prefer": "return=representation" } }
-    ) || [];
-    const itemMap = new Map();
-    [...byPickList, ...byWorkOrder].forEach(item => {
-      if (item?.id) itemMap.set(String(item.id), item);
-    });
-    const items = [...itemMap.values()];
+    const items = await loadResolvedPickListItems(pl.id, woNum);
     renderAllocationReviewBody(pl, items, woNum);
   } catch (err) {
     const body = document.getElementById("generic-review-body");
@@ -12886,9 +13904,13 @@ async function saveAllocationReview(plId, woNum, e) {
   });
 
   const pl = (_plAllPicklists || []).find(row => String(row?.id) === String(plId)) || { id: plId, wo_number: woNum };
-  const liveItems = await loadLivePickListItemsNoRepair(plId, woNum).catch(() => []);
+  invalidatePickListCache(woNum, plId);
+  const liveItems = updateLocalPickListItems(plId, woNum, item => ({
+    ...item,
+    allocated: allocatedIds.has(String(item.id)),
+  }));
   if (woNum && liveItems.length) {
-    await syncPeteKitCompletionMissing(pl, liveItems).catch(()=>{});
+    syncPeteKitCompletionMissing(pl, liveItems).catch(()=>{});
   }
 
   document.getElementById("pete-review-modal")?.remove();
@@ -12924,6 +13946,7 @@ async function savePeteAllocationReview(plId, woNum, e) {
     ...item,
     allocated: allocatedIds.has(String(item.id)),
   }))).catch(()=>{});
+  invalidatePickListCache(woNum, plId);
 
   window._petePlLists = (window._petePlLists || []).map(p => {
     if (p.id !== plId && p.wo_number !== woNum) return p;
@@ -13048,6 +14071,7 @@ async function completePickList(plId, e, forcedByAdmin = false) {
   document.getElementById("pl-confirm-modal")?.remove();
   const btn = e?.currentTarget;
   if (btn) { btn.disabled = true; btn.textContent = "Completing…"; }
+  const pl = (_plAllPicklists || []).find(row => String(row?.id) === String(plId)) || null;
   await sbFetch(`picklists?id=eq.${encodeURIComponent(plId)}`, {
     method: "PATCH",
     prefer: "return=minimal",
@@ -13058,10 +14082,59 @@ async function completePickList(plId, e, forcedByAdmin = false) {
       updated_at:   new Date().toISOString(),
     }),
   });
+  invalidatePickListCache(pl?.wo_number || _plCurrentWo, plId);
+  const completeWo = pl?.wo_number || _plCurrentWo || "";
+  const mondayItem = findKnownBoardItemByWo(completeWo) || pl?.mondayItem || null;
+  triggerProductionEvent({
+    recipientNames: productionEventRecipients(mondayItem, { admin: true, leads: true, assigned: true, kitters: true }),
+    eventType: forcedByAdmin ? "picklist_manual_complete" : "picklist_complete",
+    title: forcedByAdmin ? "Pick List Manually Completed" : "QC / Pick List Complete",
+    body: `${productionEventProjectName(mondayItem, pl?.customer_name || completeWo)}${completeWo ? ` · ${completeWo}` : ""} pick list is complete${forcedByAdmin ? " by admin override" : ""}. Ready for final handoff/ship review.`,
+    url: productionEventUrl(mondayItem, completeWo),
+    tag: `picklist-complete-${completeWo || plId}`,
+    meta: productionEventMeta(mondayItem, {
+      event_action: forcedByAdmin ? "picklist_manual_complete" : "picklist_complete",
+      wo_number: completeWo,
+      picklist_id: plId,
+      forced_by_admin: !!forcedByAdmin,
+      completed_by: forcedByAdmin ? `${currentUser?.name || "Admin"} (Manual)` : (currentUser?.name || ""),
+    }),
+    excludeSender: currentUser?.name || "",
+  });
   const woNum = _plCurrentWo;
   if (woNum) await loadPickLists(woNum);
   else await loadPickLists(null);
   showToast(forcedByAdmin ? "Pick list manually completed." : "Pick list completed!", "ok");
+}
+
+async function confirmReopenPickList(plId, e) {
+  if (e) e.stopPropagation();
+  if (currentUser?.role !== "admin") return;
+  const pl = (_plAllPicklists || []).find(row => String(row?.id) === String(plId)) || null;
+  if (!pl) {
+    showToast("Could not find that pick list.", "err");
+    return;
+  }
+  if (!confirm("Reopen this completed pick list so it can be corrected?")) return;
+  const btn = e?.currentTarget;
+  if (btn) { btn.disabled = true; btn.textContent = "Reopening…"; }
+  const items = await loadResolvedPickListItems(plId, pl?.wo_number || _plCurrentWo || null).catch(() => []);
+  const allAllocated = items.length > 0 && items.every(item => !!item?.allocated);
+  await sbFetch(`picklists?id=eq.${encodeURIComponent(plId)}`, {
+    method: "PATCH",
+    prefer: "return=minimal",
+    body: JSON.stringify({
+      status: allAllocated ? "fully_kitted" : "missing_items",
+      completed_at: null,
+      completed_by: null,
+      updated_at: new Date().toISOString(),
+    }),
+  });
+  invalidatePickListCache(pl?.wo_number || _plCurrentWo, plId);
+  const woNum = _plCurrentWo;
+  if (woNum) await loadPickLists(woNum);
+  else await loadPickLists(null);
+  showToast("Pick list reopened.", "ok");
 }
 
 /* ── Acknowledge changes (dismiss badge) ── */
@@ -13443,12 +14516,17 @@ function stopRealTimeSync() {
 /* Update a single builder's timer display in admin view when Supabase fires */
 function updateAdminTimerDisplay(record) {
   if (!record?.user_name) return;
-  const timerId = "admin-sb-timer-" + record.user_name.replace(/\s/g,"-");
+  if (!shouldShowAdminLiveTimer(record)) {
+    if (document.getElementById("screen-admin")?.classList.contains("active")) loadAdminData();
+    return;
+  }
+  const timerId = adminTimerDomId(record);
   const el = document.getElementById(timerId);
-  if (!el) return;
-  const ms = record.state === "running"
-    ? (record.duration_ms||0) + (Date.now() - new Date(record.updated_at).getTime())
-    : (record.duration_ms||0);
+  if (!el) {
+    if (document.getElementById("screen-admin")?.classList.contains("active")) loadAdminData();
+    return;
+  }
+  const ms = adminTimerLiveMs(record);
   el.textContent = fmtMs(ms);
   if (el.classList.contains("admin-live-time")) {
     el.classList.toggle("paused", record.state !== "running");
@@ -13534,8 +14612,8 @@ try {
       ? { ...storedMember, role: u.role, baseRole: FLOAT_ROLE }
       : storedMember || u;
     syncPushForActiveSession(false);
-    if(currentUser.role==="admin"){showScreen("screen-admin");document.getElementById("admin-date").textContent=new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});loadAdminData();}
-    else { showDash(); }
+    if(currentUser.role==="admin"){showScreen("screen-admin");document.getElementById("admin-date").textContent=new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});loadAdminData().then(() => routePendingProductionDeepLink()).catch(()=>{});}
+    else { showDash(); routePendingProductionDeepLink(); }
   } else if (saved) {
     /* Session exists but user is on login screen — show sign out */
     const soBtn = document.getElementById("login-signout-btn");
