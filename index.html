@@ -2609,11 +2609,38 @@ function isSameBuildSession(session, itemId, colType) {
   return String(session?.itemId || "") === String(itemId || "") && session?.colType === colType;
 }
 
+function builderSessionSortScore(session) {
+  if (!session) return -1;
+  const item = session.item || (boardItems || []).find(i => String(i.id) === String(session.itemId || ""));
+  const entry = session.entry || {};
+  const running = !!entry.running;
+  const hasTrackedWork = !!(running || Number(entry.totalMs || 0) > 0);
+  const stuck = !!(item && isBuildStuck(item, session.colType));
+  const paused = !!(item && isBuildPaused(item, session.colType));
+  const inactive = stuck || paused;
+  const updatedAt = new Date(entry.updatedAt || entry.updated_at || entry.startedAt || entry.started_at || item?.updated_at || 0).getTime() || 0;
+  return [
+    running ? 1 : 0,
+    inactive ? 0 : 1,
+    hasTrackedWork ? 1 : 0,
+    updatedAt
+  ];
+}
+
+function compareBuilderSessions(a, b) {
+  const sa = builderSessionSortScore(a);
+  const sb = builderSessionSortScore(b);
+  for (let i = 0; i < sa.length; i++) {
+    if (sa[i] !== sb[i]) return sb[i] - sa[i];
+  }
+  return 0;
+}
+
 function getActiveBuilderSessionForCurrentUser(exceptItemId = "", exceptColType = "") {
   const sessions = getActiveBuilderSessionsForCurrentUser();
   return sessions
     .filter(s => !(exceptItemId && exceptColType && isSameBuildSession(s, exceptItemId, exceptColType)))
-    .sort((a,b) => Number(!!b.entry?.running) - Number(!!a.entry?.running))[0] || null;
+    .sort(compareBuilderSessions)[0] || null;
 }
 
 function canStartTimerForBuild(itemId, colType) {
@@ -5257,10 +5284,18 @@ function buildPickListBtn(item, centered = false) {
     : "";
 }
 
+function canUnstickProject(item, colType) {
+  if (!currentUser || !item || !["ms", "chassis"].includes(colType)) return false;
+  if (currentUser.role === "admin" || isTeamLead(currentUser) || isLead()) return true;
+  const whoColId = colType === "ms" ? COL.ms_who : COL.chassis_who;
+  return !!whoColId && isMeInPeople(item, whoColId);
+}
+
 function buildResolveStuckBtn(item, colType) {
+  if (!canUnstickProject(item, colType)) return "";
   return `<button class="resolve-stuck-btn" onclick="openResolveStuckSheet('${item.id}','${colType}',event)">
     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-    Resolve Stuck
+    Unstick Project
   </button>`;
 }
 
@@ -6161,7 +6196,8 @@ async function loadResolveStuckOptions(itemId) {
   help.textContent = "";
 
   try {
-    const item = boardItems.find(i => i.id === itemId);
+    const item = (boardItems || []).find(i => String(i.id) === String(itemId)) ||
+      (window._adminItems || []).find(i => String(i.id) === String(itemId)) || null;
     const woNum = getWorkOrderNumber(item);
     if (!woNum) throw new Error("No work order is linked to this build yet.");
 
@@ -6180,12 +6216,12 @@ async function loadResolveStuckOptions(itemId) {
       return;
     }
 
-    select.innerHTML = `<option value="">Choose the item that showed up…</option>` +
+    select.innerHTML = `<option value="">No pick-list item to update</option>` +
       missingItems.map(it => {
         const label = it.label || buildItemLabel(it);
         return `<option value="${escAttr(String(it.id || ""))}" data-label="${escAttr(label)}">${escHtml(label)}</option>`;
       }).join("");
-    help.textContent = `${missingItems.length} missing item${missingItems.length === 1 ? "" : "s"} currently open on this pick list.`;
+    help.textContent = `Optional: choose a resolved item to allocate it now. ${missingItems.length} missing item${missingItems.length === 1 ? "" : "s"} currently open.`;
   } catch (err) {
     select.innerHTML = `<option value="">Could not load missing items</option>`;
     help.textContent = err.message || "Could not load missing pick-list items.";
@@ -6206,54 +6242,64 @@ function openResolveStuckPickList(itemId, colType, e) {
 
 async function resumeStuckBuild(itemId, colType, e) {
   if (e) e.stopPropagation();
+  const currentItem = (boardItems || []).find(i => String(i.id) === String(itemId)) ||
+    (window._adminItems || []).find(i => String(i.id) === String(itemId)) || null;
+  if (!currentItem || !isBuildStuck(currentItem, colType)) {
+    showToast("This project is no longer marked Stuck.", "err");
+    return;
+  }
+  if (!canUnstickProject(currentItem, colType)) {
+    showToast("Only the assigned Builder, a Production Lead, or Admin can unstick this project.", "err");
+    return;
+  }
   const btn = document.getElementById("resolve-stuck-submit-" + itemId);
   const itemSelect = document.getElementById("resolve-stuck-item-" + itemId);
   const selectedItemId = (itemSelect?.value || "").trim();
   const selectedItemLabel = (itemSelect?.selectedOptions?.[0]?.dataset?.label || itemSelect?.selectedOptions?.[0]?.textContent || "").trim();
   const plId = (itemSelect?.dataset?.plId || "").trim();
   const note = (document.getElementById("resolve-stuck-note-" + itemId)?.value || "").trim();
-  if (!selectedItemId || !plId) {
-    showToast("Choose the missing pick-list item that showed up first.", "err");
-    itemSelect?.focus();
+  if (selectedItemId && !plId) {
+    showToast("Could not link that pick-list item. Try again or leave it unselected.", "err");
     return;
   }
   if (btn) {
     btn.disabled = true;
-    btn.textContent = "Resuming…";
+    btn.textContent = "Unsticking…";
   }
   try {
-    await sbFetch(`picklist_items?id=eq.${encodeURIComponent(selectedItemId)}`, {
-      method: "PATCH",
-      prefer: "return=minimal",
-      body: JSON.stringify({ allocated: true }),
-    });
-    const currentItem = boardItems.find(i => i.id === itemId) || null;
     const woNum = getWorkOrderNumber(currentItem);
-    const allItems = await loadWorkOrderPickListItems(woNum, plId, { sync: false, relink: true });
-    if (woNum) await syncPickListStatusByWorkOrder(woNum, allItems);
-    await setBuildStatusLabel(itemId, colType, "In Progress");
-    const local = boardItems.find(i => i.id === itemId);
+    if (selectedItemId) {
+      await sbFetch(`picklist_items?id=eq.${encodeURIComponent(selectedItemId)}`, {
+        method: "PATCH",
+        prefer: "return=minimal",
+        body: JSON.stringify({ allocated: true }),
+      });
+      const allItems = await loadWorkOrderPickListItems(woNum, plId, { sync: false, relink: true });
+      if (woNum) await syncPickListStatusByWorkOrder(woNum, allItems);
+    }
+    await setActiveStatus(itemId, colType);
+    const local = (boardItems || []).find(i => String(i.id) === String(itemId)) || currentItem;
     if (local) {
       const statColId = colType === "ms" ? COL.ms_status : COL.chassis_status;
       const statCol = local.column_values.find(c => c.id === statColId);
       if (statCol) statCol.text = "In Progress";
     }
-    const item = local || (window.boardItems || []).find(i => i.id === itemId) || null;
+    const item = local || currentItem;
     const tsLabel = new Date().toLocaleDateString("en-US",{month:"short",day:"numeric"}) + " " + new Date().toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"});
     const bodyParts = [
       `[${currentUser.name}] ${tsLabel}`,
-      `${colType === "ms" ? "MS" : "Chassis"} resumed from Stuck`,
-      `Resolved blocking item: ${selectedItemLabel || "Missing item allocated"}`,
+      `${colType === "ms" ? "MS" : "Chassis"} status: Stuck → Active`,
     ];
-    if (note) bodyParts.push(note);
+    if (selectedItemId) bodyParts.push(`Resolved blocking item: ${selectedItemLabel || "Pick-list item allocated"}`);
+    if (note) bodyParts.push(`Resolution: ${note}`);
     await mondayQuery(`mutation {
       create_update(item_id:${itemId}, body:"${bodyParts.join(" | ").replace(/"/g,"'").replace(/\n/g," ")}") { id }
     }`);
     triggerProductionEvent({
       recipientNames: productionEventRecipients(item, { admin: true, leads: true, assigned: true, kitters: true }),
       eventType: "build_unstuck",
-      title: `${colType === "ms" ? "Monitor Stand" : "Chassis"} Ready Again`,
-      body: `${productionEventProjectName(item, itemId)}${woNum ? ` · ${woNum}` : ""} moved back to In Progress. ${selectedItemLabel ? `${selectedItemLabel} was allocated.` : "Blocking item was cleared."}`,
+      title: `${colType === "ms" ? "Monitor Stand" : "Chassis"} Project Unstuck`,
+      body: `${productionEventProjectName(item, itemId)}${woNum ? ` · ${woNum}` : ""} moved from Stuck back to Active by ${currentUser.name}.${selectedItemId ? ` ${selectedItemLabel} was allocated.` : ""}`,
       url: productionEventUrl(item, woNum),
       tag: `build-unstuck-${woNum || itemId}-${colType}`,
       meta: productionEventMeta(item, {
@@ -6265,14 +6311,15 @@ async function resumeStuckBuild(itemId, colType, e) {
       excludeSender: currentUser?.name || "",
     });
     closeUpdateSheet();
-    showToast("Build moved back to In Progress.", "ok");
-    if (document.getElementById("screen-team")?.classList.contains("active")) renderTeamScreen();
+    showToast("Project is Active again.", "ok");
+    if (document.getElementById("screen-admin")?.classList.contains("active")) loadAdminData();
+    else if (document.getElementById("screen-team")?.classList.contains("active")) renderTeamScreen();
     else renderDash(boardItems || window.boardItems || []);
   } catch (err) {
-    showToast("Could not resume build: " + err.message, "err");
+    showToast("Could not unstick project: " + err.message, "err");
     if (btn) {
       btn.disabled = false;
-      btn.textContent = "Resume Build";
+      btn.textContent = "Unstick Project";
     }
   }
 }
@@ -6280,7 +6327,16 @@ async function resumeStuckBuild(itemId, colType, e) {
 function openResolveStuckSheet(itemId, colType, e) {
   if (e) e.stopPropagation();
   const isMS = colType === "ms";
-  const item = boardItems.find(i => i.id === itemId);
+  const item = (boardItems || []).find(i => String(i.id) === String(itemId)) ||
+    (window._adminItems || []).find(i => String(i.id) === String(itemId)) || null;
+  if (!item || !isBuildStuck(item, colType)) {
+    showToast("This project is no longer marked Stuck.", "err");
+    return;
+  }
+  if (!canUnstickProject(item, colType)) {
+    showToast("Only the assigned Builder, a Production Lead, or Admin can unstick this project.", "err");
+    return;
+  }
   const itemName = item?.name || itemId;
   const curPct = parsePct(cvText(item, isMS ? COL.ms_pct : COL.chassis_pct));
   const woNum = getWorkOrderNumber(item);
@@ -6293,7 +6349,7 @@ function openResolveStuckSheet(itemId, colType, e) {
     </div>
     <div class="update-sheet-sub">${isMS ? "Monitor Stand" : "Chassis"} · ${curPct}% complete · currently stuck</div>
     <div style="background:rgba(224,32,32,0.08);border:1px solid rgba(224,32,32,0.18);border-radius:var(--radius-xs);padding:11px 13px;font-size:12px;color:var(--text);line-height:1.55;margin-bottom:14px">
-      Choose the missing pick-list item that showed up. When you continue, the pick list will update and the build will move back into progress.
+      Move this project back to Active so the assigned Builder can continue. If a missing item was resolved, you can optionally allocate it here.
     </div>
     <div class="resolve-stuck-help" id="resolve-stuck-help-${itemId}">
       Loading missing pick-list items…
@@ -6301,9 +6357,9 @@ function openResolveStuckSheet(itemId, colType, e) {
     <select class="note-inp" id="resolve-stuck-item-${itemId}" style="margin-top:12px">
       <option value="">Loading missing pick-list items…</option>
     </select>
-    <textarea class="note-inp" id="resolve-stuck-note-${itemId}" rows="2" placeholder="Optional note (what arrived, where it came from, etc.)…" style="margin-top:12px"></textarea>
+    <textarea class="note-inp" id="resolve-stuck-note-${itemId}" rows="2" placeholder="Optional resolution notes…" style="margin-top:12px"></textarea>
     <div class="resolve-stuck-actions">
-      <button class="resolve-stuck-primary" id="resolve-stuck-submit-${itemId}" onclick="resumeStuckBuild('${itemId}','${colType}',event)">Continue Build</button>
+      <button class="resolve-stuck-primary" id="resolve-stuck-submit-${itemId}" onclick="resumeStuckBuild('${itemId}','${colType}',event)">Unstick Project</button>
     </div>`;
   document.getElementById("update-sheet-overlay").classList.add("open");
   loadResolveStuckOptions(itemId);
@@ -7975,8 +8031,13 @@ function renderAdminStreamlineWidgets(items, sbTimers = [], sbKits = [], sbUpdat
     if (!isAllocationOpenForAdmin(i, allocationSummaryByWo)) return false;
     return !parsePeople(i, COL.ms_who).length && !parsePeople(i, COL.chassis_who).length;
   }).sort(compareScores);
+  const stuckBuilds = items.flatMap(item => ["chassis", "ms"]
+    .filter(side => isBuildStuck(item, side))
+    .map(side => ({ item, side }))
+  ).sort((a, b) => compareScores(a.item, b.item));
 
   const alerts = [
+    stuckBuilds.length ? { title:`${stuckBuilds.length} stuck build${stuckBuilds.length===1?"":"s"}`, sub:"A Builder, Production Lead, or Admin can unstick resolved projects." } : null,
     overdue.length ? { title:`${overdue.length} overdue ship date${overdue.length===1?"":"s"}`, sub:compactProjectLabel(overdue[0]) } : null,
     unassigned.length ? { title:`${unassigned.length} unassigned item${unassigned.length===1?"":"s"}`, sub:"Assign MS/chassis ownership before it stalls." } : null,
     partsPulled.length ? { title:`${partsPulled.length} in Parts Pulled`, sub:"Ready for builders to grab or for Pete follow-up." } : null,
@@ -7992,6 +8053,14 @@ function renderAdminStreamlineWidgets(items, sbTimers = [], sbKits = [], sbUpdat
   ${alerts.length ? `<div style="margin-bottom:16px">
     <div style="font-size:13px;font-weight:800;margin-bottom:8px">Smart Alerts</div>
     ${alerts.map(a => `<div class="stream-alert"><div class="stream-alert-title">${escHtml(a.title)}</div><div class="stream-alert-sub">${escHtml(a.sub)}</div></div>`).join("")}
+  </div>` : ""}
+  ${stuckBuilds.length ? `<div style="margin-bottom:16px">
+    <div style="font-size:13px;font-weight:800;margin-bottom:8px">Stuck Projects</div>
+    ${stuckBuilds.map(({ item, side }) => `<div class="stream-alert">
+      <div class="stream-alert-title">${escHtml(compactProjectLabel(item))}</div>
+      <div class="stream-alert-sub">${side === "ms" ? "Monitor Stand" : "Chassis"} · ${escHtml(getWorkOrderNumber(item) || "No work order")}</div>
+      ${buildResolveStuckBtn(item, side)}
+    </div>`).join("")}
   </div>` : ""}`;
 }
 
@@ -9341,6 +9410,7 @@ function renderTeamScreen() {
             <div class="team-build-name">${escHtml(item.name)}${stuck ? ' <span style="color:var(--accent);font-size:10px">· Stuck — waiting on missing item</span>' : paused ? ' <span style="color:var(--yellow);font-size:10px">· Paused — switched projects</span>' : ""}</div>
             <div class="team-build-pct" style="color:${pctColor(pct)}">${pct}%</div>
             <div class="team-build-bar"><div class="team-build-fill" style="width:${pct}%;background:${pctColor(pct)}"></div></div>
+            ${stuck ? `<div style="grid-column:1/-1">${buildResolveStuckBtn(item, colType)}</div>` : ""}
           </div>`;
         }).join("")
       : `<div class="team-no-builds">No active builds</div>`;
