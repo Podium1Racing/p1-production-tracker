@@ -1,201 +1,262 @@
-# Podium 1 Racing — Production Tracker Handoff
-**Last updated:** July 2026
-**Previous AI:** Claude (Anthropic)
-**Handoff to:** ChatGPT / Codex
-**Live URL:** https://p1production.netlify.app (migrating to Vercel)
+# Podium 1 Racing Production Tracker — Handoff
+
+Last updated: July 29, 2026  
+Repo: `/Users/ejvmoose01/Documents/Production App/p1-production-tracker`  
+Primary branch: `main`  
+Latest local/pushed commit at handoff time: `165014a` (`notification edits`)
 
 ## What This App Is
 
-A mobile-first PWA (single HTML file) used daily on the production floor at Podium 1 Racing in Nashville, TN. It tracks simulator build progress, kitting, and pick list allocation. Every system ships fully built and configured — this app tracks that process from parts arrival through quality control.
+This is a mobile-first production-floor app for Podium 1 Racing. It is used by:
+
+- Pete for kitting and pick list allocation
+- Builders for project sessions, timers, and build updates
+- Leads for floor visibility and team follow-up
+- Admin for production command center, pick list oversight, and manual recovery actions
+
+The app is intentionally built to feel like a phone app first. Tablet support matters too. Desktop matters mainly for Admin, but the production-floor experience should always be optimized for iPhone-sized screens and touch interaction.
 
 ## Stack
 
-| Layer | Technology |
-|---|---|
-| Frontend | Single-file HTML + vanilla JS + CSS (no framework) |
-| Hosting | Netlify → migrating to Vercel |
-| Serverless | Netlify Functions → Vercel API Routes |
-| Database | Supabase (Postgres) |
-| Board data | Monday.com API (GraphQL) |
-| Parts/WO data | P1 NetSuite API |
-| Auth | SHA-256 hashed PIN per user, stored in Supabase user_pins |
+- Frontend: single-file `index.html` with vanilla JS/CSS
+- API routes: `api/`
+- Service worker: `sw.js`
+- Hosting: Vercel
+- Database: Supabase
+- Board / production status source: Monday.com
+- Work order / pick list source: P1 / NetSuite-backed API through the app
 
-## Credentials & Keys
+## Important Credentials
 
-**Gate (first-launch device lock):**
-- Username: podium1racing
-- Passcode: AlWaYsBeRaCiNg
-- SHA-256 hashes stored in HTML — never plain text
+Shared gate login:
 
-**Admin:** Elijah Moosekian | Setup code: 5248
+- Username: `podium1racing`
+- Password: `alwaysberacing`
 
-**APIs (also in p1proxy.js):**
-- Monday API Key: eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjY3NDQwMzIwMCwiYWFpIjoxMSwidWlkIjo3MzA3NzY1NCwiaWFkIjoiMjAyNi0wNi0yM1QxNTozMjowOC4wMDBaIiwicGVyIjoibWU6d3JpdGUiLCJhY3RpZCI6MTcyNTAyMjIsInJnbiI6InVzZTEifQ.aQ2XoeK3ZCasOe6C4ocU5tow3bWga-myr-CAH6MUVtA
-- Monday Board ID: 7847112819
-- P1 API URL: https://submission-api-331638234113.us-central1.run.app
-- P1 API Key: p1r-0ed3fa51376c78f8ad9df9b43728e46d59f6ca7f447d8645
-- Supabase URL: https://paufeygvqwyidyasuubr.supabase.co
-- Supabase Anon Key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBhdWZleWd2cXd5aWR5YXN1dWJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzOTEzNTMsImV4cCI6MjA5Nzk2NzM1M30._LRmmxQdzqUJaFdCa_w6P82rtcQVUJgwec79COxKxGE
+Current shared-device behavior:
 
-## Team
+- Shared devices should keep the main gate login saved
+- After that, shared devices should continue to show the name-select flow
+- Personal device mode is being improved so a user can go straight to PIN instead of finding their name every time
 
-| Name | Role | Notes |
-|---|---|---|
-| Alex Inthavone | MS Builder (ms) | |
-| Mason McKnight | MS Builder (ms) | |
-| Thomas Persichina | MS Builder / Lead (ms) | Next Up assign button, team dashboard |
-| Daniel Barbarino | Chassis Builder (chassis) | |
-| Ray Simonson | Chassis Builder (chassis) | |
-| Sepan Ali | Chassis Builder / Lead (chassis) | Next Up assign button, team dashboard |
-| Billy Vankham | Chassis Builder (chassis) | |
-| Pete Jeji | Kitter (kit) | Kit screen, pick list button, submit kit flow |
-| Elijah Moosekian | Admin | Full desktop analytics |
+Do not change the shared-device flow unless explicitly asked.
 
-Role constants: MS_ROLE="ms", CHASSIS_ROLE="chassis", KIT_ROLE="kit"
+## Key Files
 
-## Supabase Tables
+- [index.html](/Users/ejvmoose01/Documents/Production%20App/p1-production-tracker/index.html)
+- [api/push.js](/Users/ejvmoose01/Documents/Production%20App/p1-production-tracker/api/push.js)
+- [sw.js](/Users/ejvmoose01/Documents/Production%20App/p1-production-tracker/sw.js)
+- [vercel.json](/Users/ejvmoose01/Documents/Production%20App/p1-production-tracker/vercel.json)
 
-**user_pins** — cross-device PIN storage
-- name (PK), pin_hash, updated_at
+Almost all app logic lives in `index.html`.
 
-**timer_sessions** — builder timer events
+## Current Architecture Notes
 
-**kit_completions** — Pete's kit submissions
-- item_id, item_name, user_name, missing_items (text[]), completed_at, date_str
+### Single source of truth
 
-**build_updates** — % progress updates with optional photos
-- item_id, item_name, user_name, col_type (ms/chassis), ms_total_ms, chassis_total_ms, photo_base64, date_str
+Pick list behavior is being pushed toward one rule:
 
-**picklists** — one row per work order
-- id (uuid PK), wo_number (UNIQUE), customer_name, monday_item_id
-- status: in_queue / missing_items / fully_kitted / complete / exclude
-- has_changes (bool), changes_note, completed_at, completed_by
+- All pick list data must be keyed by `wo_number`
+- All views must reflect the same allocation state
+- Admin, Pete, Builder, Lead, and completion flows should all read/write the same pick list records
 
-**picklist_items** — NetSuite line items
-- id (bigint PK), wo_number, customer_name, brand, item_name, memo, quantity
-- allocated (bool) — Pete checks as he pulls
-- builder_confirmed (bool) — Thomas/Sepan confirm grab
-- picklist_id (FK → picklists.id)
-- label (text) — pre-built display string, source of truth for display
-- last_synced_at
+If a future change introduces customer-name-based matching again, that will likely re-break allocation consistency for repeat customers with multiple systems.
 
-## Pick List Status Mapping (Monday Group → App Status)
+### Pick list data model
 
-- Pick Ticket Printed → in_queue
-- Parts Pulled → missing_items
-- Building Queue - In Progress → missing_items
-- Stand By - Pending MS or Chassis → missing_items
-- Configuration → missing_items
-- Quality Control (Support) → missing_items (Complete button active HERE)
-- Pending Shipping → missing_items
-- Hold → missing_items
-- Pending Parts Pulled → exclude (hidden entirely)
-- Complete Pick List button pressed → complete (terminal)
-- All items checked → fully_kitted (auto-set)
+Core Supabase tables involved:
 
-## Dual Checkboxes (PC / Monitor / Seat)
+- `picklists`
+- `picklist_items`
+- `kit_completions`
+- `build_updates`
+- `timer_sessions`
+- push / notification related tables added during the notification work
 
-These items get TWO checkboxes — Pete's (allocated) and Builder's (builder_confirmed):
-- PC: item label matches /50[6-9]0\s*pc/i (5060, 5070, 5080, 5090 PC)
-- Monitor: label contains 32", 45", or 55"
-- Seat: label contains "seat" but NOT "seat slider" or "seat bracket"
+Important practical rule:
 
-Who sees the builder checkbox:
-- Sepan Ali (chassis lead) → Seat only
-- Thomas Persichina (MS lead) → Monitor + PC only
-- Admin → all three
+- Work Order is the identity
+- Customer name is display only
 
-## Key Functions
+### Session and timer model
 
-**Auth:** submitGate(), signOutCompletely(), savePinToSupabase(name, hash), syncPinsFromSupabase()
+Builder session logic has been moving toward:
 
-**Monday:** mondayQuery(gql, version), discoverColumns(columns), cvText(item, colId), parsePeople(item, colId), getShipDate(item)
+- one active project session per builder
+- top-of-screen Project HUD is the main session control area
+- timer state, session state, and Monday build state should stay synchronized
 
-**Board:** loadBoard(), renderDash(items), renderPartsPulled(items, isMS), grabBuild(itemId), grabBuildAs(itemId, memberName), updateProgress(itemId, pct, photo)
+This area has been actively edited and should be treated carefully because it affects both local UI state and Monday status updates.
 
-**Kit (Pete):** showKitScreen(), loadKitBoard(), buildKitChecklistAsync(item), submitKitFromPickList(plId, woNum, e), confirmSubmitKitFromPickList(...), openPetePickListOverview()
+## What Is Working Well Right Now
 
-**Pick Lists:** openPickListForItem(itemId, woNum, e), openPickListScreen(), loadPickLists(woNum), ensurePickList(woNum), syncPickListItems(woNum), syncPickListStatusFromMonday(woNum), mondayGroupToPlStatus(groupTitle), renderPickLists(), togglePickListItem(itemId, plId, e), toggleBuilderConfirm(itemId, plId, e), completePickList(plId, e), confirmCompletePickList(plId, e), acknowledgePickListChanges(plId, e), buildItemLabel(it), isBuilderGrabItem(label), isServiceItem(it), isLead(), isChassisLead(), isMSLead(), cleanMondayName(name)
+- Repo is clean and on `main`
+- Shared login gate is in place
+- Pete’s kitting queue and kitted pick lists exist
+- Pick list allocation is largely driven by work order instead of customer name
+- Admin can view pick lists by status
+- Admin has manual pick list complete / reopen recovery paths
+- Builder HUD and timer controls were recently consolidated so session actions are less duplicated
+- Push notification groundwork exists in the app and backend
 
-**Leads:** openNextUpAssign(), assignBuildFromModal(itemId, e), renderLeadDashboard()
+## Most Recent Work Before This Handoff
 
-**Admin:** loadAdminData(), isDesktop(), renderAdminDesktop(...), renderAdminDash(...), setAdminRange(r)
+The last local work focused on Builder session controls:
 
-**Supabase:** sbFetch(path, opts), sbUpsertTimer(...), sbEndTimer(...), sbRecordKitCompletion(...)
+- Resuming a paused project should not leave the UI showing `Paused` while the timer is running
+- A paused project should remain paused until the builder explicitly starts the timer
+- Session controls were being moved to the top Project HUD
+- Duplicate start/end session controls lower on the page were being removed
+- Goal: one source of truth for timer/session/project status
 
-## Screens
+The user wanted this deployed so they could test whether pausing a timer correctly pushes the Monday project status to `Paused` until the project is resumed or the session is ended.
 
-- screen-gate — first-launch device credentials
-- screen-login — name select + PIN pad
-- screen-dash — builder dashboard
-- screen-kit — Pete's kitting screen
-- screen-admin-login — admin PIN
-- screen-admin — admin view (mobile) / full analytics (desktop Mac ≥900px, no touch)
-- screen-picklist — pick list screen
-- screen-updates — build updates photo feed
-- screen-history — builder history
-- screen-setup — first-time PIN setup
+At the moment of handoff, the repo itself was clean, so there were no uncommitted local changes waiting to be pushed.
 
-## Vercel Migration
+## Current User Priorities
 
-vercel.json rewrites /.netlify/functions/p1proxy → /api/p1proxy so NO frontend changes needed.
+These are the things the user currently cares about most:
 
-Steps:
-1. Push to GitHub
-2. Connect repo in Vercel dashboard
-3. No build command (static HTML)
-4. Add vercel.json and api/p1proxy.js (provided in handoff zip)
-5. Convert mondaywebhook.js to api/mondaywebhook.js using same Vercel handler pattern
+1. Phone experience must feel polished and stable.
+2. The bottom control center must sit correctly at the bottom on all iPhone resolutions.
+3. The Podium 1 loading screen must cover the full screen cleanly, including safe areas.
+4. Pick lists must load fast and consistently everywhere.
+5. Admin pick list views must be accurate, readable, and grouped in a useful way.
+6. Builders need a foolproof timer/session workflow with minimal accidental misuse.
+7. Pete’s pick list and kitting flows must stay extremely reliable.
 
-## Important Gotchas
+## Known Open Issues
 
-1. Monday item names come back as "224310 Joe Lynch" — always use cleanMondayName(name) to strip the leading number prefix before storing to Supabase.
+### 1. Mobile layout / safe-area inconsistencies still exist
 
-2. Column discovery (discoverColumns) happens at board load. If COL.ms_who is null, board hasn't loaded yet.
+The user is still seeing:
 
-3. boardItems = all Monday items globally. kitBoardItems = Pete's subset. window._adminItems = admin's copy.
+- top content partially under the iPhone clock/status area on some screens
+- bottom control center floating too high on some screens
+- loading / splash screen not visually covering the full device height
+- some screens showing uneven vertical spacing or large blank gaps
 
-4. Pick list labels — picklist_items.label is source of truth. Always use (it.label || buildItemLabel(it)) when rendering. Never build from brand+item_name directly.
+This is not fully solved yet. The app needs another careful pass specifically for safe-area behavior across multiple iPhone resolutions.
 
-5. Service items (installation, white glove, delivery, warranty) filtered by isServiceItem(it).
+### 2. Pick list screens can still feel slow or visually broken
 
-6. Status is Monday-driven — syncPickListStatusFromMonday() runs on every open and overwrites unless complete or exclude.
+The user has repeatedly reported:
 
-7. exclude status = Pending Parts Pulled group in Monday. Hidden everywhere. Reappears as missing_items when moved to Parts Pulled.
+- pick lists taking too long to load
+- inline pick list expansion occasionally failing or feeling delayed
+- some screens showing a loading spinner in a way that makes the page feel broken
 
-8. Monday create_update mutation requires "2025-07" as second arg to mondayQuery(). Other mutations use default.
+The user wants pick lists to feel immediate.
 
-9. Gate SHA-256 hashes:
-   - podium1racing → 84e72cb2fce97fb96fc3b35fe1fed70e74660adc1497623a3a0298ef3f513777
-   - AlWaYsBeRaCiNg → 98dcbed840e44810c72e93ab5c9b9c25dce7189ee8c39729a12a127e1f7f7ace
+### 3. Missing-items display is too messy
 
-## Jake & Ayden (Inventory Team)
+In Admin, the "what's missing" display is currently too dense and hard to scan.  
+User preference:
 
-Stored in INVENTORY_IDS in the HTML. They receive Monday comment notifications when Pete submits a kit:
+- cleaner formatting
+- bullets
+- more readable separation of items
+- less wall-of-red-text presentation
 
-[Pete Jeji] Kitting complete (Jul 9, 2026)
-Missing:
-- Fanatec — DD Pro
-- Custom: Pedal Slider
-OR: Missing: Nothing — full kit confirmed
+### 4. Some orders still fail to populate pick list data correctly
 
-## Design System
+The user has seen cases where orders show:
 
---bg: #0d0d0d (near-black)
---surface: #161616
---accent: #e02020 (Podium 1 crimson red)
---green: #10b981
---yellow: #f59e0b
---muted: #888888
---radius: 12px
+- no pick list data
+- `0/0 allocated`
+- wrong status
+- incorrect inclusion in Missing Items
 
-Uppercase headers, tight tracking, 3px red accent bar on gate/login/admin screens, red left border on project cards.
+Examples that came up recently in conversation included shipped, hold, or edge-case orders not behaving correctly in Admin.
 
-## How to Continue with ChatGPT
+The standing expectation is:
 
-Prompt template:
-"I am continuing development on the Podium 1 Racing Production Tracker (currently v79). Attached is the current index.html and the handoff document. I need to: [describe change]. Please make the change, syntax-check the JS, and provide a deployable zip with index.html, vercel.json, and api/p1proxy.js."
+- only eligible active orders belong in Missing Items
+- shipped orders should retain history elsewhere
+- hold/cancel-style orders should not pollute active problem lists
 
-Always upload: index.html + this handoff doc
-Always verify: JS syntax before deploying
-Always test on: iPhone (primary device for floor workers)
+### 5. Builder timer flow still needs real-world phone testing
+
+The user specifically wants to test:
+
+- when a builder pauses a timer, does Monday move the build to `Paused`
+- when they resume, does status move back cleanly
+- when they end session, does status reconcile correctly
+
+This is one of the main immediate test targets for the next chat.
+
+## Important Behavioral Rules the User Has Repeatedly Stated
+
+### Pick lists
+
+- Pick lists are the same thing as the work order
+- Pick list data must match the work order exactly
+- Pick list changes must propagate everywhere
+- If an item is changed in one place, it should reflect everywhere else
+- Admin, Pete, Builders, and Leads should all be seeing the same truth
+
+### Builder workflow
+
+- Builders should only be actively working one project at a time unless the project is intentionally shared
+- They should not have confusing duplicate controls
+- End session should force proper progress update behavior
+- Timer control needs to be dummy-proof
+
+### Admin workflow
+
+- Admin needs override tools for recovery cases
+- Admin needs live, current data, not stale cached summaries
+- Admin needs readable, grouped pick list views
+
+### Pete workflow
+
+- Pete should be the only one who can retake the initial kit photo
+- Pick list actions should be quick and responsive
+- Kitted pick list review should stay editable until the process is truly complete
+
+## Suggested Starting Point for the Next Chat
+
+If continuing in a new chat, the best next move is:
+
+1. Read this handoff first.
+2. Open [index.html](/Users/ejvmoose01/Documents/Production%20App/p1-production-tracker/index.html).
+3. Focus first on mobile safe-area and dock behavior.
+4. Then validate Builder pause/resume/end-session behavior against Monday status syncing.
+5. Then clean up Admin Missing Items readability and any remaining empty pick list edge cases.
+
+## Recommended Prompt for the Next Chat
+
+Use something like this:
+
+> I’m continuing development on the Podium 1 Racing Production Tracker. Please read the attached `HANDOFF.md` first, then inspect the current `index.html`, `api/push.js`, and `sw.js`. This app is mobile-first and phone polish is the top priority. Please preserve the existing shared-device login flow and the work-order-based pick list source of truth. The first thing I need help with is: [insert task here].
+
+## Notes for the Next Assistant
+
+- Do not reintroduce customer-name-based pick list matching.
+- Do not change shared-device login behavior unless explicitly asked.
+- Treat `index.html` as the primary application surface.
+- Prioritize real iPhone behavior over desktop assumptions.
+- Keep the interface simple, finger-friendly, and visually finished.
+- The user strongly prefers direct action over long planning.
+- The user often wants to deploy quickly to phone-test changes.
+
+## Verification Habits That Have Helped
+
+Before handing back work:
+
+- syntax-check JS
+- watch for mobile layout regressions
+- test for stale status / stale pick list state
+- make sure timer/session/status language matches actual behavior
+- if changing pick list logic, verify it still keys off work order
+
+## Current State at Handoff
+
+At the moment of this handoff:
+
+- repo branch: `main`
+- local working tree: clean
+- latest commit visible locally: `165014a`
+- app is active and under ongoing polish, not frozen
+
+This handoff is meant to let a new chat continue immediately without re-discovering the app.
