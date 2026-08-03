@@ -6700,7 +6700,9 @@ async function primeLeadPickListVerificationState(itemId, colType, opts = {}) {
     const checklistItems = viewState.checklist.map(row => {
       const normalized = normalizePickListItemRow(row);
       const prev = previousRows.get(String(normalized.id)) || {};
-      const allocated = typeof prev.allocated === "boolean" ? !!prev.allocated : !!normalized.allocated;
+      const allocated = force
+        ? !!normalized.allocated
+        : (typeof prev.allocated === "boolean" ? !!prev.allocated : !!normalized.allocated);
       return {
         itemId: String(normalized.id),
         label: normalized.label || buildItemLabel(normalized),
