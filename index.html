@@ -6737,8 +6737,16 @@ async function primeLeadPickListVerificationState(itemId, colType, opts = {}) {
   }
 
   try {
+    let activePickListId = "";
     const updateLoadingState = (stage, detail) => {
       const existing = LEAD_PICKLIST_VERIFICATION_STATE[stateKey] || {};
+      if (activePickListId) {
+        setPickListVerificationState(activePickListId, {
+          state: "loading",
+          stage: stage || "Loading pick list",
+          detail: detail || "",
+        });
+      }
       LEAD_PICKLIST_VERIFICATION_STATE[stateKey] = {
         ...existing,
         itemId,
@@ -6759,9 +6767,25 @@ async function primeLeadPickListVerificationState(itemId, colType, opts = {}) {
     };
 
     const pl = await ensurePrimaryPickListForWorkOrder(woNum);
+    activePickListId = String(pl?.id || "");
+    if (activePickListId) {
+      setPickListVerificationState(activePickListId, {
+        state: "loading",
+        stage: "Loading Work Order",
+        detail: `Opening the live Work Order checklist for ${woNum}.`,
+      });
+    }
     const items = await loadResolvedPickListItems(pl?.id, woNum, { onStage: updateLoadingState });
     const filtered = (items || []).filter(row => !isServiceItem(row));
-    const viewState = getVerifiedPickListViewState(pl, filtered);
+    const verifiedState = {
+      state: "ready",
+      stage: "Pick list ready",
+      detail: `${filtered.length} item${filtered.length === 1 ? "" : "s"} verified for ${woNum || "this Work Order"}.`,
+    };
+    if (activePickListId) {
+      setPickListVerificationState(activePickListId, verifiedState);
+    }
+    const viewState = getVerifiedPickListViewState(pl, filtered, verifiedState);
     const existing = LEAD_PICKLIST_VERIFICATION_STATE[stateKey] || {};
     const previousRows = new Map((existing.checklistItems || []).map(row => [String(row.itemId), row]));
     const checklistItems = viewState.checklist.map(row => {
@@ -6791,11 +6815,11 @@ async function primeLeadPickListVerificationState(itemId, colType, opts = {}) {
       itemName: item?.name || woNum,
       customerName: cleanMondayName(item?.name || pl?.customer_name || woNum),
       loaded: true,
-      stage: viewState.verification?.stage || "Pick list ready",
-      detail: viewState.verification?.detail || `${viewState.checklist.length} item${viewState.checklist.length === 1 ? "" : "s"} verified for today’s Lead check.`,
+      stage: verifiedState.stage,
+      detail: verifiedState.detail,
       loadError: "",
       checklistItems,
-      verification: viewState.verification,
+      verification: verifiedState,
       generalNote: existing.generalNote || "",
       missingItems,
       availableItems,
@@ -6805,6 +6829,13 @@ async function primeLeadPickListVerificationState(itemId, colType, opts = {}) {
     };
     renderLeadPickListVerificationSection(itemId, colType);
   } catch (err) {
+    if (activePickListId) {
+      setPickListVerificationState(activePickListId, {
+        state: "error",
+        stage: "Verification failed",
+        detail: err?.message || "Could not load the shared pick list for Lead verification.",
+      });
+    }
     LEAD_PICKLIST_VERIFICATION_STATE[stateKey] = {
       itemId,
       colType,
