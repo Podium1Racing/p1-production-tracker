@@ -224,7 +224,7 @@ button, input, select, textarea { font-family:inherit; }
 .quick-start-btn.secondary { background:transparent; border:1px solid var(--border); color:var(--muted); font-weight:700; }
 .pin-device-note { font-size:12px; color:var(--muted); text-align:center; line-height:1.45; margin:-2px 0 10px; }
 .pin-device-actions { display:flex; flex-direction:column; align-items:center; gap:6px; margin-top:10px; }
-.name-btn { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px 15px; color:var(--text); font-size:14px; font-weight:500; cursor:pointer; display:flex; align-items:center; gap:11px; width:100%; transition:border-color .15s,background .15s; }
+.name-btn { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); padding:13px 15px; min-height:50px; color:var(--text); font-size:14px; font-weight:500; cursor:pointer; display:flex; align-items:center; gap:11px; width:100%; transition:border-color .15s,background .15s; }
 .name-btn:active { background:var(--surface2); }
 .name-btn.selected { border-color:var(--accent); background:rgba(224,32,32,0.1); }
 .role-tag { margin-left:auto; font-size:10px; font-weight:600; padding:3px 8px; border-radius:20px; flex-shrink:0; }
@@ -396,13 +396,13 @@ button, input, select, textarea { font-family:inherit; }
 .pl-week-title { font-size:12px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; color:var(--text); }
 .pl-week-sub { font-size:10px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--muted2); white-space:nowrap; }
 .pl-changes-badge { display:inline-flex; align-items:center; gap:4px; background:rgba(224,32,32,0.15); color:var(--accent); font-size:10px; font-weight:700; padding:3px 8px; border-radius:4px; margin-top:5px; }
-.pl-item-row { display:flex; align-items:center; gap:10px; padding:9px 14px; border-top:1px solid var(--border); }
+.pl-item-row { display:flex; align-items:flex-start; gap:12px; padding:12px 14px; min-height:54px; border-top:1px solid var(--border); }
 .pl-item-row:first-of-type { border-top:1px solid var(--border); }
-.pl-checkbox { width:20px; height:20px; border-radius:4px; border:1.5px solid var(--border2); background:var(--surface2); flex-shrink:0; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:background .12s,border-color .12s; }
+.pl-checkbox { width:24px; height:24px; margin-top:1px; border-radius:6px; border:1.5px solid var(--border2); background:var(--surface2); flex-shrink:0; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:background .12s,border-color .12s; }
 .pl-checkbox.checked { background:var(--green); border-color:var(--green); }
-.pl-item-label { flex:1; font-size:13px; color:var(--text); }
+.pl-item-label { flex:1; min-width:0; font-size:13px; line-height:1.4; color:var(--text); word-break:break-word; }
 .pl-item-label.allocated { text-decoration:line-through; color:var(--muted); }
-.pl-more-info-btn { background:rgba(255,255,255,0.045); border:1px solid var(--border2); color:var(--muted); border-radius:999px; padding:4px 8px; font-size:9px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; cursor:pointer; flex-shrink:0; white-space:nowrap; transition:background .15s,color .15s,border-color .15s; }
+.pl-more-info-btn { background:rgba(255,255,255,0.045); border:1px solid var(--border2); color:var(--muted); border-radius:999px; padding:6px 10px; min-height:32px; font-size:9px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; cursor:pointer; flex-shrink:0; white-space:nowrap; transition:background .15s,color .15s,border-color .15s; }
 .pl-more-info-btn:hover { background:rgba(255,255,255,0.08); color:var(--text); border-color:var(--muted); }
 .pl-item-new-badge { font-size:8px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; background:rgba(224,32,32,0.12); color:#ff8a8a; padding:3px 6px; border-radius:999px; flex-shrink:0; line-height:1.1; white-space:nowrap; }
 .pl-dual-wrap { display:flex; flex-direction:column; gap:0; }
@@ -557,7 +557,7 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:22px; h
 .note-inp { width:100%; background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:var(--radius-xs); padding:9px 11px; color:var(--text); font-size:13px; resize:none; outline:none; font-family:inherit; margin-top:12px; }
 .note-inp:focus { border-color:var(--accent); }
 .note-inp::placeholder { color:var(--muted2); }
-.save-btn { width:100%; background:var(--accent); color:white; border:none; border-radius:var(--radius-xs); padding:13px; font-size:14px; font-weight:600; cursor:pointer; margin-top:10px; transition:all .15s; }
+.save-btn { width:100%; min-height:46px; background:var(--accent); color:white; border:none; border-radius:var(--radius-xs); padding:13px; font-size:14px; font-weight:600; cursor:pointer; margin-top:10px; transition:all .15s; }
 .save-btn:active { opacity:.85; }
 .save-btn:disabled { opacity:.38; }
 .save-btn.saved { background:var(--green); }
@@ -746,7 +746,7 @@ input.photo-file-inp { display:none; }
 /* UPDATE SHEET (bottom sheet modal) */
 .update-sheet-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.72); z-index:120; align-items:flex-end; justify-content:center; }
 .update-sheet-overlay.open { display:flex; }
-.update-sheet { background:var(--surface); border-radius:var(--radius) var(--radius) 0 0; border-top:2px solid var(--accent); padding:18px 18px calc(36px + env(safe-area-inset-bottom)); width:100%; max-width:480px; max-height:92vh; overflow-y:auto; animation:slideUp .22s ease; }
+.update-sheet { background:var(--surface); border-radius:var(--radius) var(--radius) 0 0; border-top:2px solid var(--accent); padding:18px 18px calc(36px + env(safe-area-inset-bottom)); width:min(100%, 480px); max-width:480px; max-height:92vh; overflow-y:auto; overscroll-behavior:contain; box-sizing:border-box; animation:slideUp .22s ease; }
 .update-sheet-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
 .update-sheet-title { font-size:15px; font-weight:700; }
 .update-sheet-close { background:none; border:none; color:var(--muted); font-size:20px; cursor:pointer; padding:2px 6px; line-height:1; }
@@ -759,7 +759,7 @@ input.photo-file-inp { display:none; }
 .lead-verify-count { font-size:10px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--muted2); }
 .lead-verify-summary { display:grid; gap:8px; margin-bottom:10px; padding:10px 11px; border-radius:var(--radius-xs); background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); }
 .lead-verify-summary-title { font-size:13px; font-weight:800; color:var(--text); line-height:1.35; }
-.lead-verify-summary-meta { display:flex; flex-wrap:wrap; gap:6px; }
+.lead-verify-summary-meta { display:flex; flex-wrap:wrap; gap:6px; row-gap:8px; }
 .lead-verify-meta-pill { display:inline-flex; align-items:center; gap:4px; padding:4px 8px; border-radius:999px; font-size:10px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; }
 .lead-verify-meta-pill.wo { background:rgba(59,130,246,.15); color:#93c5fd; }
 .lead-verify-meta-pill.stage { background:rgba(245,158,11,.14); color:#fbbf24; }
@@ -772,6 +772,8 @@ input.photo-file-inp { display:none; }
 .lead-verify-label small { display:block; margin-top:4px; color:var(--muted2); font-size:10px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; }
 .lead-verify-badge { font-size:9px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; border-radius:999px; padding:5px 8px; }
 .lead-verify-badge.missing { background:rgba(224,32,32,.14); color:#fca5a5; }
+.lead-verify-badge.ready { background:rgba(16,185,129,.14); color:#6ee7b7; }
+.lead-verify-empty { border:1px dashed var(--border2); border-radius:var(--radius-xs); padding:16px 12px; text-align:center; color:var(--muted); font-size:12px; }
 .lead-verify-badge.new { background:rgba(245,158,11,.14); color:#fbbf24; }
 .lead-verify-select { width:100%; background:var(--surface); border:1px solid var(--border2); border-radius:var(--radius-xs); padding:11px 12px; color:var(--text); font-size:12px; font-family:inherit; appearance:none; }
 .lead-verify-text { width:100%; box-sizing:border-box; background:var(--surface); border:1px solid var(--border2); border-radius:var(--radius-xs); padding:10px 12px; color:var(--text); font-size:12px; min-height:70px; resize:vertical; font-family:inherit; }
@@ -1042,6 +1044,17 @@ input.photo-file-inp { display:none; }
 /* MISC */
 .loading-state,.empty-state { text-align:center; padding:3rem 1rem; color:var(--muted); font-size:13px; }
 .spinner { width:28px; height:28px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite; margin:0 auto 10px; }
+.picklist-progress-panel { padding:14px 12px 12px; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:var(--radius-xs); margin-bottom:10px; }
+.picklist-progress-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+.picklist-progress-stage { font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--text); line-height:1.25; }
+.picklist-progress-percent { font-size:12px; font-weight:900; color:var(--accent2); flex-shrink:0; }
+.picklist-progress-track { width:100%; height:8px; border-radius:999px; background:rgba(255,255,255,0.06); overflow:hidden; margin-bottom:8px; }
+.picklist-progress-fill { height:100%; border-radius:999px; background:linear-gradient(90deg, rgba(224,32,32,0.7) 0%, rgba(255,64,64,1) 100%); transition:width .18s ease; }
+.picklist-progress-detail { font-size:11px; line-height:1.45; color:var(--muted); }
+.picklist-progress-steps { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+.picklist-progress-step { font-size:9px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; border-radius:999px; padding:4px 7px; background:rgba(255,255,255,0.04); color:var(--muted2); border:1px solid rgba(255,255,255,0.05); }
+.picklist-progress-step.done { background:rgba(16,185,129,0.12); color:#6ee7b7; border-color:rgba(16,185,129,0.18); }
+.picklist-progress-step.active { background:rgba(224,32,32,0.12); color:#fca5a5; border-color:rgba(224,32,32,0.18); }
 @keyframes spin { to { transform:rotate(360deg); } }
 .toast { position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(90px); background:var(--surface); border:1px solid var(--border); color:var(--text); padding:11px 14px; border-radius:11px; font-size:13px; font-weight:500; z-index:100; transition:transform .3s ease; box-shadow:0 4px 24px rgba(0,0,0,0.55); pointer-events:none; display:flex; align-items:center; gap:10px; white-space:nowrap; }
 .toast.show { transform:translateX(-50%) translateY(0); pointer-events:auto; }
@@ -3934,7 +3947,7 @@ function renderQuickStartPrompt(member, fromRememberedDevice = false) {
     </div>`;
 }
 
-function selectUser(m, roleOverride, fromRememberedDevice = false) {
+async function selectUser(m, roleOverride, fromRememberedDevice = false) {
   document.querySelectorAll(".name-btn").forEach(b=>b.classList.remove("selected"));
   document.querySelectorAll(".name-btn").forEach(b=>{ if(b.textContent.includes(m.name)) b.classList.add("selected"); });
   pendingUser = roleOverride && m.role === FLOAT_ROLE ? { ...m, role: roleOverride, baseRole: FLOAT_ROLE } : m;
@@ -3950,7 +3963,7 @@ function selectUser(m, roleOverride, fromRememberedDevice = false) {
     document.getElementById("pin-entry-wrap").style.display = "none";
     document.getElementById("login-device-copy").style.display = "none";
     document.getElementById("admin-login-btn").style.display = "flex";
-    renderQuickStartPrompt(pendingUser, fromRememberedDevice);
+    await loginSuccess();
     return;
   }
   setLoginScreenMode("pin");
@@ -6651,6 +6664,7 @@ async function primeLeadPickListVerificationState(itemId, colType, opts = {}) {
       availableItems: [],
       addedItems: [],
       noMissingConfirmed: false,
+      reviewConfirmed: false,
     };
     return LEAD_PICKLIST_VERIFICATION_STATE[stateKey];
   }
@@ -6667,10 +6681,12 @@ async function primeLeadPickListVerificationState(itemId, colType, opts = {}) {
         loadError: "",
         stage: stage || "Loading pick list",
         detail: detail || "",
+        generalNote: existing.generalNote || "",
         missingItems: existing.missingItems || [],
         availableItems: existing.availableItems || [],
         addedItems: existing.addedItems || [],
         noMissingConfirmed: !!existing.noMissingConfirmed,
+        reviewConfirmed: !!existing.reviewConfirmed,
       };
       renderLeadPickListVerificationSection(itemId, colType);
     };
@@ -6678,45 +6694,45 @@ async function primeLeadPickListVerificationState(itemId, colType, opts = {}) {
     const pl = await ensurePrimaryPickListForWorkOrder(woNum);
     const items = await loadResolvedPickListItems(pl?.id, woNum, { onStage: updateLoadingState });
     const filtered = (items || []).filter(row => !isServiceItem(row));
-    const missingItems = filtered.filter(row => !row?.allocated);
-    const availableItems = filtered.filter(row => !!row?.allocated);
+    const viewState = getVerifiedPickListViewState(pl, filtered);
     const existing = LEAD_PICKLIST_VERIFICATION_STATE[stateKey] || {};
-    const previousMissing = new Map((existing.missingItems || []).map(row => [String(row.itemId), row]));
-    const previousAdded = new Map((existing.addedItems || []).map(row => [String(row.uid), row]));
-    const availableIds = new Set(availableItems.map(row => String(row.id)));
+    const previousRows = new Map((existing.checklistItems || []).map(row => [String(row.itemId), row]));
+    const checklistItems = viewState.checklist.map(row => {
+      const normalized = normalizePickListItemRow(row);
+      const prev = previousRows.get(String(normalized.id)) || {};
+      const allocated = typeof prev.allocated === "boolean" ? !!prev.allocated : !!normalized.allocated;
+      return {
+        itemId: String(normalized.id),
+        label: normalized.label || buildItemLabel(normalized),
+        note: prev.note || "",
+        allocated,
+        initialAllocated: !!normalized.allocated,
+        item: normalized,
+      };
+    });
+    const missingItems = checklistItems.filter(row => !row.allocated);
+    const availableItems = checklistItems.filter(row => !!row.allocated);
 
     LEAD_PICKLIST_VERIFICATION_STATE[stateKey] = {
       itemId,
       colType,
       woNum,
+      plMeta: pl ? { ...pl } : null,
       plId: pl?.id || "",
       itemName: item?.name || woNum,
       customerName: cleanMondayName(item?.name || pl?.customer_name || woNum),
       loaded: true,
-      stage: "Pick list ready",
-      detail: `${filtered.length} item${filtered.length === 1 ? "" : "s"} verified for today’s Lead check.`,
+      stage: viewState.verification?.stage || "Pick list ready",
+      detail: viewState.verification?.detail || `${viewState.checklist.length} item${viewState.checklist.length === 1 ? "" : "s"} verified for today’s Lead check.`,
       loadError: "",
-      missingItems: missingItems.map(row => {
-        const prev = previousMissing.get(String(row.id)) || {};
-        return {
-          itemId: String(row.id),
-          label: row.label || buildItemLabel(row),
-          action: prev.action || "",
-          note: prev.note || "",
-        };
-      }),
-      availableItems: availableItems.map(row => ({
-        itemId: String(row.id),
-        label: row.label || buildItemLabel(row),
-      })),
-      addedItems: (existing.addedItems || [])
-        .filter(row => !row?.itemId || availableIds.has(String(row.itemId)))
-        .map(row => ({
-          uid: row.uid,
-          itemId: row.itemId || "",
-          note: row.note || "",
-        })),
-      noMissingConfirmed: missingItems.length ? false : !!existing.noMissingConfirmed,
+      checklistItems,
+      verification: viewState.verification,
+      generalNote: existing.generalNote || "",
+      missingItems,
+      availableItems,
+      addedItems: [],
+      noMissingConfirmed: false,
+      reviewConfirmed: checklistItems.length ? !!existing.reviewConfirmed : true,
     };
     renderLeadPickListVerificationSection(itemId, colType);
   } catch (err) {
@@ -6731,6 +6747,7 @@ async function primeLeadPickListVerificationState(itemId, colType, opts = {}) {
       availableItems: [],
       addedItems: [],
       noMissingConfirmed: false,
+      reviewConfirmed: false,
     };
     renderLeadPickListVerificationSection(itemId, colType);
   }
@@ -6770,16 +6787,6 @@ function leadPickListVerificationBlockers(state) {
   if (!state) blockers.push("Pick list verification is still loading.");
   if (state?.loadError) blockers.push(state.loadError);
   if (!state) return blockers;
-  if (state.missingItems?.length) {
-    state.missingItems.forEach(row => {
-      if (!row.action) blockers.push(`Review ${row.label}.`);
-    });
-  } else if (!state.noMissingConfirmed) {
-    blockers.push("Confirm that this project has no missing items today.");
-  }
-  (state.addedItems || []).forEach(row => {
-    if (!row.itemId) blockers.push("Choose each newly discovered missing item or remove the empty row.");
-  });
   return [...new Set(blockers)];
 }
 
@@ -6812,7 +6819,7 @@ function renderLeadPickListVerificationSection(itemId, colType) {
   if (!state || !state.loaded) {
     mount.innerHTML = `<div class="lead-verify-card">${renderPickListLoadingPanel(
       state?.stage || "Loading Work Order",
-      state?.detail || "Checking the shared pick list before this Lead update can be submitted."
+      state?.detail || "Checking the shared Work Order pick list before this Lead update can be submitted."
     )}</div>`;
     syncLeadVerificationSubmitState(itemId, colType);
     return;
@@ -6825,90 +6832,81 @@ function renderLeadPickListVerificationSection(itemId, colType) {
 
   const blockers = leadPickListVerificationBlockers(state);
   const item = boardItems.find(i => String(i.id) === String(itemId)) || findKnownBoardItemByWo(state.woNum);
-  const stageText = item?.group?.title || "No current stage";
+  const pickLink = item ? parseLink(item, COL.pick_list) : null;
+  const safePickUrl = pickLink?.url ? escHtml(pickLink.url) : "";
+  const checklistItems = state.checklistItems || [];
+  const checklistDisplayItems = checklistItems.map(row => ({ ...row.item, allocated: !!row.allocated }));
+  const leadViewState = getVerifiedPickListViewState(
+    state.plMeta || { id: state.plId, wo_number: state.woNum, status: "missing_items" },
+    checklistDisplayItems,
+    state.verification || { state: "ready", stage: "Pick list ready", detail: `${checklistDisplayItems.length} item${checklistDisplayItems.length === 1 ? "" : "s"} verified for ${state.woNum || "this Work Order"}.` }
+  );
+  const stillMissingCount = leadViewState.allocation.missing;
+  const allocatedNow = leadViewState.allocation.allocated;
+  const totalVisible = leadViewState.allocation.total;
   const summaryTitle = state.customerName
     ? `${state.customerName}${state.woNum ? ` · ${state.woNum}` : ""}`
-    : compactProjectLabel(item || { name: state.itemName || state.customerName || state.woNum || itemId });
-  const selectedAddedIds = new Set((state.addedItems || []).map(row => String(row.itemId || "")).filter(Boolean));
-  const missingRowsHtml = state.missingItems.length
-    ? state.missingItems.map(row => {
-        const photoSummary = leadPickListVerificationPhotoSummary(itemId, colType, "missing", row.itemId);
-        return `<div class="lead-verify-row">
-          <div class="lead-verify-row-head">
-            <div class="lead-verify-label">${escHtml(row.label)}<small>Still missing from the shared pick list</small></div>
-            <span class="lead-verify-badge missing">Missing now</span>
-          </div>
-          <select class="lead-verify-select" onchange="changeLeadPickListVerificationAction('${jsArg(itemId)}','${jsArg(colType)}','${jsArg(row.itemId)}',this.value)">
-            ${leadPickListVerificationActionOptions(row.action)}
-          </select>
-          <textarea class="lead-verify-text" placeholder="Add a note for this item (optional)…" oninput="changeLeadPickListVerificationNote('${jsArg(itemId)}','${jsArg(colType)}','missing','${jsArg(row.itemId)}',this.value)">${escHtml(row.note || "")}</textarea>
-          <div class="lead-verify-photo-row">
-            <input id="lead-verify-photo-${escHtml(itemId)}-${escHtml(colType)}-missing-${escHtml(row.itemId)}" type="file" accept="image/*" capture="environment" multiple class="photo-file-inp" onchange="onLeadPickListVerificationPhotoSelected('${jsArg(itemId)}','${jsArg(colType)}','missing','${jsArg(row.itemId)}',this)">
-            <button type="button" class="lead-verify-photo-btn${photoSummary ? " has-photo" : ""}" onclick="document.getElementById('lead-verify-photo-${escHtml(itemId)}-${escHtml(colType)}-missing-${escHtml(row.itemId)}').click()">${photoSummary ? "Photos Ready" : "Add Photo(s)"}</button>
-            <div class="lead-verify-photo-name">${escHtml(photoSummary || "Optional — use when the issue needs proof or context.")}</div>
-            ${photoSummary ? `<button type="button" class="lead-verify-photo-remove" onclick="clearLeadPickListVerificationPhotos('${jsArg(itemId)}','${jsArg(colType)}','missing','${jsArg(row.itemId)}')">Remove</button>` : ""}
-          </div>
-        </div>`;
-      }).join("")
-    : `<label class="lead-verify-confirm">
-        <input type="checkbox" ${state.noMissingConfirmed ? "checked" : ""} onchange="toggleLeadPickListVerificationNoMissing('${jsArg(itemId)}','${jsArg(colType)}',this.checked)">
-        <span>No items are currently missing on this pick list. I reviewed it and confirmed nothing is blocking this project right now.</span>
-      </label>`;
-
-  const addedRowsHtml = (state.addedItems || []).map(row => {
-    const photoSummary = leadPickListVerificationPhotoSummary(itemId, colType, "added", row.uid);
-    const options = [`<option value="">Choose item that is now missing…</option>`].concat(
-      (state.availableItems || [])
-        .filter(opt => !selectedAddedIds.has(String(opt.itemId)) || String(opt.itemId) === String(row.itemId || ""))
-        .map(opt => `<option value="${escAttr(opt.itemId)}"${String(opt.itemId) === String(row.itemId || "") ? " selected" : ""}>${escHtml(opt.label)}</option>`)
-    ).join("");
-    return `<div class="lead-verify-row">
-      <div class="lead-verify-row-head">
-        <div class="lead-verify-label">${escHtml(leadPickListVerificationSelectedLabel(state, row.itemId) || "Newly discovered missing item")}</div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <span class="lead-verify-badge new">New missing</span>
-          <button type="button" class="lead-verify-remove-row" onclick="removeLeadPickListVerificationNewItem('${jsArg(itemId)}','${jsArg(colType)}','${jsArg(row.uid)}')">Remove</button>
-        </div>
+    : compactProjectLabel(item || { name: state.itemName || state.woNum || itemId });
+  const stageText = item?.group?.title || "No current stage";
+  const allocation = {
+    ...leadViewState.allocation,
+    emptyCopy: "No shared pick-list items were found for this Work Order yet.",
+  };
+  const checkAllHtml = checklistDisplayItems.length ? `
+    <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.24);border-radius:var(--radius-xs);padding:9px 10px;margin:0 0 10px">
+      <div style="display:flex;gap:7px;align-items:stretch">
+        <button type="button" onclick="checkAllLeadPickListVerification('${jsArg(itemId)}','${jsArg(colType)}',event)"
+          style="flex:1;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:var(--radius-xs);padding:9px 10px;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#10b981;cursor:pointer">
+          Check All
+        </button>
+        <button type="button" onclick="deselectAllLeadPickListVerification('${jsArg(itemId)}','${jsArg(colType)}',event)"
+          style="width:104px;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:var(--radius-xs);padding:9px 8px;font-size:9px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);cursor:pointer">
+          Deselect All
+        </button>
       </div>
-      <select class="lead-verify-select" onchange="changeLeadPickListVerificationNewItem('${jsArg(itemId)}','${jsArg(colType)}','${jsArg(row.uid)}',this.value)">${options}</select>
-      <textarea class="lead-verify-text" placeholder="What did you discover or confirm about this item?" oninput="changeLeadPickListVerificationNote('${jsArg(itemId)}','${jsArg(colType)}','added','${jsArg(row.uid)}',this.value)">${escHtml(row.note || "")}</textarea>
-      <div class="lead-verify-photo-row">
-        <input id="lead-verify-photo-${escHtml(itemId)}-${escHtml(colType)}-added-${escHtml(row.uid)}" type="file" accept="image/*" capture="environment" multiple class="photo-file-inp" onchange="onLeadPickListVerificationPhotoSelected('${jsArg(itemId)}','${jsArg(colType)}','added','${jsArg(row.uid)}',this)">
-        <button type="button" class="lead-verify-photo-btn${photoSummary ? " has-photo" : ""}" onclick="document.getElementById('lead-verify-photo-${escHtml(itemId)}-${escHtml(colType)}-added-${escHtml(row.uid)}').click()">${photoSummary ? "Photos Ready" : "Add Photo(s)"}</button>
-        <div class="lead-verify-photo-name">${escHtml(photoSummary || "Optional photo if the newly missing item needs a visual callout.")}</div>
-        ${photoSummary ? `<button type="button" class="lead-verify-photo-remove" onclick="clearLeadPickListVerificationPhotos('${jsArg(itemId)}','${jsArg(colType)}','added','${jsArg(row.uid)}')">Remove</button>` : ""}
+      <div style="font-size:10px;color:#fbbf24;line-height:1.35;margin-top:7px;text-align:center">
+        Double-check anything still missing before you submit this Lead update.
       </div>
-    </div>`;
-  }).join("");
+    </div>` : "";
 
   mount.innerHTML = `<div class="lead-verify-wrap">
     <div class="lead-verify-card">
       <div class="lead-verify-head">
         <div>
           <div class="lead-verify-title">Daily Pick List Verification</div>
-          <div class="lead-verify-sub">Review the live missing-item checklist, confirm what is still missing, and clear anything that showed up today before sending this Lead update.</div>
+          <div class="lead-verify-sub">Use the same live Work Order checklist as Initial Kit. Check anything that is now here, uncheck anything that is still missing, then save this Lead update.</div>
         </div>
-        <div class="lead-verify-count">${state.missingItems.length} missing now</div>
+        <div class="lead-verify-count">${stillMissingCount} missing now</div>
       </div>
       <div class="lead-verify-summary">
         <div class="lead-verify-summary-title">${escHtml(summaryTitle)}</div>
         <div class="lead-verify-summary-meta">
           <span class="lead-verify-meta-pill wo">WO ${escHtml(state.woNum || "Unknown")}</span>
           <span class="lead-verify-meta-pill stage">${escHtml(stageText)}</span>
-          <span class="lead-verify-meta-pill missing">${state.missingItems.length} currently missing</span>
+          <span class="lead-verify-meta-pill">${allocatedNow}/${totalVisible} allocated</span>
+          <span class="lead-verify-meta-pill missing">${stillMissingCount} currently missing</span>
         </div>
+        ${safePickUrl ? `<a class="wo-btn compact" href="${safePickUrl}" target="_blank" rel="noopener" style="margin-top:10px;background:rgba(249,115,22,0.12);border-color:rgba(249,115,22,0.3);color:#f97316">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          Work Order PDF
+        </a>` : ""}
       </div>
-      <div class="lead-verify-checklist">${missingRowsHtml}</div>
-    </div>
-    <div class="lead-verify-card">
-      <div class="lead-verify-head">
-        <div>
-          <div class="lead-verify-title" style="color:#fbbf24">Newly Discovered Missing Items</div>
-          <div class="lead-verify-sub">If you discover something new is missing during today’s check, add it here so the pick list, app, and Monday all update together.</div>
-        </div>
+      ${renderSharedPickListChecklistIntro({ id: state.plId, wo_number: state.woNum }, allocation, {
+        canEditAllocation: true,
+        isLocked: false,
+        checkAllHtml,
+      })}
+      <div class="lead-verify-checklist">${renderSharedPickListRows(checklistDisplayItems, {
+        canEditAllocation: true,
+        isLocked: false,
+        allocation,
+        emptyCopy: allocation.emptyCopy,
+        itemToggleBuilder: (pickItem) => `toggleLeadPickListVerificationResolved('${jsArg(itemId)}','${jsArg(colType)}','${jsArg(String(pickItem.id || ""))}',${pickItem.allocated ? "false" : "true"})`,
+      })}</div>
+      <div style="margin-top:12px">
+        <div style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Optional verification notes</div>
+        <textarea class="lead-verify-text" placeholder="Add one note for today's missing-item verification (optional)…" oninput="setLeadPickListVerificationGeneralNote('${jsArg(itemId)}','${jsArg(colType)}',this.value)">${escHtml(state.generalNote || "")}</textarea>
       </div>
-      ${addedRowsHtml || `<div class="lead-verify-sub">Nothing newly missing has been added for today’s verification.</div>`}
-      <button type="button" class="lead-verify-add-btn" onclick="addLeadPickListVerificationNewItem('${jsArg(itemId)}','${jsArg(colType)}')">Add Newly Missing Item</button>
     </div>
     ${blockers.length ? `<div class="lead-verify-blockers">
       <div class="lead-verify-blockers-title">Still blocking submission</div>
@@ -6918,75 +6916,66 @@ function renderLeadPickListVerificationSection(itemId, colType) {
   syncLeadVerificationSubmitState(itemId, colType);
 }
 
-function changeLeadPickListVerificationAction(itemId, colType, rowId, value) {
+function checkAllLeadPickListVerification(itemId, colType, e) {
+  if (e) {
+    e.stopPropagation();
+    e.preventDefault();
+  }
   const state = LEAD_PICKLIST_VERIFICATION_STATE[leadPickListVerificationKey(itemId, colType)];
-  const row = (state?.missingItems || []).find(entry => String(entry.itemId) === String(rowId));
+  if (!state?.checklistItems?.length) return;
+  state.checklistItems = state.checklistItems.map(row => ({ ...row, allocated: true }));
+  state.reviewConfirmed = false;
+  state.missingItems = [];
+  state.availableItems = [...state.checklistItems];
+  renderLeadPickListVerificationSection(itemId, colType);
+}
+
+function deselectAllLeadPickListVerification(itemId, colType, e) {
+  if (e) {
+    e.stopPropagation();
+    e.preventDefault();
+  }
+  const state = LEAD_PICKLIST_VERIFICATION_STATE[leadPickListVerificationKey(itemId, colType)];
+  if (!state?.checklistItems?.length) return;
+  state.checklistItems = state.checklistItems.map(row => ({ ...row, allocated: false }));
+  state.reviewConfirmed = false;
+  state.missingItems = [...state.checklistItems];
+  state.availableItems = [];
+  renderLeadPickListVerificationSection(itemId, colType);
+}
+
+function toggleLeadPickListVerificationResolved(itemId, colType, rowId, checked) {
+  const state = LEAD_PICKLIST_VERIFICATION_STATE[leadPickListVerificationKey(itemId, colType)];
+  const row = (state?.checklistItems || []).find(entry => String(entry.itemId) === String(rowId));
   if (!row) return;
-  row.action = String(value || "");
+  row.allocated = !!checked;
+  state.reviewConfirmed = false;
+  state.missingItems = (state.checklistItems || []).filter(entry => !entry.allocated);
+  state.availableItems = (state.checklistItems || []).filter(entry => !!entry.allocated);
   renderLeadPickListVerificationSection(itemId, colType);
 }
 
-function changeLeadPickListVerificationNote(itemId, colType, kind, rowId, value) {
+function toggleLeadPickListVerificationReviewed(itemId, colType, checked) {
   const state = LEAD_PICKLIST_VERIFICATION_STATE[leadPickListVerificationKey(itemId, colType)];
   if (!state) return;
-  const collection = kind === "added" ? state.addedItems || [] : state.missingItems || [];
-  const row = collection.find(entry => String(kind === "added" ? entry.uid : entry.itemId) === String(rowId));
-  if (!row) return;
-  row.note = String(value || "");
+  state.reviewConfirmed = !!checked;
+  renderLeadPickListVerificationSection(itemId, colType);
 }
 
-function toggleLeadPickListVerificationNoMissing(itemId, colType, checked) {
+function openLeadPickListVerificationItemInfo(itemId, colType, rowId) {
+  const state = LEAD_PICKLIST_VERIFICATION_STATE[leadPickListVerificationKey(itemId, colType)];
+  const row = (state?.checklistItems || []).find(entry => String(entry.itemId) === String(rowId));
+  if (!row?.item) {
+    showToast("Could not load item details for this pick-list row yet.", "warn");
+    return;
+  }
+  showPickListItemInfo(row.item);
+}
+
+function setLeadPickListVerificationGeneralNote(itemId, colType, value) {
   const state = LEAD_PICKLIST_VERIFICATION_STATE[leadPickListVerificationKey(itemId, colType)];
   if (!state) return;
-  state.noMissingConfirmed = !!checked;
-  renderLeadPickListVerificationSection(itemId, colType);
-}
-
-function addLeadPickListVerificationNewItem(itemId, colType) {
-  const state = LEAD_PICKLIST_VERIFICATION_STATE[leadPickListVerificationKey(itemId, colType)];
-  if (!state) return;
-  state.addedItems = state.addedItems || [];
-  state.addedItems.push({
-    uid: `added-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-    itemId: "",
-    note: "",
-  });
-  renderLeadPickListVerificationSection(itemId, colType);
-}
-
-function removeLeadPickListVerificationNewItem(itemId, colType, uid) {
-  const state = LEAD_PICKLIST_VERIFICATION_STATE[leadPickListVerificationKey(itemId, colType)];
-  if (!state) return;
-  state.addedItems = (state.addedItems || []).filter(row => String(row.uid) !== String(uid));
-  delete LEAD_PICKLIST_VERIFICATION_PHOTOS[leadPickListVerificationPhotoKey(itemId, colType, "added", uid)];
-  renderLeadPickListVerificationSection(itemId, colType);
-}
-
-function changeLeadPickListVerificationNewItem(itemId, colType, uid, selectedItemId) {
-  const state = LEAD_PICKLIST_VERIFICATION_STATE[leadPickListVerificationKey(itemId, colType)];
-  const row = (state?.addedItems || []).find(entry => String(entry.uid) === String(uid));
-  if (!row) return;
-  row.itemId = String(selectedItemId || "");
-  renderLeadPickListVerificationSection(itemId, colType);
-}
-
-function onLeadPickListVerificationPhotoSelected(itemId, colType, kind, rowId, input) {
-  const files = [...(input?.files || [])];
-  if (!files.length) return;
-  const readers = files.map(file => new Promise(resolve => {
-    const reader = new FileReader();
-    reader.onload = (e) => resolve({ file, base64: e.target?.result || "" });
-    reader.readAsDataURL(file);
-  }));
-  Promise.all(readers).then(entries => {
-    LEAD_PICKLIST_VERIFICATION_PHOTOS[leadPickListVerificationPhotoKey(itemId, colType, kind, rowId)] = entries.filter(entry => entry?.base64);
-    renderLeadPickListVerificationSection(itemId, colType);
-  });
-}
-
-function clearLeadPickListVerificationPhotos(itemId, colType, kind, rowId) {
-  delete LEAD_PICKLIST_VERIFICATION_PHOTOS[leadPickListVerificationPhotoKey(itemId, colType, kind, rowId)];
-  renderLeadPickListVerificationSection(itemId, colType);
+  state.generalNote = String(value || "");
 }
 
 function collectLeadPickListVerificationPayload(itemId, colType) {
@@ -6995,60 +6984,54 @@ function collectLeadPickListVerificationPayload(itemId, colType) {
   if (blockers.length) {
     throw new Error(blockers[0]);
   }
-  const stillMissing = (state?.missingItems || [])
-    .filter(row => row.action === "still_missing")
+  const checklistItems = state?.checklistItems || [];
+  const stillMissing = checklistItems
+    .filter(row => !row.allocated)
     .map(row => ({
       item_id: row.itemId,
       label: row.label,
-      note: row.note || "",
-      photos: (LEAD_PICKLIST_VERIFICATION_PHOTOS[leadPickListVerificationPhotoKey(itemId, colType, "missing", row.itemId)] || []).map(photo => ({
-        name: photo.file?.name || "",
-        mime: photo.file?.type || "image/jpeg",
-        base64: photo.base64 || "",
-      })),
+      photos: [],
     }));
-  const resolved = (state?.missingItems || [])
-    .filter(row => row.action && row.action !== "still_missing")
+  const resolved = checklistItems
+    .filter(row => !row.initialAllocated && row.allocated)
     .map(row => ({
       item_id: row.itemId,
       label: row.label,
-      resolution: row.action,
-      resolution_label: leadPickListVerificationActionLabel(row.action),
-      note: row.note || "",
-      photos: (LEAD_PICKLIST_VERIFICATION_PHOTOS[leadPickListVerificationPhotoKey(itemId, colType, "missing", row.itemId)] || []).map(photo => ({
-        name: photo.file?.name || "",
-        mime: photo.file?.type || "image/jpeg",
-        base64: photo.base64 || "",
-      })),
+      resolution: "allocated",
+      resolution_label: "Allocated Today",
+      photos: [],
     }));
-  const newlyMissing = (state?.addedItems || [])
-    .filter(row => row.itemId)
+  const newlyMissing = checklistItems
+    .filter(row => row.initialAllocated && !row.allocated)
     .map(row => ({
       item_id: row.itemId,
-      label: leadPickListVerificationSelectedLabel(state, row.itemId),
-      note: row.note || "",
-      photos: (LEAD_PICKLIST_VERIFICATION_PHOTOS[leadPickListVerificationPhotoKey(itemId, colType, "added", row.uid)] || []).map(photo => ({
-        name: photo.file?.name || "",
-        mime: photo.file?.type || "image/jpeg",
-        base64: photo.base64 || "",
-      })),
+      label: row.label,
+      photos: [],
     }));
-  return { state, stillMissing, resolved, newlyMissing };
+  return {
+    state,
+    generalNote: String(state?.generalNote || "").trim(),
+    stillMissing,
+    resolved,
+    newlyMissing,
+    checklistItems,
+  };
 }
 
 function buildLeadPickListVerificationSummary(verification, typedNote = "", currentUserName = "") {
   const stillMissingLine = verification.stillMissing.length
-    ? verification.stillMissing.map(row => attachPhotoNames(`• ${row.label}${row.note ? ` — ${row.note}` : ""}`, row.photos)).join("\n")
+    ? verification.stillMissing.map(row => attachPhotoNames(`• ${row.label}`, row.photos)).join("\n")
     : "• None";
   const resolvedLine = verification.resolved.length
-    ? verification.resolved.map(row => attachPhotoNames(`• ${row.label} — ${row.resolution_label}${row.note ? ` — ${row.note}` : ""}`, row.photos)).join("\n")
+    ? verification.resolved.map(row => attachPhotoNames(`• ${row.label} — ${row.resolution_label}`, row.photos)).join("\n")
     : "• None";
   const newLine = verification.newlyMissing.length
-    ? verification.newlyMissing.map(row => attachPhotoNames(`• ${row.label}${row.note ? ` — ${row.note}` : ""}`, row.photos)).join("\n")
+    ? verification.newlyMissing.map(row => attachPhotoNames(`• ${row.label}`, row.photos)).join("\n")
     : "• None";
   return [
     typedNote || "",
     `Lead pick list verification by ${currentUserName || "Lead"}`,
+    verification.generalNote ? `Verification note:\n${verification.generalNote}` : "",
     `Still missing:\n${stillMissingLine}`,
     `Resolved:\n${resolvedLine}`,
     `Newly missing:\n${newLine}`,
@@ -7227,7 +7210,7 @@ async function openUpdateSheet(itemId, colType, e) {
       <img class="photo-preview" id="photo-preview-${itemId}" alt="Progress photo">
       <button class="photo-retake" id="photo-retake-${itemId}" onclick="retakePhoto('${itemId}')">Retake photo</button>
     </div>
-    ${needsLeadVerification ? `<div id="lead-picklist-verify-wrap-${escHtml(itemId)}" class="lead-verify-wrap"><div class="lead-verify-card"><div class="loading-state" style="padding:10px 0"><div class="spinner"></div>Loading shared pick list verification…</div></div></div>` : ""}
+    ${needsLeadVerification ? `<div id="lead-picklist-verify-wrap-${escHtml(itemId)}" class="lead-verify-wrap"><div class="lead-verify-card">${renderPickListLoadingPanel("Loading Work Order", "Opening the live Work Order checklist before this Lead update can be submitted.")}</div></div>` : ""}
     <button class="save-btn" id="sbtn-${itemId}" onclick="saveUpdate('${itemId}',event)" ${(timerLocked || needsLeadVerification) ? "disabled" : ""} style="${timerLocked ? "opacity:.38" : (needsLeadVerification ? "opacity:.55" : "")}">
       ${needsLeadVerification ? "Verify & Save to Monday.com" : "Save to Monday.com"}
     </button>`;
@@ -7621,18 +7604,20 @@ async function saveUpdate(itemId,e,forceEndDay=false) {
     if (leadVerificationMode) {
       leadVerification = collectLeadPickListVerificationPayload(itemId, colType);
       const liveItems = await loadResolvedPickListItems(leadVerification.state.plId, leadVerification.state.woNum);
-      const resolvedIds = new Set(leadVerification.resolved.map(row => String(row.item_id)));
-      const newMissingIds = new Set(leadVerification.newlyMissing.map(row => String(row.item_id)));
+      const desiredAllocations = new Map((leadVerification.checklistItems || []).map(row => [String(row.itemId), !!row.allocated]));
       const changes = [];
       liveItems.forEach(row => {
         const rowId = String(row.id);
-        if (resolvedIds.has(rowId) && !row.allocated) changes.push({ id: rowId, allocated: true });
-        if (newMissingIds.has(rowId) && row.allocated) changes.push({ id: rowId, allocated: false });
+        if (!desiredAllocations.has(rowId)) return;
+        const nextAllocated = !!desiredAllocations.get(rowId);
+        if (!!row.allocated !== nextAllocated) {
+          changes.push({ id: rowId, allocated: nextAllocated });
+        }
       });
       if (changes.length) {
         await Promise.all(changes.map(change => saveSinglePickListAllocation(change.id, change.allocated, {
           reason: "lead_daily_picklist_verification",
-          note: typedNote || "",
+          note: leadVerification.generalNote || typedNote || "",
         })));
         setLocalPickListItemAllocation(leadVerification.state.plId, leadVerification.state.woNum, changes.filter(change => change.allocated).map(change => change.id), true);
         setLocalPickListItemAllocation(leadVerification.state.plId, leadVerification.state.woNum, changes.filter(change => !change.allocated).map(change => change.id), false);
@@ -7670,10 +7655,10 @@ async function saveUpdate(itemId,e,forceEndDay=false) {
         ? `<ul>${leadVerification.newlyMissing.map(row => `<li>${escHtml(row.label)}${row.note ? ` — ${escHtml(row.note)}` : ""}</li>`).join("")}</ul>`
         : `<p>None</p>`;
       const mondayBodyRaw = `<p>[${currentUser.name}] Daily Lead update (${tsLabel})</p>
-        <p><strong>Customer:</strong> ${escHtml(customerName)}<br><strong>Work Order:</strong> ${escHtml(woLabel)}<br><strong>Progress:</strong> ${newPct}%<br><strong>Project update:</strong> ${escHtml(typedNote || "No written progress note added.")}</p>
+        <p><strong>Customer:</strong> ${escHtml(customerName)}<br><strong>Work Order:</strong> ${escHtml(woLabel)}<br><strong>Progress:</strong> ${newPct}%<br><strong>Project update:</strong> ${escHtml(typedNote || "No written progress note added.")}${leadVerification.generalNote ? `<br><strong>Pick List Verification Note:</strong> ${escHtml(leadVerification.generalNote)}` : ""}</p>
         <p><strong>Still Missing</strong></p>${stillMissingHtml}
-        <p><strong>Resolved Today</strong></p>${resolvedHtml}
-        <p><strong>Newly Added Missing Items</strong></p>${newMissingHtml}
+        <p><strong>Allocated Today</strong></p>${resolvedHtml}
+        <p><strong>Now Missing / Unallocated Today</strong></p>${newMissingHtml}
         <p><strong>Verified by:</strong> ${escHtml(currentUser.name)} · ${escHtml(tsLabel)}</p>`;
       mutations.push(`upd: create_update(item_id:${itemId}, body:${JSON.stringify(mondayBodyRaw)}${mentionsArg}) { id }`);
     } else {
@@ -11740,28 +11725,31 @@ async function loadConfigurationPickListContext(woNum) {
       return context;
     }
     let items = [];
-    let allocationVerification = null;
+    let viewState = null;
     try {
       items = await loadResolvedPickListItems(pickList.id, key);
-      allocationVerification = {
+      viewState = getVerifiedPickListViewState(pickList, items, {
         state: "ready",
         stage: "Pick list ready",
         detail: "Verified allocation loaded from the current Work Order.",
-      };
+      });
     } catch (err) {
-      allocationVerification = {
+      viewState = getVerifiedPickListViewState(pickList, [], {
         state: "error",
         stage: "Verification failed",
         detail: err?.message || "We could not verify the latest pick-list rows for this work order.",
-      };
+      });
     }
-    const allocation = getPickListAllocationSnapshot(pickList, items, allocationVerification);
     const context = {
       woNum: key,
       pickList,
-      items,
-      allocation,
-      loadError: items.length ? "" : "Checklist could not be verified.",
+      items: viewState?.checklist || [],
+      allocation: viewState?.allocation || getPickListAllocationSnapshot(null, [], {
+        state: "error",
+        stage: "Verification failed",
+        detail: "Could not verify the latest pick list data.",
+      }),
+      loadError: viewState?.allocation?.verified ? "" : "Checklist could not be verified.",
     };
     _configPickListContextByWo[key] = context;
     return context;
@@ -13031,6 +13019,10 @@ function escHtml(s) {
   return String(s||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/'/g,"&#39;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
 
+function escAttr(s) {
+  return escHtml(s);
+}
+
 const NEED_KITTED_GROUPS = ["Building Queue - In Progress", "Stand By - Pending MS or Chassis"];
 
 function getKnownBoardItems() {
@@ -13644,7 +13636,7 @@ function dedupePickListItemRows(rows = []) {
   (rows || []).forEach(item => {
     const key = item?.id ? String(item.id) : `${item?.wo_number || ""}|${item?.picklist_id || ""}|${item?.label || item?.item_name || ""}|${item?.quantity || 1}`;
     if (!key) return;
-    byId.set(key, item);
+    byId.set(key, normalizePickListItemRow(item));
   });
   return [...byId.values()];
 }
@@ -13656,27 +13648,21 @@ async function fetchPickListItemsForPicklists(picklists = []) {
   const plIds = [...new Set(lists.map(pl => String(pl.id || "").trim()).filter(Boolean))];
   const woNums = [...new Set(lists.map(pl => pl.wo_number).filter(Boolean))];
   const woVariants = getWorkOrderQueryVariants(woNums);
-  const rows = [];
 
-  for (const idChunk of chunkArray(plIds, 20)) {
-    const chunkRows = await sbFetchOrThrow(
-      `picklist_items?picklist_id=in.(${idChunk.join(",")})&select=*&order=id.asc`,
-      { method: "GET", headers: { "Prefer": "return=representation" } },
-      "Could not load pick list items by pick list id."
-    );
-    rows.push(...(chunkRows || []));
-  }
+  const idRequests = chunkArray(plIds, 20).map(idChunk => sbFetchOrThrow(
+    `picklist_items?picklist_id=in.(${idChunk.join(",")})&select=*&order=id.asc`,
+    { method: "GET", headers: { "Prefer": "return=representation" } },
+    "Could not load pick list items by pick list id."
+  ));
 
-  for (const woChunk of chunkArray(woVariants, 25)) {
-    const chunkRows = await sbFetchOrThrow(
-      `picklist_items?wo_number=in.(${woChunk.map(encodeURIComponent).join(",")})&select=*&order=id.asc`,
-      { method: "GET", headers: { "Prefer": "return=representation" } },
-      "Could not load pick list items by work order."
-    );
-    rows.push(...(chunkRows || []));
-  }
+  const woRequests = chunkArray(woVariants, 25).map(woChunk => sbFetchOrThrow(
+    `picklist_items?wo_number=in.(${woChunk.map(encodeURIComponent).join(",")})&select=*&order=id.asc`,
+    { method: "GET", headers: { "Prefer": "return=representation" } },
+    "Could not load pick list items by work order."
+  ));
 
-  return dedupePickListItemRows(rows);
+  const chunks = await Promise.all([...idRequests, ...woRequests]);
+  return dedupePickListItemRows(chunks.flat().filter(Boolean));
 }
 
 function pickListLabelMatchCandidates(value = "") {
@@ -13748,8 +13734,25 @@ function pickListCacheKey(woNum, plId = "") {
   return `${woKey || "no-wo"}|${String(plId || "").trim()}`;
 }
 
+function normalizePickListAllocated(value) {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value > 0;
+  const raw = String(value ?? "").trim().toLowerCase();
+  if (!raw) return false;
+  if (["true", "t", "1", "yes", "y", "allocated", "checked"].includes(raw)) return true;
+  if (["false", "f", "0", "no", "n", "missing", "unchecked", "null"].includes(raw)) return false;
+  return !!value;
+}
+
+function normalizePickListItemRow(item = {}) {
+  return {
+    ...item,
+    allocated: normalizePickListAllocated(item?.allocated),
+  };
+}
+
 function clonePickListItems(items = []) {
-  return Array.isArray(items) ? items.map(item => ({ ...item })) : [];
+  return Array.isArray(items) ? items.map(item => normalizePickListItemRow(item)) : [];
 }
 
 function invalidatePickListCache(woNum = null, plId = null) {
@@ -15025,16 +15028,17 @@ function renderInlineKitPickList() {
   const verification = _kitInlinePickList.verification || (checklist.length
     ? { state: "ready", stage: "Pick list ready", detail: "Verified allocation loaded from the current Work Order." }
     : { state: "error", stage: "Verification failed", detail: "No verified pick-list rows were returned for this work order." });
-  const allocation = getPickListAllocationSnapshot(pl, checklist, verification);
-  const canEditAllocation = canEditPickListAllocations(currentUser);
-  const status = allocation.displayStatus || derivePickListStatusFromAllocation(checklist, pl.status);
+  const inlineViewState = getVerifiedPickListViewState(pl, checklist, verification);
+  const allocation = inlineViewState.allocation;
+  const canEditAllocation = inlineViewState.canEditAllocation;
+  const status = inlineViewState.displayStatus || derivePickListStatusFromAllocation(inlineViewState.checklist, pl.status);
   const statusLabel = !allocation.verified
     ? (verification?.state === "error" ? "Needs Retry" : "Verifying")
     : status === "fully_kitted" ? "Fully Kitted" : status === "missing_items" ? "Missing Items" : "In Queue";
   const statusColor = !allocation.verified
     ? (verification?.state === "error" ? "var(--accent)" : "var(--muted)")
     : status === "fully_kitted" ? "#10b981" : status === "missing_items" ? "var(--accent)" : "#f59e0b";
-  if (allocation.verified) registerPickListItemsForInfo(checklist);
+  if (allocation.verified) registerPickListItemsForInfo(inlineViewState.checklist);
 
   wrap.style.display = "block";
   wrap.innerHTML = `
@@ -15060,7 +15064,7 @@ function renderInlineKitPickList() {
                 </button>
               </div>`
             : renderPickListLoadingPanel(verification?.stage || "Verifying allocation quantities", verification?.detail || "Confirming the latest Work Order allocation before showing this checklist."))
-        : checklist.length ? `
+        : inlineViewState.checklist.length ? `
       <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.24);border-radius:10px;padding:10px;margin-bottom:10px">
         ${canEditAllocation ? `
         <div class="kit-inline-actions">
@@ -15081,7 +15085,7 @@ function renderInlineKitPickList() {
         </div>`}
       </div>
       <div class="kit-inline-list">
-        ${checklist.map(item => `
+        ${inlineViewState.checklist.map(item => `
           <div class="kit-inline-row" ${canEditAllocation ? `onclick="inlineToggleKitPickListItem('${String(item.id).replace(/\\/g, "\\\\").replace(/'/g, "\\'")}',event)"` : ""} style="${canEditAllocation ? "cursor:pointer" : "cursor:default"}">
             <div class="pl-checkbox${item.allocated ? " checked" : ""}" style="flex-shrink:0">
               ${item.allocated ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>` : ""}
@@ -15394,26 +15398,38 @@ function togglePickListExpand(plId, e) {
 /* ── Load pick lists from Supabase ── */
 async function loadPickLists(woNum) {
   const el = document.getElementById("pl-content");
+  const perf = createPickListPerformanceLog("picklists.load", {
+    tab: _plCurrentTab,
+    workOrder: woNum || "all",
+    role: currentUser?.role || "unknown",
+  });
   _plVerificationStateById = {};
   el.innerHTML = renderPickListLoadingPanel("Loading Work Order", woNum
     ? `Looking up ${woNum} and its latest pick list record.`
     : "Loading the latest pick list records.");
   try {
+    const isAdminMissingOverview = currentUser?.role === "admin" && !_plCurrentWo && _plCurrentTab === "missing_items";
     const woVariants = getWorkOrderQueryVariants([woNum]);
     const filter = woNum && woVariants.length
       ? `?wo_number=in.(${woVariants.map(encodeURIComponent).join(",")})&order=updated_at.desc`
-      : `?order=updated_at.desc`;
+      : isAdminMissingOverview
+        ? `?status=not.in.(complete,exclude,in_queue)&order=updated_at.desc`
+        : `?order=updated_at.desc`;
     let rows = await sbFetch(`picklists${filter}`, {
       method: "GET", headers: { "Prefer": "return=representation" }
     }) || [];
+    perf.mark("work_order_lookup", { rows: rows.length });
 
-    if (!woNum) {
+    if (!woNum && !isAdminMissingOverview) {
       const completions = await sbGetKitCompletions().catch(() => []);
+      perf.mark("kit_completions_lookup", { rows: completions.length });
       const createdFromKits = await ensureAdminPickListsFromKitCompletions(completions, rows);
+      perf.mark("picklist_header_backfill", { createdFromKits });
       if (createdFromKits) {
         rows = await sbFetch("picklists?order=updated_at.desc", {
           method: "GET", headers: { "Prefer": "return=representation" }
         }) || [];
+        perf.mark("picklist_header_reload", { rows: rows.length });
       }
     }
 
@@ -15425,7 +15441,6 @@ async function loadPickLists(woNum) {
     }));
     el.innerHTML = renderPickListLoadingPanel("Loading pick-list items", "Retrieving the latest checklist rows from the database.");
 
-    /* Backfill customer_name for any rows that only have the WO number */
     const needsName = rows.filter(pl =>
       !pl.customer_name || pl.customer_name === pl.wo_number || !!getWoFromText(pl.customer_name)
     );
@@ -15433,7 +15448,6 @@ async function loadPickLists(woNum) {
       for (const pl of needsName) {
         const mondayItem = findKnownBoardItemByWo(pl.wo_number);
         if (mondayItem?.name && mondayItem.name !== pl.wo_number) {
-          /* Update Supabase and local cache */
           sbFetch(`picklists?id=eq.${encodeURIComponent(pl.id)}`, {
             method: "PATCH", prefer: "return=minimal",
             body: JSON.stringify({ customer_name: cleanMondayName(mondayItem.name) }),
@@ -15442,12 +15456,13 @@ async function loadPickLists(woNum) {
         }
       }
     }
+    perf.mark("customer_name_backfill", { rowsNeedingName: needsName.length });
 
-    /* If no picklist exists yet for this WO, auto-create it */
     if (woNum && rows.length === 0) {
       await ensurePickList(woNum);
       const fresh = await getPrimaryPickListForWorkOrder(woNum);
       _plAllPicklists = fresh ? [fresh] : [];
+      perf.mark("picklist_auto_create", { created: !!fresh });
     }
 
     _plAllPicklists.forEach(pl => setPickListVerificationState(pl?.id, {
@@ -15456,11 +15471,14 @@ async function loadPickLists(woNum) {
       detail: `Confirming the latest allocated and missing items for ${pl?.wo_number || "this work order"}.`,
     }));
     el.innerHTML = renderPickListLoadingPanel("Verifying allocation quantities", "Checking the latest allocation data before showing the pick list.");
+    perf.mark("status_filtering_ready", { rows: _plAllPicklists.length });
 
-    renderPickLists();
-    /* Quietly check P1/Monday after the screen opens; do not block the tap. */
+    await renderPickLists();
+    perf.mark("render_picklists_complete", { renderedRows: _plAllPicklists.length });
+    perf.finish({ finalRows: _plAllPicklists.length });
     if (woNum) maybeBackgroundSyncPickList(woNum);
   } catch(err) {
+    perf.finish({ error: err?.message || String(err) });
     el.innerHTML = `<div class="empty-state">Failed to load pick lists.<br><small>${err.message}</small></div>`;
   }
 }
@@ -15564,13 +15582,91 @@ function getPickListVerificationState(plId) {
   return _plVerificationStateById[String(plId)] || { state: "loading", stage: "", detail: "" };
 }
 
+function createPickListPerformanceLog(scope = "picklists", meta = {}) {
+  const started = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
+  const marks = [];
+  return {
+    mark(label, extra = {}) {
+      const now = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
+      marks.push({
+        label,
+        ms: Math.round((now - started) * 10) / 10,
+        ...extra,
+      });
+    },
+    finish(extra = {}) {
+      const now = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
+      const totalMs = Math.round((now - started) * 10) / 10;
+      const payload = {
+        scope,
+        totalMs,
+        ...meta,
+        ...extra,
+        marks,
+      };
+      window._lastPickListPerfLog = payload;
+      try {
+        console.groupCollapsed(`[PickList Perf] ${scope} · ${totalMs}ms`);
+        console.table(marks);
+        console.log(payload);
+        console.groupEnd();
+      } catch (_) {
+        console.log("[PickList Perf]", payload);
+      }
+      return payload;
+    }
+  };
+}
+
+let _adminMissingPickListRefreshRunning = false;
+
+async function runAdminMissingPickListRefresh(woNums = [], completions = []) {
+  const targets = [...new Set((woNums || []).map(wo => String(wo || "").trim()).filter(Boolean))];
+  if (!targets.length || _adminMissingPickListRefreshRunning) return false;
+  _adminMissingPickListRefreshRunning = true;
+  try {
+    await Promise.all(targets.map(async woNum => {
+      try {
+        await syncPickListItems(woNum);
+        await repairKittedPickListAllocation(woNum, completions);
+      } catch (err) {
+        console.warn(`Admin Missing Items background refresh skipped for ${woNum}:`, err?.message || err);
+      }
+    }));
+    return true;
+  } finally {
+    _adminMissingPickListRefreshRunning = false;
+  }
+}
+
 function renderPickListLoadingPanel(stage = "Loading pick list", detail = "") {
-  return `<div style="padding:14px 12px 12px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:var(--radius-xs);margin-bottom:10px">
-    <div style="display:flex;align-items:center;gap:9px;margin-bottom:6px">
-      <div class="spinner" style="width:18px;height:18px;border-width:2px"></div>
-      <div style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text)">${escHtml(stage || "Loading pick list")}</div>
+  const steps = [
+    { label: "Loading Work Order", pct: 18 },
+    { label: "Loading pick-list items", pct: 46 },
+    { label: "Verifying allocation quantities", pct: 78 },
+    { label: "Confirming latest updates", pct: 92 },
+    { label: "Pick list ready", pct: 100 }
+  ];
+  const normalizedStage = String(stage || "Loading pick list").trim();
+  const activeIndex = Math.max(0, steps.findIndex(step => step.label.toLowerCase() === normalizedStage.toLowerCase()));
+  const matchedStep = steps[activeIndex] || steps[0];
+  const progress = matchedStep.pct;
+  return `<div class="picklist-progress-panel" role="status" aria-live="polite">
+    <div class="picklist-progress-head">
+      <div class="picklist-progress-stage">${escHtml(normalizedStage || "Loading pick list")}</div>
+      <div class="picklist-progress-percent">${progress}%</div>
     </div>
-    <div style="font-size:11px;line-height:1.45;color:var(--muted)">${escHtml(detail || "Please wait while we confirm the latest Work Order and allocation data.")}</div>
+    <div class="picklist-progress-track" aria-hidden="true">
+      <div class="picklist-progress-fill" style="width:${progress}%"></div>
+    </div>
+    <div class="picklist-progress-detail">${escHtml(detail || "Please wait while we confirm the latest Work Order and allocation data.")}</div>
+    <div class="picklist-progress-steps" aria-hidden="true">
+      ${steps.map((step, idx) => `
+        <span class="picklist-progress-step ${idx < activeIndex ? "done" : (idx === activeIndex ? "active" : "")}">
+          ${escHtml(step.label.replace("Loading ", "").replace("Confirming ", "").replace("Pick list ready", "Ready"))}
+        </span>
+      `).join("")}
+    </div>
   </div>`;
 }
 
@@ -15630,6 +15726,27 @@ function getPickListAllocationSnapshot(pl, items = [], verification = null) {
       ? (missing ? `${missing} missing` : "All allocated")
       : verificationState?.detail || "Waiting for checklist items",
     emptyCopy,
+  };
+}
+
+function getVerifiedPickListViewState(pl, items = [], verification = null) {
+  const targetWo = canonicalWorkOrderKey(pl?.wo_number);
+  const normalizedItems = clonePickListItems(items).filter(item => {
+    if (!targetWo) return true;
+    const itemWo = canonicalWorkOrderKey(item?.wo_number);
+    return !itemWo || itemWo === targetWo;
+  });
+  const resolvedVerification = verification || getPickListVerificationState(pl?.id);
+  const allocation = getPickListAllocationSnapshot(pl, normalizedItems, resolvedVerification);
+  const displayStatus = allocation.displayStatus;
+  const isLocked = displayStatus === "complete" || String(pl?.status || "") === "complete";
+  return {
+    checklist: normalizedItems,
+    verification: resolvedVerification,
+    allocation,
+    displayStatus,
+    isLocked,
+    canEditAllocation: canEditPickListAllocations(currentUser),
   };
 }
 
@@ -16330,21 +16447,43 @@ async function renderPickLists() {
   if (!el) return;
   const renderSeq = ++_plRenderSeq;
   const targetTab = _plCurrentTab;
+  const adminOverviewMode = currentUser?.role === "admin" && !_plCurrentWo;
+  const isAdminMissingOverview = adminOverviewMode && targetTab === "missing_items";
+  const perf = createPickListPerformanceLog("picklists.render", {
+    tab: targetTab,
+    workOrder: _plCurrentWo || "all",
+    role: currentUser?.role || "unknown",
+    adminOverviewMode,
+  });
 
   const allPicklists = Array.isArray(_plAllPicklists) ? _plAllPicklists : [];
   if (!allPicklists.length) {
     if (renderSeq !== _plRenderSeq) return;
     el.innerHTML = `<div class="empty-state" style="padding:40px 0">No pick lists found.</div>`;
+    perf.finish({ finalRows: 0 });
     return;
   }
 
   const completions = await sbGetKitCompletions().catch(() => []);
+  perf.mark("kit_completion_lookup", { rows: completions.length });
 
   el.innerHTML = renderPickListLoadingPanel("Loading pick-list items", "Reading the latest Work Order checklist rows.");
 
+  const fetchCandidates = isAdminMissingOverview
+    ? allPicklists.filter(pl => isActiveMissingItemsPickList(pl))
+    : allPicklists;
+  perf.mark("status_filtering", {
+    sourceRows: allPicklists.length,
+    eligibleRows: fetchCandidates.length,
+  });
+
   /* Load items for each picklist. Some older rows are only tied by WO number,
      so read both paths and group them back to the visible picklist. */
-  const allItemsFetched = await fetchPickListItemsForPicklists(allPicklists);
+  const allItemsFetched = await fetchPickListItemsForPicklists(fetchCandidates);
+  perf.mark("picklist_retrieval", {
+    picklistsRequested: fetchCandidates.length,
+    itemRows: allItemsFetched.length,
+  });
   if (renderSeq !== _plRenderSeq) return;
 
   const dedupePickListItems = (sourceItems = []) => {
@@ -16400,7 +16539,12 @@ async function renderPickLists() {
 
   let allItems = dedupePickListItems(allItemsFetched);
   let itemsByPl = await buildItemsByPl(allItems);
-  allPicklists.forEach(pl => {
+  perf.mark("work_order_grouping", {
+    uniqueItems: allItems.length,
+    groupedPicklists: Object.keys(itemsByPl || {}).length,
+  });
+  const backgroundRefreshWos = new Set();
+  fetchCandidates.forEach(pl => {
     const hasRows = !!(itemsByPl[pl.id] || []).length;
     setPickListVerificationState(pl.id, hasRows
       ? {
@@ -16415,11 +16559,22 @@ async function renderPickLists() {
         });
   });
 
-  const missingChecklistPicklists = allPicklists.filter(pl => pl?.wo_number && !(itemsByPl[pl.id] || []).length);
+  const missingChecklistPicklists = fetchCandidates.filter(pl => pl?.wo_number && !(itemsByPl[pl.id] || []).length);
   const shouldSyncMissingChecklistNow =
     missingChecklistPicklists.length &&
     (_plCurrentWo || (currentUser?.role === "admin" && !_plCurrentWo && ["missing_items", "fully_kitted", "complete"].includes(targetTab)));
-  if (shouldSyncMissingChecklistNow) {
+  if (isAdminMissingOverview && missingChecklistPicklists.length) {
+    const syncTargets = missingChecklistPicklists.filter(pl => isActiveMissingItemsPickList(pl));
+    syncTargets.forEach(pl => {
+      backgroundRefreshWos.add(pl.wo_number);
+      setPickListVerificationState(pl.id, {
+        state: "loading",
+        stage: "Confirming latest updates",
+        detail: `Refreshing ${pl.wo_number || "this work order"} before showing its missing-item checklist.`,
+      });
+    });
+    perf.mark("missing_picklist_background_sync", { targets: syncTargets.length });
+  } else if (shouldSyncMissingChecklistNow) {
     const syncTargets = _plCurrentWo
       ? missingChecklistPicklists
       : missingChecklistPicklists.filter(pl => {
@@ -16448,12 +16603,17 @@ async function renderPickLists() {
       allItems = dedupePickListItems([...allItems, ...refreshedMissingItems]);
       itemsByPl = await buildItemsByPl(allItems);
     }
+    perf.mark("missing_picklist_sync", {
+      syncTargets: syncTargets.length,
+      refreshedRows: allItems.length,
+    });
   } else if (missingChecklistPicklists.length) {
     missingChecklistPicklists.forEach(pl => maybeBackgroundSyncPickList(pl.wo_number, pl.id));
+    perf.mark("missing_picklist_background_sync", { targets: missingChecklistPicklists.length });
   }
   if (renderSeq !== _plRenderSeq) return;
 
-  const zeroAllocationRepairs = allPicklists.filter(pl => {
+  const zeroAllocationRepairs = fetchCandidates.filter(pl => {
     const items = itemsByPl[pl.id] || [];
     return shouldRepairZeroAllocationPickList(pl, items, findKitCompletionForPickList(pl, completions));
   });
@@ -16465,7 +16625,18 @@ async function renderPickLists() {
           .map(pl => pl.wo_number)
           .filter(Boolean)
       )];
-  if (repairTargets.length) {
+  if (isAdminMissingOverview && repairTargets.length) {
+    zeroAllocationRepairs.forEach(pl => {
+      if (!repairTargets.includes(pl.wo_number)) return;
+      backgroundRefreshWos.add(pl.wo_number);
+      setPickListVerificationState(pl.id, {
+        state: "loading",
+        stage: "Verifying allocation quantities",
+        detail: `Confirming the latest allocated quantities for ${pl.wo_number || "this work order"}.`,
+      });
+    });
+    perf.mark("allocation_background_sync", { targets: repairTargets.length });
+  } else if (repairTargets.length) {
     await Promise.all(repairTargets.map(async woNum => {
       try {
         await repairKittedPickListAllocation(woNum, completions);
@@ -16484,13 +16655,28 @@ async function renderPickLists() {
     repairedItems.forEach(item => { if (item?.id) byItemId.set(String(item.id), item); });
     allItems = [...byItemId.values()];
     itemsByPl = await buildItemsByPl(allItems);
+    perf.mark("allocation_calculation", {
+      repairTargets: repairTargets.length,
+      repairedRows: repairedItems.length,
+    });
   } else if (zeroAllocationRepairs.length) {
     zeroAllocationRepairs.forEach(pl => maybeBackgroundSyncPickList(pl.wo_number, pl.id));
+    perf.mark("allocation_background_sync", { targets: zeroAllocationRepairs.length });
+  } else {
+    perf.mark("allocation_calculation", { repairTargets: 0 });
   }
   if (renderSeq !== _plRenderSeq) return;
 
-  allPicklists.forEach(pl => {
+  fetchCandidates.forEach(pl => {
     const items = itemsByPl[pl.id] || [];
+    if (isAdminMissingOverview && backgroundRefreshWos.has(pl.wo_number)) {
+      setPickListVerificationState(pl.id, {
+        state: "loading",
+        stage: "Confirming latest updates",
+        detail: `Refreshing the latest shared pick-list data for ${pl.wo_number || "this work order"}.`,
+      });
+      return;
+    }
     if (items.length) {
       setPickListVerificationState(pl.id, {
         state: "ready",
@@ -16509,7 +16695,7 @@ async function renderPickLists() {
   registerPickListItemsForInfo(allItems);
   window._plItemsByPl = itemsByPl;
 
-  const enrichedPicklists = allPicklists.map(pl => {
+  const enrichedPicklists = fetchCandidates.map(pl => {
     const items = itemsByPl[pl.id] || [];
     return { ...pl, _displayStatus: getPickListDisplayStatus(pl, items) };
   });
@@ -16517,7 +16703,6 @@ async function renderPickLists() {
   let filtered = enrichedPicklists
     .filter(pl => shouldShowPickListInTab(pl, targetTab, itemsByPl[pl.id] || []));
 
-  const adminOverviewMode = currentUser?.role === "admin" && !_plCurrentWo;
   if (adminOverviewMode) {
     filtered = [...filtered].sort((a, b) => {
       const aWeek = getAdminPickListWeekInfo(a, completions);
@@ -16535,6 +16720,8 @@ async function renderPickLists() {
       ? "No active pick lists with missing items."
       : "No pick lists found.";
     el.innerHTML = `<div class="empty-state" style="padding:40px 0">${escHtml(emptyCopy)}</div>`;
+    perf.mark("render_results", { finalRows: 0 });
+    perf.finish({ finalRows: 0 });
     return;
   }
 
@@ -16552,6 +16739,7 @@ async function renderPickLists() {
   if (isLead() && !_plCurrentWo) {
     html += renderLeadDashboard();
   }
+  perf.mark("render_results_prepare", { finalRows: filtered.length });
 
   for (const pl of filtered) {
     /* Check if this WO is currently in QC group in Monday */
@@ -16573,13 +16761,14 @@ async function renderPickLists() {
       }
     }
     pl._inQC = (mondayItem?.group?.title || "").toLowerCase().includes("quality control");
-    const items = itemsByPl[pl.id] || [];
-    const verification = getPickListVerificationState(pl.id);
-    const allocation = getPickListAllocationSnapshot(pl, items, verification);
+    const viewState = getVerifiedPickListViewState(pl, itemsByPl[pl.id] || [], getPickListVerificationState(pl.id));
+    const items = viewState.checklist;
+    const verification = viewState.verification;
+    const allocation = viewState.allocation;
     const newestAdded = getNewestRelevantAddedPickListItem(items, pl.created_at || null, completionMissingEntries);
     const newestAddedLabel = newestAdded ? (newestAdded.item.label || buildItemLabel(newestAdded.item)) : "";
     const newestAddedStamp = newestAdded ? formatPickListAddedStamp(newestAdded.tsRaw) : "";
-    const displayStatus = allocation.displayStatus;
+    const displayStatus = viewState.displayStatus;
     const isOverviewMode = !_plCurrentWo;
     const isExpanded = isOverviewMode ? !!_plExpandedState[String(pl.id)] : true;
     const statusLabel = !allocation.verified ? (verification?.state === "error" ? "Needs Retry" : "Verifying") : ({
@@ -16589,7 +16778,7 @@ async function renderPickLists() {
       complete:      "Complete"
     }[displayStatus] || displayStatus);
     const statusClass = !allocation.verified ? (verification?.state === "error" ? "missing_items" : "in_queue") : displayStatus;
-    const canEditAllocation = canEditPickListAllocations(currentUser);
+    const canEditAllocation = viewState.canEditAllocation;
     const showKitCheckAll = allocation.verified && displayStatus !== "complete" && canEditAllocation && !_plKittedAccessMode;
     const checkAllHtml = showKitCheckAll ? `
       <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.24);border-radius:var(--radius-xs);padding:9px 10px;margin:0 12px 10px">
@@ -16636,14 +16825,14 @@ async function renderPickLists() {
       <div id="pl-expand-body-${pl.id}" style="display:${isExpanded ? "block" : "none"}">
       ${renderSharedPickListChecklistIntro(pl, allocation, {
         canEditAllocation,
-        isLocked: displayStatus === "complete",
+        isLocked: viewState.isLocked,
         checkAllHtml,
         readOnlyNoticeHtml,
       })}
 
       ${renderSharedPickListRows(items, {
         canEditAllocation,
-        isLocked: displayStatus === "complete",
+        isLocked: viewState.isLocked,
         newestAdded: pl.has_changes ? newestAdded : null,
         completionMissingEntries,
         allocation,
@@ -16686,6 +16875,17 @@ async function renderPickLists() {
 
   if (renderSeq !== _plRenderSeq) return;
   el.innerHTML = html;
+  if (isAdminMissingOverview && backgroundRefreshWos.size) {
+    Promise.resolve().then(async () => {
+      const didRefresh = await runAdminMissingPickListRefresh([...backgroundRefreshWos], completions);
+      if (!didRefresh) return;
+      if (currentUser?.role === "admin" && !_plCurrentWo && _plCurrentTab === "missing_items") {
+        await loadPickLists(null);
+      }
+    });
+  }
+  perf.mark("render_results", { finalRows: filtered.length, renderedCards: filtered.length });
+  perf.finish({ finalRows: filtered.length, renderedCards: filtered.length });
 }
 
 /* ── Toggle item allocated state ── */
@@ -17107,12 +17307,23 @@ function getInlineSubmitPickListItems(plId, woNum) {
 
 async function loadPickListItemsForKitSubmit(plId, woNum) {
   const inlineItems = getInlineSubmitPickListItems(plId, woNum);
-  if (inlineItems?.length) return sortPickListItemsByWorkOrder(inlineItems, woNum);
+  if (inlineItems?.length) {
+    const pl = await ensurePrimaryPickListForWorkOrder(woNum);
+    const viewState = getVerifiedPickListViewState(pl || { id: plId, wo_number: woNum }, inlineItems);
+    return sortPickListItemsByWorkOrder(viewState.checklist, woNum);
+  }
 
   const cached = ((window._plItemsByPl || {})[plId] || []).filter(item => item?.id);
-  if (cached.length) return sortPickListItemsByWorkOrder(cached.map(item => ({ ...item })), woNum);
+  if (cached.length) {
+    const pl = await ensurePrimaryPickListForWorkOrder(woNum);
+    const viewState = getVerifiedPickListViewState(pl || { id: plId, wo_number: woNum }, cached.map(item => ({ ...item })));
+    return sortPickListItemsByWorkOrder(viewState.checklist, woNum);
+  }
 
-  return loadLivePickListItemsNoRepair(plId, woNum);
+  const liveItems = await loadLivePickListItemsNoRepair(plId, woNum);
+  const pl = await ensurePrimaryPickListForWorkOrder(woNum);
+  const viewState = getVerifiedPickListViewState(pl || { id: plId, wo_number: woNum }, liveItems);
+  return sortPickListItemsByWorkOrder(viewState.checklist, woNum);
 }
 
 /* ── Pete submits kit from the pick list screen ── */
@@ -17641,7 +17852,7 @@ async function openPeteKittedPickLists(forceRefresh = false, preserveSearch = fa
     window._petePlLists = cachedLists;
     renderPetePlList();
   } else if (listEl) {
-    listEl.innerHTML = `<div class="loading-state"><div class="spinner"></div>Loading kitted pick lists…</div>`;
+    listEl.innerHTML = renderPickListLoadingPanel("Loading Work Order", "Gathering Pete’s completed Initial Kit work orders and their latest pick-list records.");
   }
 
   /* Load open picklists Pete has kitted from Supabase */
@@ -17773,7 +17984,7 @@ async function refreshPeteKittedPickLists(e) {
   try { localStorage.removeItem(PETE_KITTED_CACHE_KEY); } catch (_) {}
   const listEl = document.getElementById("pete-pl-list");
   if (listEl) {
-    listEl.innerHTML = `<div class="loading-state"><div class="spinner"></div>Refreshing kitted pick lists…</div>`;
+    listEl.innerHTML = renderPickListLoadingPanel("Confirming latest updates", "Refreshing Pete’s latest Initial Kit history and allocation totals.");
   }
   await openPeteKittedPickLists(true, true);
 }
@@ -17813,19 +18024,21 @@ function renderPetePlList() {
       : "No date";
     const kittedStr = pl.kittedAt ? fmtTs(pl.kittedAt) : "Unknown";
     const isExpanded = window._peteExpandedWo === pl.wo_number;
-    const checklist = pl.checklistItems || [];
     const completionMissingEntries = normalizeMissingItems(pl.kitCompletion?.missing_items);
+    const viewState = getVerifiedPickListViewState(pl, pl.checklistItems || [], getPickListVerificationState(pl.id));
+    const checklist = viewState.checklist;
+    const verification = viewState.verification;
+    const allocation = viewState.allocation;
+    const verifiedDisplayStatus = viewState.displayStatus;
+    const isLocked = viewState.isLocked;
+    const canEditAllocation = viewState.canEditAllocation;
     const newestAdded = getNewestRelevantAddedPickListItem(checklist, pl.kittedAt || null, completionMissingEntries);
     const newestAddedLabel = newestAdded ? (newestAdded.item.label || buildItemLabel(newestAdded.item)) : "";
     const newestAddedStamp = newestAdded ? formatPickListAddedStamp(newestAdded.tsRaw) : "";
-    const verification = getPickListVerificationState(pl.id);
-    const allocation = getPickListAllocationSnapshot(pl, checklist, verification);
     const missingCount = allocation.missing;
     const qcReady = (groupLabel || "").toLowerCase().includes("quality control");
-    const baseStatus = derivePickListStatusFromAllocation(checklist, pl.status);
+    const baseStatus = verifiedDisplayStatus;
     const displayStatus = pl.needsReview ? "needs_review" : baseStatus;
-    const isLocked = baseStatus === "complete" || pl.status === "complete";
-    const canEditAllocation = canEditPickListAllocations(currentUser);
     const sl = !allocation.verified
       ? (verification?.state === "error" ? "Needs Retry" : "Verifying")
       : displayStatus === "needs_review" ? "Needs Review" : (statusLabel[displayStatus] || displayStatus);
@@ -17993,7 +18206,7 @@ async function openAllocationReviewByWo(woNum, heading = "Review Allocation") {
           style="background:none;border:none;color:var(--muted);font-size:24px;line-height:1;cursor:pointer">×</button>
       </div>
       <div id="generic-review-body">
-        <div class="loading-state" style="padding:22px 0"><div class="spinner"></div>Loading pick list…</div>
+        ${renderPickListLoadingPanel("Loading Work Order", "Opening the latest verified pick list for this Work Order.")}
       </div>
     </div>`;
   modal.addEventListener("click", ev => { if (ev.target === modal) modal.remove(); });
@@ -18003,7 +18216,8 @@ async function openAllocationReviewByWo(woNum, heading = "Review Allocation") {
     const pl = await ensurePrimaryPickListForWorkOrder(woNum);
     if (!pl?.id) throw new Error("No pick list found for this work order.");
     const items = await loadResolvedPickListItems(pl.id, woNum);
-    renderAllocationReviewBody(pl, items, woNum);
+    const viewState = getVerifiedPickListViewState(pl, items);
+    renderAllocationReviewBody(pl, viewState.checklist, woNum);
   } catch (err) {
     const body = document.getElementById("generic-review-body");
     if (body) body.innerHTML = `<div class="empty-state" style="padding:22px 0">Could not load allocation review.<br><small>${escHtml(err.message)}</small></div>`;
@@ -18893,7 +19107,7 @@ window.addEventListener("resize", () => {
         oninput="renderPetePlList()">
     </div>
     <div id="pete-pl-list">
-      <div class="loading-state"><div class="spinner"></div>Loading kitted pick lists…</div>
+      ${renderPickListLoadingPanel("Loading Work Order", "Gathering Pete’s completed Initial Kit work orders and their latest pick-list records.")}
     </div>
   </div>
 </div>
@@ -18925,7 +19139,7 @@ window.addEventListener("resize", () => {
     <button class="pl-status-tab"        id="pl-tab-complete"      onclick="setPickListTab('complete',this)">Complete</button>
   </div>
   <div class="main-content" id="pl-content">
-    <div class="loading-state"><div class="spinner"></div>Loading pick lists…</div>
+    ${renderPickListLoadingPanel("Loading Work Order", "Gathering the latest Work Orders and preparing the pick-list view.")}
   </div>
 </div>
 
