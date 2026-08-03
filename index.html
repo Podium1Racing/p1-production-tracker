@@ -11971,8 +11971,15 @@ async function completeConfigurationPickList(woNum) {
   if (!key) throw new Error("Missing work order.");
   const context = await loadConfigurationPickListContext(key);
   if (!context?.pickList?.id) throw new Error("No synced pick list found.");
-  const total = context.items.length;
-  const allocated = context.items.filter(item => !!item?.allocated).length;
+  const allocation = context?.allocation || getPickListAllocationSnapshot(null, [], {
+    state: "error",
+    stage: "Verification failed",
+    detail: "Pick list verification has not completed yet.",
+  });
+  if (!allocation.verified) throw new Error("Pick list verification is not complete yet.");
+  if (!allocation.hasChecklist) throw new Error("Pick list data has not synced in yet.");
+  const total = allocation.total;
+  const allocated = allocation.allocated;
   if (!total || total !== allocated) throw new Error("Every pick list item must be allocated first.");
   await sbFetch(`picklists?id=eq.${encodeURIComponent(context.pickList.id)}`, {
     method: "PATCH",
