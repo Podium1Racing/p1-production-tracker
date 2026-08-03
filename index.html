@@ -7247,7 +7247,8 @@ async function loadStuckItemOptions(itemId) {
     if (!plId) throw new Error("This order does not have a synced pick list yet.");
 
     const resolvedItems = await loadResolvedPickListItems(plId, woNum);
-    const missingItems = (Array.isArray(resolvedItems) ? resolvedItems : [])
+    const viewState = getVerifiedPickListViewState(pl, resolvedItems);
+    const missingItems = (Array.isArray(viewState.checklist) ? viewState.checklist : [])
       .filter(it => !isServiceItem(it) && !it.allocated);
 
     if (!missingItems.length) {
@@ -7305,7 +7306,8 @@ async function loadResolveStuckOptions(itemId) {
     select.dataset.plId = String(plId);
 
     const resolvedItems = await loadResolvedPickListItems(plId, woNum);
-    const missingItems = (Array.isArray(resolvedItems) ? resolvedItems : [])
+    const viewState = getVerifiedPickListViewState(pl, resolvedItems);
+    const missingItems = (Array.isArray(viewState.checklist) ? viewState.checklist : [])
       .filter(it => !isServiceItem(it) && !it.allocated);
 
     if (!missingItems.length) {
@@ -15130,23 +15132,20 @@ async function loadInlineKitPickList(itemId, woNum, token) {
   const pl = await ensurePrimaryPickListForWorkOrder(woNum);
   if (!pl?.id) throw new Error("No pick list found for this work order.");
   const items = await loadResolvedPickListItems(pl.id, woNum);
+  const viewState = getVerifiedPickListViewState(pl, items, {
+    state: items.length ? "ready" : "error",
+    stage: items.length ? "Pick list ready" : "Verification failed",
+    detail: items.length
+      ? "Verified allocation loaded from the current Work Order."
+      : "We could not verify any pick-list rows for this work order.",
+  });
   if (_kitInlinePickList.token !== token || _kitInlinePickList.itemId !== itemId) return;
   _kitInlinePickList = {
     itemId,
     woNum,
     pl,
-    items,
-    verification: items.length
-      ? {
-          state: "ready",
-          stage: "Pick list ready",
-          detail: "Verified allocation loaded from the current Work Order.",
-        }
-      : {
-          state: "error",
-          stage: "Verification failed",
-          detail: "We could not verify any pick-list rows for this work order.",
-        },
+    items: viewState.checklist,
+    verification: viewState.verification,
     loading: false,
     token,
   };
@@ -17031,6 +17030,7 @@ async function deselectAllPickListItems(plId, e) {
 async function refreshPickListCard(plId, knownItems = null) {
   const pl = (_plAllPicklists || []).find(row => String(row?.id) === String(plId)) || null;
   let items = Array.isArray(knownItems) ? knownItems : null;
+  let viewState = null;
   if (!items) {
     try {
       items = await loadResolvedPickListItems(plId, pl?.wo_number || null);
@@ -17048,9 +17048,10 @@ async function refreshPickListCard(plId, knownItems = null) {
       });
     }
   }
-  const alloc = items.filter(i => i.allocated).length;
-  const total = items.length;
-  if (total) {
+  viewState = getVerifiedPickListViewState(pl || { id: plId, wo_number: pl?.wo_number || null }, items, getPickListVerificationState(plId));
+  const alloc = viewState.allocation.allocated;
+  const total = viewState.allocation.total;
+  if (viewState.allocation.verified && total) {
     setPickListVerificationState(plId, {
       state: "ready",
       stage: "Pick list ready",
@@ -17063,9 +17064,9 @@ async function refreshPickListCard(plId, knownItems = null) {
     if (meta) {
       const parts = meta.textContent.split("·");
       if (parts.length >= 2) {
-        meta.textContent = total
+        meta.textContent = viewState.allocation.verified
           ? `${parts[0].trim()} · ${alloc}/${total} allocated`
-          : `${parts[0].trim()} · Verifying allocation…`;
+          : `${parts[0].trim()} · ${viewState.allocation.metaText}`;
       }
     }
   }
@@ -17885,12 +17886,18 @@ async function openPeteKittedPickLists(forceRefresh = false, preserveSearch = fa
       if (!canonicalWo || !pl?.id) return;
       try {
         const liveItems = await loadResolvedPickListItems(pl.id, canonicalWo, { backgroundSync: false });
-        const sortedItems = await sortPickListItemsByWorkOrder(liveItems, canonicalWo);
+        const viewState = getVerifiedPickListViewState(pl, liveItems, {
+          state: "ready",
+          stage: "Pick list ready",
+          detail: `Pete’s kitted pick list for ${canonicalWo} is verified.`,
+        });
+        const sortedItems = await sortPickListItemsByWorkOrder(viewState.checklist, canonicalWo);
         itemStateByWo[canonicalWo] = {
-          total: sortedItems.length,
-          allocated: sortedItems.filter(item => !!item?.allocated).length,
+          total: viewState.allocation.total,
+          allocated: viewState.allocation.allocated,
           items: sortedItems,
-        };
+          allocation: viewState.allocation,
+          };
       } catch (err) {
         reviewByWo[canonicalWo] = true;
         itemStateByWo[canonicalWo] = {
@@ -18134,7 +18141,8 @@ function openPeteAllocationReview(plId, woNum, e) {
   if (!ensurePickListAllocationAccess()) return;
   const pl = (window._petePlLists || []).find(p => p.id === plId || p.wo_number === woNum);
   if (!pl) return;
-  const items = pl.checklistItems || [];
+  const reviewViewState = getVerifiedPickListViewState(pl, pl.checklistItems || [], getPickListVerificationState(pl.id));
+  const items = reviewViewState.checklist;
   registerPickListItemsForInfo(items);
   const existing = document.getElementById("pete-review-modal");
   if (existing) existing.remove();
@@ -18317,7 +18325,8 @@ async function savePeteAllocationReview(plId, woNum, e) {
     .filter(cb => cb.checked)
     .map(cb => cb.dataset.itemId));
   const pl = (window._petePlLists || []).find(p => p.id === plId || p.wo_number === woNum);
-  const items = pl?.checklistItems || [];
+  const reviewViewState = getVerifiedPickListViewState(pl || { id: plId, wo_number: woNum }, pl?.checklistItems || [], getPickListVerificationState(pl?.id));
+  const items = reviewViewState.checklist;
 
   try {
     await saveBatchPickListAllocations(items.map(item => item.id), allocatedIds, { reason: "kitted_picklist_review_save" });
@@ -18375,14 +18384,16 @@ async function confirmManualCompletePickList(plId, e) {
   }
   const pl = (_plAllPicklists || []).find(row => String(row?.id) === String(plId)) || null;
   let items = [];
+  let viewState = null;
   try {
     items = await loadResolvedPickListItems(plId, pl?.wo_number || _plCurrentWo || null);
+    viewState = getVerifiedPickListViewState(pl || { id: plId, wo_number: pl?.wo_number || _plCurrentWo || null }, items);
   } catch (err) {
     showToast(err?.message || "Could not verify this pick list yet.", "err");
     return;
   }
-  const totalItems = items.length;
-  const allocatedItems = items.filter(item => !!item?.allocated).length;
+  const totalItems = viewState?.allocation?.total || 0;
+  const allocatedItems = viewState?.allocation?.allocated || 0;
   if (!totalItems || allocatedItems !== totalItems) {
     showToast("Manual complete only works when every pick list item is allocated.", "warn");
     return;
@@ -18394,15 +18405,18 @@ async function openPickListCompleteModal(plId, opts = {}) {
   const force = !!opts.force;
   const pl = (_plAllPicklists || []).find(row => String(row?.id) === String(plId)) || null;
   let items = [];
+  let viewState = null;
   try {
     items = await loadResolvedPickListItems(plId, pl?.wo_number || _plCurrentWo || null);
+    viewState = getVerifiedPickListViewState(pl || { id: plId, wo_number: pl?.wo_number || _plCurrentWo || null }, items);
   } catch (err) {
     showToast(err?.message || "Could not verify this pick list yet.", "err");
     return;
   }
 
-  const allocated   = items.filter(i => i.allocated);
-  const unallocated = items.filter(i => !i.allocated);
+  const checklist = viewState?.checklist || items;
+  const allocated   = checklist.filter(i => i.allocated);
+  const unallocated = checklist.filter(i => !i.allocated);
   const hasMissing  = unallocated.length > 0;
 
   const existing = document.getElementById("pl-confirm-modal");
@@ -18439,7 +18453,7 @@ async function openPickListCompleteModal(plId, opts = {}) {
       <!-- Allocated summary -->
       <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:var(--radius-xs);padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;gap:8px">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
-        <span style="font-size:12px;font-weight:600;color:#10b981">${allocated.length} of ${items.length} items allocated</span>
+        <span style="font-size:12px;font-weight:600;color:#10b981">${allocated.length} of ${checklist.length} items allocated</span>
       </div>
 
       <!-- Missing items list -->
@@ -18547,14 +18561,17 @@ async function confirmReopenPickList(plId, e) {
   const btn = e?.currentTarget;
   if (btn) { btn.disabled = true; btn.textContent = "Reopening…"; }
   let items = [];
+  let viewState = null;
   try {
     items = await loadResolvedPickListItems(plId, pl?.wo_number || _plCurrentWo || null);
+    viewState = getVerifiedPickListViewState(pl || { id: plId, wo_number: pl?.wo_number || _plCurrentWo || null }, items);
   } catch (err) {
     if (btn) { btn.disabled = false; btn.textContent = "Reopen"; }
     showToast(err?.message || "Could not verify this pick list yet.", "err");
     return;
   }
-  const allAllocated = items.length > 0 && items.every(item => !!item?.allocated);
+  const checklist = viewState?.checklist || items;
+  const allAllocated = checklist.length > 0 && checklist.every(item => !!item?.allocated);
   await sbFetch(`picklists?id=eq.${encodeURIComponent(plId)}`, {
     method: "PATCH",
     prefer: "return=minimal",
