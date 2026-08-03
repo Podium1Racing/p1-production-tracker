@@ -2186,6 +2186,13 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 async function sbFetch(path, options = {}) {
   const url = SUPABASE_URL + "/rest/v1/" + path;
+  const method = String(options.method || "GET").toUpperCase();
+  const timeoutMs = Number.isFinite(options.timeoutMs)
+    ? Number(options.timeoutMs)
+    : (method === "GET" || method === "HEAD" ? 12000 : 20000);
+  const retryCount = Number.isFinite(options.retryCount)
+    ? Math.max(0, Number(options.retryCount))
+    : (method === "GET" || method === "HEAD" ? 1 : 0);
   const headers = {
     "apikey": SUPABASE_KEY,
     "Authorization": "Bearer " + SUPABASE_KEY,
@@ -2193,12 +2200,72 @@ async function sbFetch(path, options = {}) {
     "Prefer": options.prefer || "return=minimal",
     ...options.headers,
   };
-  try {
-    const r = await fetch(url, { cache: "no-store", ...options, headers });
-    if (!r.ok) { const t = await r.text(); console.warn("Supabase error:", t); return null; }
-    const text = await r.text();
-    return text ? JSON.parse(text) : null;
-  } catch(e) { console.warn("Supabase fetch failed:", e.message); return null; }
+  const requestOptions = { cache: "no-store", ...options, method, headers };
+  delete requestOptions.prefer;
+  delete requestOptions.timeoutMs;
+  delete requestOptions.retryCount;
+
+  const isRetryableStatus = (status) => status === 408 || status === 425 || status === 429 || status >= 500;
+  const isRetryableError = (err) => {
+    if (!err) return false;
+    const name = String(err.name || "");
+    return name === "AbortError" || name === "TimeoutError" || err instanceof TypeError;
+  };
+  const buildTimeoutSignal = (ms, upstreamSignal) => {
+    if (!Number.isFinite(ms) || ms <= 0) return { signal: upstreamSignal, cleanup() {} };
+    const controller = new AbortController();
+    let timeoutId = setTimeout(() => {
+      try {
+        controller.abort(new DOMException("Supabase request timed out.", "AbortError"));
+      } catch (_) {
+        controller.abort();
+      }
+    }, ms);
+
+    const forwardAbort = () => {
+      try {
+        controller.abort(upstreamSignal?.reason);
+      } catch (_) {
+        controller.abort();
+      }
+    };
+    if (upstreamSignal) {
+      if (upstreamSignal.aborted) forwardAbort();
+      else upstreamSignal.addEventListener("abort", forwardAbort, { once: true });
+    }
+
+    return {
+      signal: controller.signal,
+      cleanup() {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+      }
+    };
+  };
+
+  for (let attempt = 0; attempt <= retryCount; attempt++) {
+    const timeoutControl = buildTimeoutSignal(timeoutMs, requestOptions.signal);
+    try {
+      const r = await fetch(url, { ...requestOptions, signal: timeoutControl.signal });
+      if (!r.ok) {
+        const t = await r.text();
+        if (attempt < retryCount && isRetryableStatus(r.status)) continue;
+        console.warn("Supabase error:", t);
+        return null;
+      }
+      const text = await r.text();
+      return text ? JSON.parse(text) : null;
+    } catch (e) {
+      if (attempt < retryCount && isRetryableError(e)) continue;
+      console.warn("Supabase fetch failed:", e?.message || e);
+      return null;
+    } finally {
+      timeoutControl.cleanup();
+    }
+  }
+  return null;
 }
 
 async function sbFetchOrThrow(path, options = {}, errMsg = "Supabase request failed.") {
@@ -18963,14 +19030,29 @@ function startRealTimeSync() {
 }
 
 /* Reload data when the user returns to the app (switches tabs or unlocks phone) */
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState !== "visible") return;
+function refreshVisibleAppScreen() {
   const screen = document.querySelector(".screen.active");
   if (!screen) return;
   if (screen.id === "screen-dash") loadBoard();
   else if (screen.id === "screen-config" || screen.id === "screen-config-checklist") loadBoard();
   else if (screen.id === "screen-kit") loadKitBoard();
   else if (screen.id === "screen-admin") loadAdminData();
+  else if (screen.id === "screen-picklist") loadPickLists(_plCurrentWo || null).catch(() => {});
+  else if (screen.id === "screen-updates") {
+    loadBuildUpdates().catch(() => {});
+    if (updateSheetContext?.mode === "update" && isLeadPickListVerificationMode(updateSheetContext.itemId, updateSheetContext.colType)) {
+      primeLeadPickListVerificationState(updateSheetContext.itemId, updateSheetContext.colType, { force: true }).catch(() => {});
+    }
+  }
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible") return;
+  refreshVisibleAppScreen();
+});
+
+window.addEventListener("pageshow", () => {
+  refreshVisibleAppScreen();
 });
 
 function stopRealTimeSync() {
