@@ -474,6 +474,78 @@ button, input, select, textarea { font-family:inherit; }
 .updates-project-header:first-child { border-top:none; margin-top:0; }
 @keyframes spin-icon { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
 .spin-icon { animation: spin-icon .7s linear infinite; }
+.pull-refresh-indicator {
+  position:fixed;
+  top:calc(env(safe-area-inset-top) + 10px);
+  left:50%;
+  z-index:160;
+  pointer-events:none;
+  opacity:0;
+  transform:translate(-50%, -54px) scale(.96);
+  transition:opacity .18s ease, transform .18s ease;
+}
+.pull-refresh-indicator.visible {
+  opacity:1;
+}
+.pull-refresh-chip {
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  min-height:38px;
+  padding:9px 14px;
+  border-radius:999px;
+  background:rgba(8,8,8,0.92);
+  border:1px solid rgba(255,255,255,0.08);
+  box-shadow:0 14px 34px rgba(0,0,0,0.28);
+  color:#fff;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  backdrop-filter:blur(12px);
+}
+[data-theme="light"] .pull-refresh-chip {
+  background:rgba(255,255,255,0.96);
+  border-color:rgba(0,0,0,0.08);
+  color:#111;
+}
+.pull-refresh-icon {
+  width:14px;
+  height:14px;
+  flex-shrink:0;
+  transition:transform .18s ease, opacity .18s ease;
+}
+.screen.pull-refresh-active .main-content,
+.screen.pull-refresh-active .kit-content,
+.screen.pull-refresh-active .admin-content,
+.screen.pull-refresh-active .hist-content,
+.screen.pull-refresh-active .team-screen-content,
+.screen.pull-refresh-active .config-content,
+.screen.pull-refresh-active .config-checklist-content,
+.screen.pull-refresh-active #screen-login,
+.screen.pull-refresh-active #pl-content,
+.screen.pull-refresh-settling .main-content,
+.screen.pull-refresh-settling .kit-content,
+.screen.pull-refresh-settling .admin-content,
+.screen.pull-refresh-settling .hist-content,
+.screen.pull-refresh-settling .team-screen-content,
+.screen.pull-refresh-settling .config-content,
+.screen.pull-refresh-settling .config-checklist-content,
+.screen.pull-refresh-settling #screen-login,
+.screen.pull-refresh-settling #pl-content {
+  transform:translateY(var(--pull-refresh-offset, 0px));
+}
+.screen.pull-refresh-settling .main-content,
+.screen.pull-refresh-settling .kit-content,
+.screen.pull-refresh-settling .admin-content,
+.screen.pull-refresh-settling .hist-content,
+.screen.pull-refresh-settling .team-screen-content,
+.screen.pull-refresh-settling .config-content,
+.screen.pull-refresh-settling .config-checklist-content,
+.screen.pull-refresh-settling #screen-login,
+.screen.pull-refresh-settling #pl-content {
+  transition:transform .18s ease;
+}
 
 /* PARTS PULLED — PRIORITY QUEUE */
 .avail-section { margin-top:20px; }
@@ -4319,6 +4391,12 @@ async function showLoginLoading(nextAction) {
 function showScreen(id) {
   const next = document.getElementById(id);
   if (!next) return;
+  document.querySelectorAll(".screen").forEach(s => {
+    s.classList.remove("pull-refresh-active", "pull-refresh-settling");
+    s.style.removeProperty("--pull-refresh-offset");
+  });
+  setPullRefreshIndicator(0, false);
+  resetPullRefreshState();
   document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
   next.classList.add("active");
   if (id === "screen-admin") applyAdminDesktopMode();
@@ -12069,12 +12147,12 @@ function closeConfigChecklist() {
   showConfigScreen();
 }
 
-function refreshActiveConfigChecklist() {
+function refreshActiveConfigChecklist({ silentSuccess = false } = {}) {
   if (!_activeConfigChecklistWo) return showConfigScreen();
   return fetchConfigurationRecordsByWo([_activeConfigChecklistWo]).then(map => {
     if (map[_activeConfigChecklistWo]) _configRecordsByWo[_activeConfigChecklistWo] = map[_activeConfigChecklistWo];
     renderConfigurationChecklist(_activeConfigChecklistWo);
-    showToast("Refreshed", "ok");
+    if (!silentSuccess) showToast("Refreshed", "ok");
   }).catch(err => showToast("Refresh failed: " + (err.message || err), "err"));
 }
 
@@ -19037,6 +19115,221 @@ async function sbGetBuildUpdates() {
   }) || [];
 }
 
+const PULL_REFRESH_MAX_DISTANCE = 92;
+const PULL_REFRESH_TRIGGER_DISTANCE = 62;
+const PULL_REFRESH_SETTLE_MS = 180;
+const _pullRefreshState = {
+  tracking: false,
+  active: false,
+  refreshing: false,
+  startX: 0,
+  startY: 0,
+  distance: 0,
+  screenId: "",
+  scroller: null,
+  pointerId: null,
+};
+
+function isPullRefreshMobileMode() {
+  return window.matchMedia?.("(pointer: coarse)").matches && Math.min(window.innerWidth || 0, window.innerHeight || 0) < 1100;
+}
+
+function activeScreenPullRefreshConfig() {
+  const screen = document.querySelector(".screen.active");
+  if (!screen) return null;
+  const map = {
+    "screen-dash": { scroller: ".main-content", action: () => runRefreshAction("dash", { silentSuccess: true }) },
+    "screen-kit": { scroller: ".kit-content", action: () => runRefreshAction("kit", { silentSuccess: true }) },
+    "screen-config": { scroller: ".config-content", action: () => runRefreshAction("config", { silentSuccess: true }) },
+    "screen-config-checklist": { scroller: ".config-checklist-content", action: () => refreshActiveConfigChecklist({ silentSuccess: true }) },
+    "screen-admin": { scroller: ".admin-content", action: () => runRefreshAction("admin", { silentSuccess: true }) },
+    "screen-team": { scroller: ".team-screen-content", action: () => runRefreshAction("team", { silentSuccess: true }) },
+    "screen-history": { scroller: "#hist-content", action: () => renderHistory() },
+    "screen-queue": { scroller: "#queue-content", action: () => showSharedQueue() },
+    "screen-updates": { scroller: ".main-content", action: () => loadBuildUpdates() },
+    "screen-picklist": { scroller: "#pl-content", action: () => runRefreshAction("picklist", { silentSuccess: true }) },
+  };
+  const entry = map[screen.id];
+  if (!entry) return null;
+  const scroller = screen.querySelector(entry.scroller);
+  if (!scroller) return null;
+  return { screen, screenId: screen.id, scroller, action: entry.action };
+}
+
+function isPullRefreshBlockedTarget(target) {
+  const el = target instanceof Element ? target : null;
+  if (!el) return false;
+  return !!el.closest(
+    "input, textarea, select, option, button, a, label, [contenteditable='true'], .update-sheet, .update-sheet-overlay, #settings-drawer, #settings-overlay, .settings-modal-box, #modal-app-controls, #photo-lightbox, .config-signature-canvas, .pl-status-tab-bar"
+  );
+}
+
+function setPullRefreshIndicator(distance = 0, refreshing = false) {
+  const indicator = document.getElementById("pull-refresh-indicator");
+  const icon = document.getElementById("pull-refresh-icon");
+  const label = document.getElementById("pull-refresh-label");
+  if (!indicator || !icon || !label) return;
+  const progress = Math.max(0, Math.min(1, distance / PULL_REFRESH_TRIGGER_DISTANCE));
+  const ready = distance >= PULL_REFRESH_TRIGGER_DISTANCE;
+  const offsetY = refreshing ? 0 : -54 + Math.min(distance * 0.78, 54);
+  indicator.classList.toggle("visible", refreshing || distance > 0);
+  indicator.style.transform = `translate(-50%, ${offsetY}px) scale(${refreshing ? 1 : 0.96 + progress * 0.04})`;
+  indicator.style.opacity = refreshing || distance > 0 ? "1" : "0";
+  if (refreshing) {
+    label.textContent = "Refreshing…";
+    icon.classList.add("spin-icon");
+    icon.style.transform = "";
+  } else {
+    label.textContent = ready ? "Release to refresh" : "Pull to refresh";
+    icon.classList.remove("spin-icon");
+    icon.style.transform = `rotate(${progress * 180}deg)`;
+  }
+}
+
+function applyPullRefreshVisual(screen, distance) {
+  if (!screen) return;
+  screen.classList.remove("pull-refresh-settling");
+  if (distance > 0) {
+    screen.classList.add("pull-refresh-active");
+    screen.style.setProperty("--pull-refresh-offset", `${Math.round(distance)}px`);
+  } else {
+    screen.classList.remove("pull-refresh-active");
+    screen.style.removeProperty("--pull-refresh-offset");
+  }
+  setPullRefreshIndicator(distance, _pullRefreshState.refreshing);
+}
+
+function settlePullRefreshVisual(screen) {
+  if (!screen) {
+    setPullRefreshIndicator(0, false);
+    return;
+  }
+  screen.classList.remove("pull-refresh-active");
+  screen.classList.add("pull-refresh-settling");
+  screen.style.setProperty("--pull-refresh-offset", "0px");
+  setPullRefreshIndicator(0, _pullRefreshState.refreshing);
+  setTimeout(() => {
+    screen.classList.remove("pull-refresh-settling");
+    screen.style.removeProperty("--pull-refresh-offset");
+    if (!_pullRefreshState.refreshing) setPullRefreshIndicator(0, false);
+  }, PULL_REFRESH_SETTLE_MS);
+}
+
+function resetPullRefreshState({ preserveRefreshing = false } = {}) {
+  _pullRefreshState.tracking = false;
+  _pullRefreshState.active = false;
+  _pullRefreshState.startX = 0;
+  _pullRefreshState.startY = 0;
+  _pullRefreshState.distance = 0;
+  _pullRefreshState.screenId = "";
+  _pullRefreshState.scroller = null;
+  _pullRefreshState.pointerId = null;
+  if (!preserveRefreshing) _pullRefreshState.refreshing = false;
+}
+
+async function triggerPullRefresh(context) {
+  if (!context || _pullRefreshState.refreshing) return;
+  _pullRefreshState.refreshing = true;
+  setPullRefreshIndicator(PULL_REFRESH_TRIGGER_DISTANCE, true);
+  try {
+    await Promise.resolve(context.action());
+  } catch (err) {
+    showToast("Refresh failed: " + (err?.message || err), "err");
+  } finally {
+    _pullRefreshState.refreshing = false;
+    settlePullRefreshVisual(context.screen);
+    setTimeout(() => setPullRefreshIndicator(0, false), PULL_REFRESH_SETTLE_MS);
+  }
+}
+
+function handlePullRefreshStart(evt) {
+  if (!isPullRefreshMobileMode() || _pullRefreshState.refreshing) return;
+  if (evt.touches?.length !== 1) return;
+  const context = activeScreenPullRefreshConfig();
+  if (!context) return;
+  if (!context.scroller.contains(evt.target)) return;
+  if (isPullRefreshBlockedTarget(evt.target)) return;
+  if ((context.scroller.scrollTop || 0) > 0) return;
+  const touch = evt.touches[0];
+  _pullRefreshState.tracking = true;
+  _pullRefreshState.active = false;
+  _pullRefreshState.startX = touch.clientX;
+  _pullRefreshState.startY = touch.clientY;
+  _pullRefreshState.distance = 0;
+  _pullRefreshState.screenId = context.screenId;
+  _pullRefreshState.scroller = context.scroller;
+}
+
+function handlePullRefreshMove(evt) {
+  if (!_pullRefreshState.tracking || !isPullRefreshMobileMode()) return;
+  const context = activeScreenPullRefreshConfig();
+  if (!context || context.screenId !== _pullRefreshState.screenId || context.scroller !== _pullRefreshState.scroller) {
+    resetPullRefreshState();
+    return;
+  }
+  if (evt.touches?.length !== 1) {
+    settlePullRefreshVisual(context.screen);
+    resetPullRefreshState();
+    return;
+  }
+  const touch = evt.touches[0];
+  const dx = touch.clientX - _pullRefreshState.startX;
+  const dy = touch.clientY - _pullRefreshState.startY;
+  if (dy <= 0) {
+    if (_pullRefreshState.active) {
+      settlePullRefreshVisual(context.screen);
+      resetPullRefreshState();
+    }
+    return;
+  }
+  if (Math.abs(dx) > dy * 0.85) {
+    if (_pullRefreshState.active) {
+      settlePullRefreshVisual(context.screen);
+      resetPullRefreshState();
+    }
+    return;
+  }
+  if ((context.scroller.scrollTop || 0) > 0) {
+    settlePullRefreshVisual(context.screen);
+    resetPullRefreshState();
+    return;
+  }
+  const damped = Math.min(PULL_REFRESH_MAX_DISTANCE, dy * 0.42 + Math.min(dy, 120) * 0.16);
+  _pullRefreshState.active = true;
+  _pullRefreshState.distance = damped;
+  applyPullRefreshVisual(context.screen, damped);
+  evt.preventDefault();
+}
+
+function handlePullRefreshEnd() {
+  if (!_pullRefreshState.tracking) return;
+  const context = activeScreenPullRefreshConfig();
+  const shouldRefresh = !!(_pullRefreshState.active && _pullRefreshState.distance >= PULL_REFRESH_TRIGGER_DISTANCE && context && context.screenId === _pullRefreshState.screenId);
+  const screen = context?.screen || document.getElementById(_pullRefreshState.screenId);
+  if (!shouldRefresh) settlePullRefreshVisual(screen);
+  const refreshContext = shouldRefresh ? context : null;
+  resetPullRefreshState({ preserveRefreshing: shouldRefresh });
+  if (refreshContext) triggerPullRefresh(refreshContext);
+}
+
+document.addEventListener("touchstart", handlePullRefreshStart, { passive: true });
+document.addEventListener("touchmove", handlePullRefreshMove, { passive: false });
+document.addEventListener("touchend", handlePullRefreshEnd, { passive: true });
+document.addEventListener("touchcancel", handlePullRefreshEnd, { passive: true });
+
+async function runRefreshAction(which, { silentSuccess = false } = {}) {
+  if (which === "dash") await loadBoard();
+  else if (which === "config") await loadBoard();
+  else if (which === "kit") await loadKitBoard();
+  else if (which === "admin") await loadAdminData();
+  else if (which === "picklist") await loadPickListRefresh();
+  else if (which === "team") {
+    await loadSharedBoardItems(true);
+    renderTeamScreen();
+  }
+  if (!silentSuccess) showToast("Refreshed", "ok");
+}
+
 /* ── Manual refresh with visible feedback ── */
 async function manualRefresh(which) {
   const btnId  = which + "-refresh-btn";
@@ -19046,16 +19339,7 @@ async function manualRefresh(which) {
   if (btn)  btn.disabled = true;
   if (icon) icon.classList.add("spin-icon");
   try {
-    if (which === "dash")     await loadBoard();
-    if (which === "config")   await loadBoard();
-    if (which === "kit")      await loadKitBoard();
-    if (which === "admin")    await loadAdminData();
-    if (which === "picklist") await loadPickListRefresh();
-    if (which === "team") {
-      await loadSharedBoardItems(true);
-      renderTeamScreen();
-    }
-    showToast("Refreshed", "ok");
+    await runRefreshAction(which);
   } catch(e) {
     showToast("Refresh failed: " + e.message, "err");
   } finally {
@@ -19332,6 +19616,17 @@ window.addEventListener("resize", () => {
 <div id="photo-lightbox" onclick="closeLightbox()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:400;align-items:center;justify-content:center;flex-direction:column;gap:12px">
   <img id="lightbox-img" style="max-width:94vw;max-height:80vh;border-radius:10px;object-fit:contain">
   <div id="lightbox-caption" style="color:#fff;font-size:13px;opacity:.7;text-align:center;padding:0 20px"></div>
+</div>
+
+<div id="pull-refresh-indicator" class="pull-refresh-indicator" aria-hidden="true">
+  <div class="pull-refresh-chip">
+    <svg id="pull-refresh-icon" class="pull-refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 5v11"/>
+      <path d="M7.5 11.5L12 16l4.5-4.5"/>
+      <path d="M20 19H4"/>
+    </svg>
+    <span id="pull-refresh-label">Pull to refresh</span>
+  </div>
 </div>
 
 
