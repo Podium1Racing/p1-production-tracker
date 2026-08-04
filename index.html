@@ -6775,8 +6775,20 @@ async function primeLeadPickListVerificationState(itemId, colType, opts = {}) {
         detail: `Opening the live Work Order checklist for ${woNum}.`,
       });
     }
-    const items = await loadResolvedPickListItems(pl?.id, woNum, { onStage: updateLoadingState });
-    const filtered = (items || []).filter(row => !isServiceItem(row));
+    let items = await loadResolvedPickListItems(pl?.id, woNum, { onStage: updateLoadingState });
+    let filtered = (items || []).filter(row => !isServiceItem(row));
+    if (filtered.length && !filtered.some(row => !!row?.allocated)) {
+      updateLoadingState(
+        "Verifying allocation quantities",
+        `Restoring the saved allocation snapshot for ${woNum} before this Lead update opens.`
+      );
+      const completions = await sbGetKitCompletions().catch(() => []);
+      const repairResult = await repairKittedPickListAllocation(woNum, completions).catch(() => "needs_review");
+      if (["repaired", "repaired_full", "full_confirmed", "already_matched", "live_allocations_preserved"].includes(String(repairResult || ""))) {
+        items = await loadResolvedPickListItems(pl?.id, woNum, { onStage: updateLoadingState });
+        filtered = (items || []).filter(row => !isServiceItem(row));
+      }
+    }
     const verifiedState = {
       state: "ready",
       stage: "Pick list ready",
