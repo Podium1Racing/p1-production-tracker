@@ -42,42 +42,41 @@
       const iconType = loginLogoImg.src.startsWith("data:image/jpeg") ? "image/jpeg" : "image/png";
       applyAppIcon(loginLogoImg.src, iconType);
     });
-    function syncAppViewportSize() {
-      const root = document.documentElement;
-      if (!root) return;
-      const viewportHeight = Math.round(
+    let _stableAppViewportHeight = 0;
+    function getAppViewportHeight() {
+      return Math.round(
         window.visualViewport?.height ||
         window.innerHeight ||
         document.documentElement?.clientHeight ||
         0
       );
+    }
+    function gateFieldFocused() {
+      const active = document.activeElement;
+      return active?.id === "gate-user" || active?.id === "gate-pass";
+    }
+    function syncAppViewportSize() {
+      const root = document.documentElement;
+      if (!root) return;
+      const viewportHeight = getAppViewportHeight();
+      const freezeGateViewport = gateFieldFocused() && gateKeyboardLikelyOpen();
       if (viewportHeight) {
-        root.style.setProperty("--app-vh", `${viewportHeight}px`);
+        if (!_stableAppViewportHeight || viewportHeight > _stableAppViewportHeight || !freezeGateViewport) {
+          _stableAppViewportHeight = viewportHeight;
+        }
+        root.style.setProperty("--app-vh", `${freezeGateViewport ? _stableAppViewportHeight : viewportHeight}px`);
       }
       updateGateKeyboardLayout();
     }
     function gateKeyboardLikelyOpen() {
-      const viewportHeight = window.visualViewport?.height || window.innerHeight || 0;
+      const viewportHeight = getAppViewportHeight();
       const windowHeight = window.innerHeight || document.documentElement?.clientHeight || 0;
       return viewportHeight > 0 && windowHeight - viewportHeight > 120;
     }
     function updateGateKeyboardLayout() {
       const gate = document.getElementById("screen-gate");
       if (!gate) return;
-      const active = document.activeElement;
-      const focusedGateField = active?.id === "gate-user" || active?.id === "gate-pass";
-      gate.classList.toggle("keyboard-open", focusedGateField && gateKeyboardLikelyOpen());
-    }
-    function keepGateFieldVisible(target) {
-      if (!target || (target.id !== "gate-user" && target.id !== "gate-pass")) return;
-      setTimeout(() => {
-        updateGateKeyboardLayout();
-        try {
-          target.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
-        } catch (_) {
-          target.scrollIntoView(true);
-        }
-      }, 180);
+      gate.classList.toggle("keyboard-open", gateFieldFocused() && gateKeyboardLikelyOpen());
     }
     window.addEventListener("DOMContentLoaded", syncAppViewportSize);
     window.addEventListener("load", syncAppViewportSize);
@@ -85,11 +84,11 @@
     window.addEventListener("orientationchange", () => setTimeout(syncAppViewportSize, 120));
     window.addEventListener("resize", syncAppViewportSize);
     window.visualViewport?.addEventListener?.("resize", syncAppViewportSize);
-    document.addEventListener("focusin", (event) => {
-      keepGateFieldVisible(event.target);
+    document.addEventListener("focusin", () => {
+      setTimeout(syncAppViewportSize, 60);
     });
     document.addEventListener("focusout", () => {
-      setTimeout(updateGateKeyboardLayout, 120);
+      setTimeout(syncAppViewportSize, 120);
     });
   </script>
 <meta charset="UTF-8">
@@ -235,6 +234,7 @@ button, input, select, textarea { font-family:inherit; }
   align-items:center;
   flex-shrink:0;
   margin:auto 0;
+  transition:transform .18s ease, margin .18s ease;
 }
 #screen-gate.keyboard-open .gate-panel {
   margin:0;
@@ -1855,18 +1855,18 @@ input.photo-file-inp { display:none; }
   </div>
   <div class="gate-title">PRODUCTION TRACKER</div>
   <div class="gate-subtitle">PODIUM 1 RACING</div>
-  <div class="gate-form">
-    <input id="gate-user" type="text" autocomplete="username" placeholder="Username"
+  <form class="gate-form" onsubmit="submitGate(event)">
+    <input id="gate-user" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="Username"
       class="auth-input" style="text-align:center;font-size:15px"
       onkeydown="if(event.key==='Enter')document.getElementById('gate-pass').focus()">
-    <input id="gate-pass" type="password" autocomplete="current-password" placeholder="Passcode"
+    <input id="gate-pass" type="password" autocomplete="current-password" autocorrect="off" spellcheck="false" placeholder="Passcode"
       class="auth-input" style="text-align:center;font-size:15px"
       onkeydown="if(event.key==='Enter')submitGate()">
     <div id="gate-error" class="auth-error" style="min-height:18px"></div>
-    <button onclick="submitGate()" class="gate-enter-btn">
+    <button type="submit" class="gate-enter-btn">
       ENTER
     </button>
-  </div>
+  </form>
   </div>
 </div>
 
@@ -2483,6 +2483,25 @@ async function registerPushWorker() {
     console.warn("Service worker registration failed:", e.message);
     return null;
   }
+}
+
+async function sbFetchAllRows(path, options = {}) {
+  const { pageSize: requestedPageSize, ...fetchOptions } = options || {};
+  const pageSize = Number.isFinite(requestedPageSize) ? Math.max(1, Number(requestedPageSize)) : 1000;
+  const rows = [];
+  for (let start = 0; ; start += pageSize) {
+    const page = await sbFetch(path, {
+      ...fetchOptions,
+      headers: {
+        ...(fetchOptions.headers || {}),
+        Range: `${start}-${start + pageSize - 1}`,
+      },
+    });
+    const chunk = Array.isArray(page) ? page : [];
+    rows.push(...chunk);
+    if (chunk.length < pageSize) break;
+  }
+  return rows;
 }
 
 async function getPushPublicKey() {
@@ -5385,10 +5404,7 @@ async function loadBoard() {
         `picklists?wo_number=in.(${woVariants.map(encodeURIComponent).join(",")})&select=id,wo_number,status`,
         { method: "GET", headers: { "Prefer": "return=representation" } }
       ).catch(() => []) || [];
-      const plItems = await sbFetch(
-        `picklist_items?wo_number=in.(${woVariants.map(encodeURIComponent).join(",")})&select=wo_number,allocated`,
-        { method: "GET", headers: { "Prefer": "return=representation" } }
-      ).catch(() => []) || [];
+      const plItems = await loadPickListAllocationSummaryRows(woNums).catch(() => []) || [];
       const itemsByWo = {};
       plItems.forEach(row => {
         const ownerWo = canonicalWoByKey[canonicalWorkOrderKey(row?.wo_number)] || row?.wo_number;
@@ -8526,15 +8542,23 @@ async function doAddMember() {
    before the app is accessible at all.
 ═══════════════════════════════════════ */
 
-async function submitGate() {
-  const u = (document.getElementById("gate-user")?.value || "").trim().toLowerCase();
-  const p = (document.getElementById("gate-pass")?.value || "").replace(/\s+/g, "").trim().toLowerCase();
+function normalizeGateCredential(value, { stripAllWhitespace = false } = {}) {
+  let normalized = String(value || "").normalize("NFKC").replace(/\u00A0/g, " ").trim().toLowerCase();
+  normalized = stripAllWhitespace ? normalized.replace(/\s+/gu, "") : normalized.replace(/\s+/gu, " ");
+  return normalized;
+}
+
+async function submitGate(event) {
+  event?.preventDefault?.();
   const err = document.getElementById("gate-error");
+  if (err) err.textContent = "";
+  const u = normalizeGateCredential(document.getElementById("gate-user")?.value);
+  const p = normalizeGateCredential(document.getElementById("gate-pass")?.value, { stripAllWhitespace: true });
   if (!u || !p) { err.textContent = "Enter both username and passcode."; return; }
-  const expectedUser = normalizeAppSettingText(getAppSetting("gate_username")).toLowerCase();
-  const expectedPass = normalizeAppSettingText(getAppSetting("gate_password")).replace(/\s+/g, "").toLowerCase();
-  const fallbackUser = normalizeAppSettingText(APP_SETTINGS_DEFAULTS.gate_username).toLowerCase();
-  const fallbackPass = normalizeAppSettingText(APP_SETTINGS_DEFAULTS.gate_password).replace(/\s+/g, "").toLowerCase();
+  const expectedUser = normalizeGateCredential(getAppSetting("gate_username"));
+  const expectedPass = normalizeGateCredential(getAppSetting("gate_password"), { stripAllWhitespace: true });
+  const fallbackUser = normalizeGateCredential(APP_SETTINGS_DEFAULTS.gate_username);
+  const fallbackPass = normalizeGateCredential(APP_SETTINGS_DEFAULTS.gate_password, { stripAllWhitespace: true });
   const matchesSaved = u === expectedUser && p === expectedPass;
   const matchesFallback = u === fallbackUser && p === fallbackPass;
   if (!matchesSaved && !matchesFallback) {
@@ -8549,6 +8573,7 @@ async function submitGate() {
       gate_password: APP_SETTINGS_DEFAULTS.gate_password,
     });
   }
+  document.activeElement?.blur?.();
   localStorage.setItem("pt_gate_passed", "1");
   showScreen("screen-login");
   showLoginEntryPoint();
@@ -8578,6 +8603,18 @@ function buildAllocationSummaryByWo(items = []) {
     }
   });
   return summary;
+}
+
+async function loadPickListAllocationSummaryRows(woNums = []) {
+  const variants = getWorkOrderQueryVariants(woNums);
+  if (!variants.length) return [];
+  const chunks = await Promise.all(chunkArray(variants, 25).map(woChunk => (
+    sbFetchAllRows(
+      `picklist_items?wo_number=in.(${woChunk.map(encodeURIComponent).join(",")})&select=id,wo_number,allocated,label,item_name,brand,quantity`,
+      { method: "GET", headers: { "Prefer": "return=representation" } }
+    ).catch(() => [])
+  )));
+  return dedupePickListItemRows(chunks.flat().filter(Boolean));
 }
 
 function getAllocationSummaryForWo(allocationSummaryByWo = {}, woNum = "") {
@@ -9816,7 +9853,7 @@ async function loadAdminData() {
       d.setDate(d.getDate() - (isDesktop() ? 30 : 7));
       return d.toISOString().slice(0,10);
     })();
-    const [boardRes, sbTimers, sbTimerHistory, sbKits, sbUpdates, sbPickItems] = await Promise.all([
+    const [boardRes, sbTimers, sbTimerHistory, sbKits, sbUpdates] = await Promise.all([
       mondayQuery(`{
         boards(ids:[${BOARD_ID}]) {
           columns { id title type }
@@ -9833,11 +9870,12 @@ async function loadAdminData() {
       sbGetTimerHistory(),
       sbGetKitCompletions(kitSince),
       sbFetch("build_updates?order=created_at.desc&limit=500",{method:"GET",headers:{"Prefer":"return=representation"}}),
-      sbFetchOrThrow("picklist_items?select=wo_number,allocated,label,item_name,brand,quantity",{method:"GET",headers:{"Prefer":"return=representation"}}, "Could not load admin pick list allocation summary."),
     ]);
     const board = boardRes.data.boards[0];
     discoverColumns(board.columns);
     const items = board.items_page.items;
+    const adminWos = items.map(getWorkOrderNumber).filter(Boolean);
+    const sbPickItems = await loadPickListAllocationSummaryRows(adminWos);
     const allocationSummaryByWo = buildAllocationSummaryByWo(sbPickItems || []);
     await hydrateKitHistoryBoardItems(sbKits, items);
     window._sbBuildUpdates = sbUpdates || [];
@@ -13919,6 +13957,7 @@ const PICKLIST_BACKGROUND_SYNC_INFLIGHT = {};
 const PICKLIST_ITEMS_CACHE_MS = 8000;
 const PICKLIST_HEADER_CACHE_MS = 30000;
 const PICKLIST_BACKGROUND_SYNC_MS = 45000;
+const PICKLIST_ITEM_SELECT = "id,picklist_id,wo_number,customer_name,brand,item_name,memo,quantity,allocated,label,first_seen_at,last_synced_at";
 
 function normalizePickListText(value) {
   return String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
@@ -13970,13 +14009,13 @@ async function fetchPickListItemsForPicklists(picklists = []) {
   const woVariants = getWorkOrderQueryVariants(woNums);
 
   const idRequests = chunkArray(plIds, 20).map(idChunk => sbFetchOrThrow(
-    `picklist_items?picklist_id=in.(${idChunk.join(",")})&select=*&order=id.asc`,
+    `picklist_items?picklist_id=in.(${idChunk.join(",")})&select=${PICKLIST_ITEM_SELECT}&order=id.asc`,
     { method: "GET", headers: { "Prefer": "return=representation" } },
     "Could not load pick list items by pick list id."
   ));
 
   const woRequests = chunkArray(woVariants, 25).map(woChunk => sbFetchOrThrow(
-    `picklist_items?wo_number=in.(${woChunk.map(encodeURIComponent).join(",")})&select=*&order=id.asc`,
+    `picklist_items?wo_number=in.(${woChunk.map(encodeURIComponent).join(",")})&select=${PICKLIST_ITEM_SELECT}&order=id.asc`,
     { method: "GET", headers: { "Prefer": "return=representation" } },
     "Could not load pick list items by work order."
   ));
@@ -14075,6 +14114,52 @@ function clonePickListItems(items = []) {
   return Array.isArray(items) ? items.map(item => normalizePickListItemRow(item)) : [];
 }
 
+async function buildPickListItemsByPickList(picklists = [], sourceItems = [], opts = {}) {
+  const lists = Array.isArray(picklists) ? picklists.filter(Boolean) : [];
+  const options = { relink: true, sort: true, ...opts };
+  const plIdByWo = {};
+  const plIdByCanonicalWo = {};
+  const plById = {};
+  lists.forEach(pl => {
+    if (pl.id) plById[String(pl.id)] = pl;
+    if (!pl.wo_number) return;
+    getWorkOrderQueryVariants([pl.wo_number]).forEach(candidate => { plIdByWo[candidate] = pl.id; });
+    const canonical = canonicalWorkOrderKey(pl.wo_number);
+    if (canonical) plIdByCanonicalWo[canonical] = pl.id;
+  });
+
+  const grouped = {};
+  const relinkWrites = [];
+  clonePickListItems(sourceItems).forEach(it => {
+    const canonical = canonicalWorkOrderKey(it.wo_number);
+    const canonicalOwnerId = canonical ? plIdByCanonicalWo[canonical] : null;
+    const linkedPickList = it.picklist_id ? plById[String(it.picklist_id)] : null;
+    const ownerId = canonicalOwnerId || (linkedPickList ? it.picklist_id : plIdByWo[it.wo_number]);
+    if (!ownerId) return;
+    if (!grouped[ownerId]) grouped[ownerId] = [];
+    grouped[ownerId].push(it);
+    const ownerPickList = plById[String(ownerId)];
+    if (!options.relink || !it.id || !ownerPickList) return;
+    if (String(it.picklist_id || "") === String(ownerId) && String(it.wo_number || "") === String(ownerPickList.wo_number || "")) return;
+    relinkWrites.push(sbFetch(`picklist_items?id=eq.${encodeURIComponent(it.id)}`, {
+      method: "PATCH",
+      prefer: "return=minimal",
+      body: JSON.stringify({
+        picklist_id: ownerId,
+        wo_number: ownerPickList.wo_number,
+      }),
+    }).catch(() => {}));
+  });
+  if (relinkWrites.length) Promise.all(relinkWrites).catch(() => {});
+  if (options.sort) {
+    await Promise.all(lists.map(async pl => {
+      if (!grouped[pl.id]?.length) return;
+      grouped[pl.id] = await sortPickListItemsByWorkOrder(grouped[pl.id], pl.wo_number);
+    }));
+  }
+  return grouped;
+}
+
 function invalidatePickListCache(woNum = null, plId = null) {
   const woKey = canonicalWorkOrderKey(woNum);
   const idKey = String(plId || "").trim();
@@ -14169,13 +14254,13 @@ async function loadWorkOrderPickListItems(woNum, plId = null, opts = {}) {
     const requests = [];
     if (plId) {
       requests.push(sbFetch(
-        `picklist_items?picklist_id=eq.${encodeURIComponent(plId)}&select=*&order=id.asc`,
+        `picklist_items?picklist_id=eq.${encodeURIComponent(plId)}&select=${PICKLIST_ITEM_SELECT}&order=id.asc`,
         { method: "GET", headers: { "Prefer": "return=representation" } }
       ).catch(() => []));
     }
     if (variants.length) {
       requests.push(sbFetch(
-        `picklist_items?wo_number=in.(${variants.map(encodeURIComponent).join(",")})&select=*&order=id.asc`,
+        `picklist_items?wo_number=in.(${variants.map(encodeURIComponent).join(",")})&select=${PICKLIST_ITEM_SELECT}&order=id.asc`,
         { method: "GET", headers: { "Prefer": "return=representation" } }
       ).catch(() => []));
     }
@@ -16813,49 +16898,8 @@ async function renderPickLists() {
     });
   };
 
-  const buildItemsByPl = async (sourceItems = []) => {
-    const plIdByWo = {};
-    const plIdByCanonicalWo = {};
-    const plById = {};
-    allPicklists.forEach(pl => {
-      if (pl.id) plById[String(pl.id)] = pl;
-      if (!pl.wo_number) return;
-      getWorkOrderQueryVariants([pl.wo_number]).forEach(candidate => { plIdByWo[candidate] = pl.id; });
-      const canonical = canonicalWorkOrderKey(pl.wo_number);
-      if (canonical) plIdByCanonicalWo[canonical] = pl.id;
-    });
-    const grouped = {};
-    const relinkWrites = [];
-    sourceItems.forEach(it => {
-      const canonical = canonicalWorkOrderKey(it.wo_number);
-      const canonicalOwnerId = canonical ? plIdByCanonicalWo[canonical] : null;
-      const linkedPickList = it.picklist_id ? plById[String(it.picklist_id)] : null;
-      const ownerId = canonicalOwnerId || (linkedPickList ? it.picklist_id : plIdByWo[it.wo_number]);
-      if (!ownerId) return;
-      if (!grouped[ownerId]) grouped[ownerId] = [];
-      grouped[ownerId].push(it);
-      const ownerPickList = plById[String(ownerId)];
-      if (it.id && ownerPickList && (String(it.picklist_id || "") !== String(ownerId) || String(it.wo_number || "") !== String(ownerPickList.wo_number || ""))) {
-        relinkWrites.push(sbFetch(`picklist_items?id=eq.${encodeURIComponent(it.id)}`, {
-          method: "PATCH",
-          prefer: "return=minimal",
-          body: JSON.stringify({
-            picklist_id: ownerId,
-            wo_number: ownerPickList.wo_number,
-          }),
-        }).catch(() => {}));
-      }
-    });
-    if (relinkWrites.length) Promise.all(relinkWrites).catch(() => {});
-    await Promise.all(allPicklists.map(async pl => {
-      if (!grouped[pl.id]?.length) return;
-      grouped[pl.id] = await sortPickListItemsByWorkOrder(grouped[pl.id], pl.wo_number);
-    }));
-    return grouped;
-  };
-
   let allItems = dedupePickListItems(allItemsFetched);
-  let itemsByPl = await buildItemsByPl(allItems);
+  let itemsByPl = await buildPickListItemsByPickList(allPicklists, allItems);
   perf.mark("work_order_grouping", {
     uniqueItems: allItems.length,
     groupedPicklists: Object.keys(itemsByPl || {}).length,
@@ -16914,11 +16958,11 @@ async function renderPickLists() {
     const missingWoVariants = getWorkOrderQueryVariants(missingWos);
     if (missingWoVariants.length) {
       const refreshedMissingItems = await sbFetch(
-        `picklist_items?wo_number=in.(${missingWoVariants.map(encodeURIComponent).join(",")})&select=*&order=id.asc`,
+        `picklist_items?wo_number=in.(${missingWoVariants.map(encodeURIComponent).join(",")})&select=${PICKLIST_ITEM_SELECT}&order=id.asc`,
         { method: "GET", headers: { "Prefer": "return=representation" } }
       ) || [];
       allItems = dedupePickListItems([...allItems, ...refreshedMissingItems]);
-      itemsByPl = await buildItemsByPl(allItems);
+      itemsByPl = await buildPickListItemsByPickList(allPicklists, allItems);
     }
     perf.mark("missing_picklist_sync", {
       syncTargets: syncTargets.length,
@@ -16964,14 +17008,14 @@ async function renderPickLists() {
 
     const repairWoVariants = getWorkOrderQueryVariants(repairTargets);
     const repairedItems = repairWoVariants.length ? await sbFetch(
-      `picklist_items?wo_number=in.(${repairWoVariants.map(encodeURIComponent).join(",")})&select=*&order=id.asc`,
+      `picklist_items?wo_number=in.(${repairWoVariants.map(encodeURIComponent).join(",")})&select=${PICKLIST_ITEM_SELECT}&order=id.asc`,
       { method: "GET", headers: { "Prefer": "return=representation" } }
     ) || [] : [];
     const byItemId = new Map();
     allItems.forEach(item => { if (item?.id) byItemId.set(String(item.id), item); });
     repairedItems.forEach(item => { if (item?.id) byItemId.set(String(item.id), item); });
     allItems = [...byItemId.values()];
-    itemsByPl = await buildItemsByPl(allItems);
+    itemsByPl = await buildPickListItemsByPickList(allPicklists, allItems);
     perf.mark("allocation_calculation", {
       repairTargets: repairTargets.length,
       repairedRows: repairedItems.length,
@@ -18199,33 +18243,58 @@ async function openPeteKittedPickLists(forceRefresh = false, preserveSearch = fa
     });
 
     const itemStateByWo = {};
-    await Promise.all(rows.map(async pl => {
+    let allItemsFetched = await fetchPickListItemsForPicklists(rows);
+    let itemsByPl = await buildPickListItemsByPickList(rows, allItemsFetched);
+    const missingItemRows = rows.filter(pl => pl?.wo_number && pl?.id && !(itemsByPl[pl.id] || []).length);
+    if (missingItemRows.length) {
+      await Promise.all(missingItemRows.map(async pl => {
+        try {
+          await syncPickListItems(pl.wo_number);
+        } catch (err) {
+          console.warn(`Pete kitted pick list sync skipped for ${pl.wo_number}:`, err?.message || err);
+        }
+      }));
+      const refreshedItems = await fetchPickListItemsForPicklists(missingItemRows).catch(() => []);
+      allItemsFetched = dedupePickListItemRows([...allItemsFetched, ...refreshedItems]);
+      itemsByPl = await buildPickListItemsByPickList(rows, allItemsFetched);
+    }
+
+    rows.forEach(pl => {
       const canonicalWo = canonicalWoByKey[canonicalWorkOrderKey(pl?.wo_number)] || pl?.wo_number;
       if (!canonicalWo || !pl?.id) return;
-      try {
-        const liveItems = await loadResolvedPickListItems(pl.id, canonicalWo, { backgroundSync: false });
-        const viewState = getVerifiedPickListViewState(pl, liveItems, {
+      const liveItems = itemsByPl[pl.id] || [];
+      if (liveItems.length) {
+        const verification = {
           state: "ready",
           stage: "Pick list ready",
           detail: `Pete’s kitted pick list for ${canonicalWo} is verified.`,
-        });
-        const sortedItems = await sortPickListItemsByWorkOrder(viewState.checklist, canonicalWo);
+        };
+        setPickListVerificationState(pl.id, verification);
+        const viewState = getVerifiedPickListViewState(pl, liveItems, verification);
         itemStateByWo[canonicalWo] = {
           total: viewState.allocation.total,
           allocated: viewState.allocation.allocated,
-          items: sortedItems,
+          items: viewState.checklist,
           allocation: viewState.allocation,
-          };
-      } catch (err) {
+          verification,
+        };
+      } else {
+        const verification = {
+          state: "error",
+          stage: "Verification failed",
+          detail: "Could not verify pick list items.",
+        };
+        setPickListVerificationState(pl.id, verification);
         reviewByWo[canonicalWo] = true;
         itemStateByWo[canonicalWo] = {
           total: 0,
           allocated: 0,
           items: [],
-          error: err?.message || "Could not verify pick list items.",
+          error: verification.detail,
+          verification,
         };
       }
-    }));
+    });
 
     /* Sort by when Pete kitted it, while still showing ship date */
     const withDates = rows
@@ -18261,6 +18330,7 @@ async function openPeteKittedPickLists(forceRefresh = false, preserveSearch = fa
           kittedAt,
           checklistItems: itemState?.items || [],
           checklistError: itemState?.error || "",
+          verification: itemState?.verification || null,
           needsReview
         };
       })
@@ -18350,7 +18420,7 @@ function renderPetePlList() {
     const kittedStr = pl.kittedAt ? fmtTs(pl.kittedAt) : "Unknown";
     const isExpanded = window._peteExpandedWo === pl.wo_number;
     const completionMissingEntries = normalizeMissingItems(pl.kitCompletion?.missing_items);
-    const viewState = getVerifiedPickListViewState(pl, pl.checklistItems || [], getPickListVerificationState(pl.id));
+    const viewState = getVerifiedPickListViewState(pl, pl.checklistItems || [], pl.verification || getPickListVerificationState(pl.id));
     const checklist = viewState.checklist;
     const verification = viewState.verification;
     const allocation = viewState.allocation;
