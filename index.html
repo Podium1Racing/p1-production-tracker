@@ -540,6 +540,7 @@ button, input, select, textarea { font-family:inherit; }
 .pick-list-btn .pl-mini-pill { margin-left:auto; font-size:9px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; padding:3px 7px; border-radius:999px; white-space:nowrap; }
 .pick-list-btn .pl-mini-pill.missing_items { background:rgba(224,32,32,0.15); color:var(--accent); }
 .pick-list-btn .pl-mini-pill.fully_kitted { background:rgba(16,185,129,0.15); color:#10b981; }
+.pick-list-btn .pl-mini-pill.syncing { background:rgba(245,158,11,0.14); color:#fbbf24; }
 .pick-list-btn.centered { justify-content:center; }
 .pick-list-btn.centered .pl-mini-pill { margin-left:8px; }
 .pick-list-btn.active { background:rgba(224,32,32,0.08); border-color:rgba(224,32,32,0.28); color:#fff; }
@@ -1239,7 +1240,7 @@ input.photo-file-inp { display:none; }
 .picklist-progress-stage { font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--text); line-height:1.25; }
 .picklist-progress-percent { font-size:12px; font-weight:900; color:var(--accent2); flex-shrink:0; }
 .picklist-progress-track { width:100%; height:8px; border-radius:999px; background:rgba(255,255,255,0.06); overflow:hidden; margin-bottom:8px; }
-.picklist-progress-fill { height:100%; border-radius:999px; background:linear-gradient(90deg, rgba(224,32,32,0.7) 0%, rgba(255,64,64,1) 100%); transition:width .18s ease; }
+.picklist-progress-fill { height:100%; border-radius:999px; background:linear-gradient(90deg, rgba(224,32,32,0.7) 0%, rgba(255,64,64,1) 100%); width:0; transition:width .45s cubic-bezier(.22,.61,.36,1); }
 .picklist-progress-detail { font-size:11px; line-height:1.45; color:var(--muted); }
 .picklist-progress-steps { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
 .picklist-progress-step { font-size:9px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; border-radius:999px; padding:4px 7px; background:rgba(255,255,255,0.04); color:var(--muted2); border:1px solid rgba(255,255,255,0.05); }
@@ -5353,6 +5354,8 @@ async function loadBoard() {
     resolveInventoryContacts(subs);
     boardItems = cached.items;
     window.boardItems = boardItems;
+    window._pickListStatusVerified = false;
+    window._pickListStatusByWo = {};
     if (currentUser?.role === CONFIG_ROLE) renderConfigurationDash(boardItems);
     else renderDash(boardItems);
     /* Show subtle refresh indicator */
@@ -5392,6 +5395,15 @@ async function loadBoard() {
     window._allBuildUpdates = Array.isArray(buildUpdatesRes) ? buildUpdatesRes : cachedUpdates;
     saveBoardCache({ columns, subscribers: subs, items });
 
+    window._pickListStatusVerified = false;
+    window._pickListStatusByWo = {};
+    if (currentUser?.role === CONFIG_ROLE) {
+      await ensureConfigurationRecords(boardItems);
+      renderConfigurationDash(boardItems);
+    } else {
+      renderDash(boardItems);
+    }
+
     const woNums = Array.from(new Set(items.map(getWorkOrderNumber).filter(Boolean)));
     if (woNums.length) {
       const woVariants = getWorkOrderQueryVariants(woNums);
@@ -5416,15 +5428,18 @@ async function loadBoard() {
       picklists.forEach(pl => {
         const ownerWo = canonicalWoByKey[canonicalWorkOrderKey(pl?.wo_number)] || pl.wo_number;
         if (!ownerWo) return;
-        statusByWo[ownerWo] = derivePickListStatusFromAllocation(itemsByWo[ownerWo] || [], pl.status);
+        const status = derivePickListStatusFromAllocation(itemsByWo[ownerWo] || [], pl.status);
+        statusByWo[ownerWo] = status;
+        const canonicalOwner = canonicalWorkOrderKey(ownerWo);
+        if (canonicalOwner) statusByWo[canonicalOwner] = status;
       });
       window._pickListStatusByWo = statusByWo;
     } else {
       window._pickListStatusByWo = {};
     }
+    window._pickListStatusVerified = true;
 
     if (currentUser?.role === CONFIG_ROLE) {
-      await ensureConfigurationRecords(boardItems);
       renderConfigurationDash(boardItems);
     } else {
       renderDash(boardItems);
@@ -5482,8 +5497,10 @@ function getWorkOrderNumber(item) {
 
 function getCachedPickListStatus(woNum) {
   if (!woNum) return null;
+  if (window._pickListStatusVerified === false) return "__syncing";
   const cached = window._pickListStatusByWo || {};
-  return cached[woNum] || null;
+  const canonical = canonicalWorkOrderKey(woNum);
+  return cached[woNum] || (canonical ? cached[canonical] : null) || cached[String(woNum || "").trim().toUpperCase()] || null;
 }
 
 function getRoleDueForWeek(items, isMS, weekOffset = 0) {
@@ -6189,12 +6206,13 @@ function buildPickListBtn(item, centered = false) {
   const woRaw = COL.work_order_num ? (cvText(item, COL.work_order_num) || "") : "";
   const woNum = getWoFromText(woRaw) || null;
   const plStatus = getCachedPickListStatus(woNum);
-  const plStatusLabel = plStatus === "fully_kitted" ? "Fully Kitted" : plStatus === "missing_items" ? "Missing Items" : "";
+  const plStatusLabel = plStatus === "__syncing" ? "Syncing" : plStatus === "fully_kitted" ? "Fully Kitted" : plStatus === "missing_items" ? "Missing Items" : "";
+  const plStatusClass = plStatus === "__syncing" ? "syncing" : plStatus;
   return woNum
     ? `<button class="pick-list-btn${centered ? " centered" : ""}" id="pl-btn-${item.id}" onclick="openPickListForItem('${item.id}','${woNum}',event)" style="margin-top:4px">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
         Pick List
-        ${plStatusLabel ? `<span class="pl-mini-pill ${plStatus}">${escHtml(plStatusLabel)}</span>` : ``}
+        ${plStatusLabel ? `<span class="pl-mini-pill ${plStatusClass}">${escHtml(plStatusLabel)}</span>` : ``}
         <span id="pl-changes-dot-${item.id}" style="display:none" class="pl-changes-dot"></span>
       </button>`
     : "";
@@ -14008,16 +14026,14 @@ async function fetchPickListItemsForPicklists(picklists = []) {
   const woNums = [...new Set(lists.map(pl => pl.wo_number).filter(Boolean))];
   const woVariants = getWorkOrderQueryVariants(woNums);
 
-  const idRequests = chunkArray(plIds, 20).map(idChunk => sbFetchOrThrow(
+  const idRequests = chunkArray(plIds, 20).map(idChunk => sbFetchAllRows(
     `picklist_items?picklist_id=in.(${idChunk.join(",")})&select=${PICKLIST_ITEM_SELECT}&order=id.asc`,
-    { method: "GET", headers: { "Prefer": "return=representation" } },
-    "Could not load pick list items by pick list id."
+    { method: "GET", headers: { "Prefer": "return=representation" } }
   ));
 
-  const woRequests = chunkArray(woVariants, 25).map(woChunk => sbFetchOrThrow(
+  const woRequests = chunkArray(woVariants, 25).map(woChunk => sbFetchAllRows(
     `picklist_items?wo_number=in.(${woChunk.map(encodeURIComponent).join(",")})&select=${PICKLIST_ITEM_SELECT}&order=id.asc`,
-    { method: "GET", headers: { "Prefer": "return=representation" } },
-    "Could not load pick list items by work order."
+    { method: "GET", headers: { "Prefer": "return=representation" } }
   ));
 
   const chunks = await Promise.all([...idRequests, ...woRequests]);
@@ -16041,25 +16057,80 @@ async function runAdminMissingPickListRefresh(woNums = [], completions = []) {
   }
 }
 
+const PICKLIST_PROGRESS_STEPS = [
+  { label: "Loading Work Order", pct: 12 },
+  { label: "Loading pick-list items", pct: 38 },
+  { label: "Verifying allocation quantities", pct: 68 },
+  { label: "Confirming latest updates", pct: 88 },
+  { label: "Pick list ready", pct: 100 }
+];
+let _pickListProgressLastPct = 0;
+let _pickListProgressPanelSeq = 0;
+
+function clampPickListProgressPct(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return 0;
+  return Math.max(0, Math.min(100, Math.round(numeric)));
+}
+
+function easePickListProgress(t) {
+  return 1 - Math.pow(1 - t, 3);
+}
+
+function animatePickListProgressPanel(panelId, startPct, targetPct) {
+  if (typeof document === "undefined") return;
+  const startedAt = (typeof performance !== "undefined" && typeof performance.now === "function") ? performance.now() : Date.now();
+  const distance = Math.abs(targetPct - startPct);
+  const duration = Math.max(650, Math.min(1600, distance * 18));
+  const tick = (now) => {
+    const panel = document.querySelector(`[data-picklist-progress-id="${panelId}"]`);
+    if (!panel) return;
+    const elapsed = Math.max(0, now - startedAt);
+    const pct = clampPickListProgressPct(startPct + ((targetPct - startPct) * easePickListProgress(Math.min(1, elapsed / duration))));
+    const fill = panel.querySelector("[data-picklist-progress-fill]");
+    const percent = panel.querySelector("[data-picklist-progress-percent]");
+    if (fill) fill.style.width = `${pct}%`;
+    if (percent) percent.textContent = `${pct}%`;
+    if (elapsed < duration && pct !== targetPct) {
+      requestAnimationFrame(tick);
+    } else {
+      if (fill) fill.style.width = `${targetPct}%`;
+      if (percent) percent.textContent = `${targetPct}%`;
+    }
+  };
+  const run = () => {
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(tick);
+    } else {
+      const panel = document.querySelector(`[data-picklist-progress-id="${panelId}"]`);
+      if (!panel) return;
+      const fill = panel.querySelector("[data-picklist-progress-fill]");
+      const percent = panel.querySelector("[data-picklist-progress-percent]");
+      if (fill) fill.style.width = `${targetPct}%`;
+      if (percent) percent.textContent = `${targetPct}%`;
+    }
+  };
+  setTimeout(run, 30);
+}
+
 function renderPickListLoadingPanel(stage = "Loading pick list", detail = "") {
-  const steps = [
-    { label: "Loading Work Order", pct: 18 },
-    { label: "Loading pick-list items", pct: 46 },
-    { label: "Verifying allocation quantities", pct: 78 },
-    { label: "Confirming latest updates", pct: 92 },
-    { label: "Pick list ready", pct: 100 }
-  ];
+  const steps = PICKLIST_PROGRESS_STEPS;
   const normalizedStage = String(stage || "Loading pick list").trim();
   const activeIndex = Math.max(0, steps.findIndex(step => step.label.toLowerCase() === normalizedStage.toLowerCase()));
   const matchedStep = steps[activeIndex] || steps[0];
-  const progress = matchedStep.pct;
-  return `<div class="picklist-progress-panel" role="status" aria-live="polite">
+  const targetProgress = clampPickListProgressPct(matchedStep.pct);
+  const shouldReset = activeIndex === 0 || targetProgress < _pickListProgressLastPct || _pickListProgressLastPct >= 100;
+  const startProgress = shouldReset ? 0 : _pickListProgressLastPct;
+  _pickListProgressLastPct = targetProgress;
+  const panelId = `picklist-progress-${++_pickListProgressPanelSeq}`;
+  animatePickListProgressPanel(panelId, startProgress, targetProgress);
+  return `<div class="picklist-progress-panel" role="status" aria-live="polite" data-picklist-progress-id="${panelId}">
     <div class="picklist-progress-head">
       <div class="picklist-progress-stage">${escHtml(normalizedStage || "Loading pick list")}</div>
-      <div class="picklist-progress-percent">${progress}%</div>
+      <div class="picklist-progress-percent" data-picklist-progress-percent>${startProgress}%</div>
     </div>
     <div class="picklist-progress-track" aria-hidden="true">
-      <div class="picklist-progress-fill" style="width:${progress}%"></div>
+      <div class="picklist-progress-fill" data-picklist-progress-fill style="width:${startProgress}%"></div>
     </div>
     <div class="picklist-progress-detail">${escHtml(detail || "Please wait while we confirm the latest Work Order and allocation data.")}</div>
     <div class="picklist-progress-steps" aria-hidden="true">
@@ -18210,11 +18281,7 @@ async function openPeteKittedPickLists(forceRefresh = false, preserveSearch = fa
   const search = document.getElementById("pete-pl-search");
   if (search && !preserveSearch) search.value = "";
   const listEl = document.getElementById("pete-pl-list");
-  const cachedLists = !forceRefresh ? loadTimedCache(PETE_KITTED_CACHE_KEY, 5 * 60 * 1000) : null;
-  if (Array.isArray(cachedLists) && cachedLists.length) {
-    window._petePlLists = cachedLists;
-    renderPetePlList();
-  } else if (listEl) {
+  if (listEl) {
     listEl.innerHTML = renderPickListLoadingPanel("Loading Work Order", "Gathering Pete’s completed Initial Kit work orders and their latest pick-list records.");
   }
 
@@ -18224,6 +18291,9 @@ async function openPeteKittedPickLists(forceRefresh = false, preserveSearch = fa
     window._kitCompletions = completions;
     const { completedItemIds, completedItemNames } = getKitCompletionSets(completions);
     await ensurePeteKittedPickListsFromKnownItems(completedItemIds, completedItemNames);
+    if (listEl) {
+      listEl.innerHTML = renderPickListLoadingPanel("Loading pick-list items", "Reading Pete’s latest pick-list rows from the database.");
+    }
 
     const rows = await sbFetch("picklists?status=neq.complete&status=neq.exclude&order=created_at.desc", {
       method: "GET", headers: { "Prefer": "return=representation" }
@@ -18257,6 +18327,25 @@ async function openPeteKittedPickLists(forceRefresh = false, preserveSearch = fa
       const refreshedItems = await fetchPickListItemsForPicklists(missingItemRows).catch(() => []);
       allItemsFetched = dedupePickListItemRows([...allItemsFetched, ...refreshedItems]);
       itemsByPl = await buildPickListItemsByPickList(rows, allItemsFetched);
+    }
+
+    if (listEl) {
+      listEl.innerHTML = renderPickListLoadingPanel("Verifying allocation quantities", "Confirming Pete’s latest allocated and missing item counts.");
+    }
+    const unresolvedRows = rows.filter(pl => pl?.wo_number && pl?.id && !(itemsByPl[pl.id] || []).length);
+    if (unresolvedRows.length) {
+      await Promise.all(unresolvedRows.map(async pl => {
+        try {
+          const resolvedItems = await loadResolvedPickListItems(pl.id, pl.wo_number);
+          allItemsFetched = dedupePickListItemRows([...allItemsFetched, ...resolvedItems]);
+        } catch (err) {
+          console.warn(`Pete kitted pick list verification failed for ${pl.wo_number}:`, err?.message || err);
+        }
+      }));
+      itemsByPl = await buildPickListItemsByPickList(rows, allItemsFetched);
+    }
+    if (listEl) {
+      listEl.innerHTML = renderPickListLoadingPanel("Confirming latest updates", "Finishing the verified pick-list view.");
     }
 
     rows.forEach(pl => {
