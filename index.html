@@ -3,8 +3,8 @@
 <head>
   <link rel="manifest" id="pwa-manifest">
   <script>
-      window.PT_APP_VERSION = "p0-standalone-containment-2026-08-06-1";
-    window.PT_DEPLOYMENT_TIMESTAMP = "2026-08-06T14:35:00-05:00";
+      window.PT_APP_VERSION = "p0-standalone-clean-2026-08-06-1";
+    window.PT_DEPLOYMENT_TIMESTAMP = "2026-08-06T14:50:00-05:00";
     window.PT_CACHE_VERSION = "push-cache:pt-push-meta";
     window.PT_DISABLE_STANDALONE_PULL_REFRESH = true;
     window.PT_SW_ACTIVE_VERSION = "unknown";
@@ -27,7 +27,7 @@
         const stamp = window.PT_DEPLOYMENT_TIMESTAMP || "unknown-time";
         const cache = window.PT_CACHE_VERSION || "unknown-cache";
         badge.textContent = `${window.PT_APP_VERSION} | ${stamp} | ${mode} | sw:${sw} | ${cache}`;
-        badge.hidden = false;
+        badge.hidden = true;
       } catch (_) {}
     };
     window.ptAuthLog = function ptAuthLog(event, details = {}) {
@@ -1855,6 +1855,7 @@ input.photo-file-inp { display:none; }
 }
 .auth-startup-panel[hidden] { display:none; }
 .standalone-diagnostic-badge {
+  display:none;
   position:fixed;
   left:max(8px, env(safe-area-inset-left));
   bottom:max(8px, env(safe-area-inset-bottom));
@@ -4774,6 +4775,17 @@ async function showLoginLoading(nextAction) {
   const overlay = document.getElementById("login-loading-overlay");
   const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
 
+  if (window.ptIsStandaloneMode?.()) {
+    if (overlay) {
+      overlay.classList.remove("show", "hide");
+      overlay.style.display = "";
+      overlay.setAttribute("aria-hidden", "true");
+    }
+    await Promise.resolve(nextAction());
+    setTimeout(() => logInteractiveLayerSnapshot("standalone-login-loading-skipped"), 0);
+    return;
+  }
+
   if (!overlay || reduced) {
     await Promise.resolve(nextAction());
     setTimeout(() => logInteractiveLayerSnapshot("login-loading-skipped"), 0);
@@ -4805,6 +4817,17 @@ async function showLoginLoading(nextAction) {
 function showScreen(id) {
   const next = document.getElementById(id);
   if (!next) return;
+  document.body.style.overflow = "";
+  document.documentElement.style.overflow = "";
+  document.documentElement.classList.remove("auth-startup-pending", "auth-startup-failed");
+  const startupPanel = document.getElementById("auth-startup-panel");
+  if (startupPanel) startupPanel.hidden = true;
+  const loadingOverlay = document.getElementById("login-loading-overlay");
+  if (loadingOverlay && window.ptIsStandaloneMode?.()) {
+    loadingOverlay.classList.remove("show", "hide");
+    loadingOverlay.style.display = "";
+    loadingOverlay.setAttribute("aria-hidden", "true");
+  }
   document.querySelectorAll(".screen").forEach(s => {
     s.classList.remove("pull-refresh-active", "pull-refresh-settling");
     s.style.removeProperty("--pull-refresh-offset");
@@ -20137,8 +20160,8 @@ if (window.ptIsStandaloneMode?.()) {
   document.addEventListener("touchstart", logStandaloneTouchDiagnostic, { capture: true, passive: true });
   document.addEventListener("touchmove", logStandaloneTouchDiagnostic, { capture: true, passive: true });
   document.addEventListener("touchend", logStandaloneTouchDiagnostic, { capture: true, passive: true });
+  document.addEventListener("click", logStandaloneTouchDiagnostic, { capture: true, passive: true });
 }
-document.addEventListener("click", logStandaloneTouchDiagnostic, { capture: true, passive: true });
 document.addEventListener("DOMContentLoaded", () => logStandaloneEnvironment("dom-content-loaded"), { once: true });
 window.addEventListener("pageshow", () => logStandaloneEnvironment("pageshow"));
 
