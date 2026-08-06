@@ -3,8 +3,8 @@
 <head>
   <link rel="manifest" id="pwa-manifest">
   <script>
-      window.PT_APP_VERSION = "p0-standalone-clean-2026-08-06-1";
-    window.PT_DEPLOYMENT_TIMESTAMP = "2026-08-06T14:50:00-05:00";
+      window.PT_APP_VERSION = "p0-login-selector-touch-2026-08-06-1";
+    window.PT_DEPLOYMENT_TIMESTAMP = "2026-08-06T14:55:00-05:00";
     window.PT_CACHE_VERSION = "push-cache:pt-push-meta";
     window.PT_DISABLE_STANDALONE_PULL_REFRESH = true;
     window.PT_SW_ACTIVE_VERSION = "unknown";
@@ -213,6 +213,18 @@ button:not(:disabled), .name-btn, .srow, .seg-btn {
 button:not(:disabled):active, .name-btn:active, .srow:active, .seg-btn:active {
   transform: scale(0.97);
   filter: brightness(0.92);
+}
+button,
+[onclick],
+[role="button"],
+.name-btn,
+.device-mode-btn,
+.lookup-login-btn,
+.quick-start-btn {
+  -webkit-touch-callout:none;
+  -webkit-user-select:none;
+  user-select:none;
+  touch-action:manipulation;
 }
 :root {
   --bg:#0d0d0d; --surface:#161616; --surface2:#1f1f1f; --surface3:#131313;
@@ -4395,6 +4407,50 @@ function loginPinAltAction() {
 }
 
 /* ── Name list ─────────────────────────────────────────────── */
+function bindStandaloneLoginTap(el, handler, diagnosticName = "login-control") {
+  if (!el || typeof handler !== "function") return;
+  let startX = 0;
+  let startY = 0;
+  let moved = false;
+  let started = false;
+  const moveLimit = 12;
+  el.addEventListener("touchstart", event => {
+    if (!window.ptIsStandaloneMode?.() || event.touches?.length !== 1) return;
+    const touch = event.touches[0];
+    startX = touch.clientX;
+    startY = touch.clientY;
+    moved = false;
+    started = true;
+  }, { passive: true });
+  el.addEventListener("touchmove", event => {
+    if (!started || !window.ptIsStandaloneMode?.() || event.touches?.length !== 1) return;
+    const touch = event.touches[0];
+    if (Math.abs(touch.clientX - startX) > moveLimit || Math.abs(touch.clientY - startY) > moveLimit) {
+      moved = true;
+    }
+  }, { passive: true });
+  el.addEventListener("touchend", event => {
+    if (!started || !window.ptIsStandaloneMode?.()) return;
+    started = false;
+    if (moved) return;
+    const touch = event.changedTouches?.[0];
+    if (!touch) return;
+    if (Math.abs(touch.clientX - startX) > moveLimit || Math.abs(touch.clientY - startY) > moveLimit) return;
+    const top = typeof document.elementFromPoint === "function"
+      ? document.elementFromPoint(touch.clientX, touch.clientY)
+      : null;
+    if (top && top !== el && !el.contains(top)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    ptAuthLog?.("standalone.login_tap", { control: diagnosticName });
+    handler(event);
+  }, { passive: false });
+  el.addEventListener("touchcancel", () => {
+    started = false;
+    moved = false;
+  }, { passive: true });
+}
+
 function buildNameList() {
   const list = document.getElementById("name-list"); list.innerHTML = "";
   [
@@ -4415,9 +4471,11 @@ function buildNameList() {
       const leadPill = isLeadMember
         ? `<span class="role-tag" style="margin-left:6px;background:rgba(16,185,129,.14);color:var(--green)">Lead</span>`
         : "";
-      const btn = document.createElement("button"); btn.className = "name-btn";
+      const btn = document.createElement("button"); btn.className = "name-btn"; btn.type = "button";
       btn.innerHTML = `<div class="av" style="background:${m.color}25;color:${m.color}">${m.initials}</div>${m.name}${leadPill}<span class="role-tag ${roleTagClass(isFloater ? FLOAT_ROLE : role)}">${isFloater ? "Choose Role" : roleLoginLabel(role)}</span>`;
-      btn.onclick = () => isFloater ? openFloaterRoleChoice(m) : selectUser(m);
+      const activate = () => isFloater ? openFloaterRoleChoice(m) : selectUser(m);
+      btn.onclick = activate;
+      bindStandaloneLoginTap(btn, activate, isFloater ? "floater-name" : "builder-name");
       list.appendChild(btn);
     });
   });
