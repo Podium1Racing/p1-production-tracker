@@ -4546,16 +4546,10 @@ async function loginSuccess() {
   localStorage.setItem("pt_user", JSON.stringify(currentUser));
   if (getDeviceMode() === "shared") setDeviceOwnerName("");
   else setDeviceOwnerName((pendingFloater?.name || pendingUser?.name || "").trim());
-  releaseStartupInteractionLocks("login-success-before-dashboard");
   syncPushForActiveSession(false);
   showLoginLoading(async () => {
     await showDash();
     routePendingProductionDeepLink();
-    releaseStartupInteractionLocks("dashboard-interactive");
-    ptAuthLog?.("interaction.dashboard_ready", {
-      screen: document.querySelector(".screen.active")?.id || "",
-      role: currentUser?.role || "",
-    });
   });
 }
 
@@ -4615,16 +4609,12 @@ async function processAdminPin() {
   ptAuthLog?.("login.admin_pin_accepted");
   currentUser = { name:ADMIN_NAME, initials:"EM", color:"#6366f1", role:"admin" };
   localStorage.setItem("pt_user", JSON.stringify(currentUser));
-  releaseStartupInteractionLocks("admin-login-before-dashboard");
   syncPushForActiveSession(false);
   showLoginLoading(() => {
     ptAuthLog?.("navigation.after_login", { destination: "admin", role: "admin" });
     showScreen("screen-admin");
     document.getElementById("admin-date").textContent = new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
-    return loadAdminData().then(() => {
-      routePendingProductionDeepLink();
-      releaseStartupInteractionLocks("admin-dashboard-interactive");
-    });
+    return loadAdminData().then(() => routePendingProductionDeepLink());
   });
 }
 
@@ -4676,22 +4666,17 @@ async function processSetupPin() {
     if (setupUser._isAdmin) {
       currentUser = { name:ADMIN_NAME, initials:"EM", color:"#6366f1", role:"admin" };
       localStorage.setItem("pt_user", JSON.stringify(currentUser));
-      releaseStartupInteractionLocks("admin-setup-before-dashboard");
       syncPushForActiveSession(false);
       showLoginLoading(() => {
         showScreen("screen-admin");
         document.getElementById("admin-date").textContent = new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
-        return loadAdminData().then(() => releaseStartupInteractionLocks("admin-setup-dashboard-interactive"));
+        return loadAdminData();
       });
     } else {
       currentUser = setupUser;
       localStorage.setItem("pt_user", JSON.stringify(currentUser));
-      releaseStartupInteractionLocks("pin-setup-before-dashboard");
       syncPushForActiveSession(false);
-      showLoginLoading(() => {
-        showDash();
-        releaseStartupInteractionLocks("pin-setup-dashboard-interactive");
-      });
+      showLoginLoading(showDash);
     }
   }
 }
@@ -8859,16 +8844,12 @@ function activateLoginScreenFallback() {
 
 function enterLoginAfterGateUnlock() {
   try {
-    releaseStartupInteractionLocks("gate-unlocked-before-login-screen");
     showScreen("screen-login");
     showLoginEntryPoint();
-    releaseStartupInteractionLocks("login-screen-interactive");
     return true;
   } catch (e) {
     ptAuthLog?.("gate.navigation_exception", { errorName: e?.name || "", errorMessage: e?.message || "" });
-    const didFallback = activateLoginScreenFallback();
-    if (didFallback) releaseStartupInteractionLocks("login-screen-fallback-interactive");
-    return didFallback;
+    return activateLoginScreenFallback();
   }
 }
 
@@ -19743,9 +19724,8 @@ async function sbGetBuildUpdates() {
   }) || [];
 }
 
-const PULL_REFRESH_MAX_DISTANCE = 124;
-const PULL_REFRESH_TRIGGER_DISTANCE = 96;
-const PULL_REFRESH_ACTIVATION_DISTANCE = 28;
+const PULL_REFRESH_MAX_DISTANCE = 92;
+const PULL_REFRESH_TRIGGER_DISTANCE = 62;
 const PULL_REFRESH_SETTLE_MS = 180;
 const _pullRefreshState = {
   tracking: false,
@@ -19758,30 +19738,6 @@ const _pullRefreshState = {
   scroller: null,
   pointerId: null,
 };
-
-function releaseStartupInteractionLocks(reason = "unknown") {
-  document.documentElement.classList.remove("auth-startup-pending", "auth-startup-failed");
-  document.documentElement.classList.add("auth-startup-ready");
-  document.documentElement.style.overflow = "";
-  document.body.style.overflow = "";
-  document.body.style.touchAction = "";
-  const loading = document.getElementById("login-loading-overlay");
-  if (loading) {
-    loading.classList.remove("show", "hide");
-    loading.style.pointerEvents = "none";
-    loading.style.visibility = "hidden";
-    loading.style.opacity = "0";
-  }
-  const startupPanel = document.getElementById("auth-startup-panel");
-  if (startupPanel) startupPanel.hidden = true;
-  document.querySelectorAll(".screen").forEach(screen => {
-    screen.classList.remove("pull-refresh-active", "pull-refresh-settling");
-    screen.style.removeProperty("--pull-refresh-offset");
-  });
-  resetPullRefreshState();
-  setPullRefreshIndicator(0, false);
-  ptAuthLog?.("interaction.locks_released", { reason });
-}
 
 function isPullRefreshMobileMode() {
   return window.matchMedia?.("(pointer: coarse)").matches && Math.min(window.innerWidth || 0, window.innerHeight || 0) < 1100;
@@ -19813,101 +19769,8 @@ function isPullRefreshBlockedTarget(target) {
   const el = target instanceof Element ? target : null;
   if (!el) return false;
   return !!el.closest(
-    "input, textarea, select, option, button, a, label, summary, [role='button'], [onclick], [contenteditable='true'], .name-btn, .proj-card, .avail-card, .kit-card, .pl-card, .update-sheet, .update-sheet-overlay, .modal-overlay, .lead-manage-overlay, .add-time-overlay, #settings-drawer, #settings-overlay, .settings-modal, .settings-modal-box, #modal-app-controls, #photo-lightbox, .config-signature-modal, .config-signature-canvas, .config-item-photo, .pl-status-tab-bar"
+    "input, textarea, select, option, button, a, label, [contenteditable='true'], .update-sheet, .update-sheet-overlay, #settings-drawer, #settings-overlay, .settings-modal-box, #modal-app-controls, #photo-lightbox, .config-signature-canvas, .pl-status-tab-bar"
   );
-}
-
-function hasActiveTouchBlockingSurface() {
-  const selectors = [
-    ".modal-overlay.open",
-    ".update-sheet-overlay",
-    ".lead-manage-overlay",
-    ".add-time-overlay",
-    ".settings-modal",
-    "#settings-overlay",
-    "#settings-drawer",
-    "#photo-lightbox",
-    ".config-signature-modal",
-    ".admin-calendar-modal",
-    "#auth-startup-panel:not([hidden])",
-    "#login-loading-overlay.show",
-  ];
-  return selectors.some(selector => {
-    const el = document.querySelector(selector);
-    if (!el) return false;
-    const style = window.getComputedStyle(el);
-    return style.display !== "none" && style.visibility !== "hidden" && style.pointerEvents !== "none";
-  });
-}
-
-function describeTouchElement(el) {
-  if (!(el instanceof Element)) return "";
-  const id = el.id ? `#${el.id}` : "";
-  const classes = String(el.className || "")
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 4)
-    .map(cls => `.${cls}`)
-    .join("");
-  return `${el.tagName.toLowerCase()}${id}${classes}`;
-}
-
-function activeTouchSurfaces() {
-  return [
-    "#login-loading-overlay",
-    "#auth-startup-panel",
-    ".modal-overlay.open",
-    ".update-sheet-overlay",
-    ".lead-manage-overlay",
-    ".add-time-overlay",
-    "#settings-overlay",
-    "#settings-drawer",
-    ".settings-modal",
-    "#photo-lightbox",
-    ".config-signature-modal",
-    ".admin-calendar-modal",
-    "#pull-refresh-indicator",
-  ].map(selector => {
-    const el = document.querySelector(selector);
-    if (!el) return null;
-    const style = window.getComputedStyle(el);
-    if (style.display === "none" || style.visibility === "hidden" || style.opacity === "0") return null;
-    return {
-      element: describeTouchElement(el),
-      display: style.display,
-      pointerEvents: style.pointerEvents,
-      zIndex: style.zIndex,
-      opacity: style.opacity,
-    };
-  }).filter(Boolean);
-}
-
-function logTouchDiagnostic(evt) {
-  try {
-    const point = evt.changedTouches?.[0] || evt.touches?.[0] || evt;
-    const top = typeof document.elementFromPoint === "function"
-      ? document.elementFromPoint(point.clientX || 0, point.clientY || 0)
-      : null;
-    const targetStyle = evt.target instanceof Element ? window.getComputedStyle(evt.target) : null;
-    const topStyle = top instanceof Element ? window.getComputedStyle(top) : null;
-    ptAuthLog?.("touch.diagnostic", {
-      type: evt.type,
-      target: describeTouchElement(evt.target),
-      top: describeTouchElement(top),
-      defaultPrevented: !!evt.defaultPrevented,
-      activeScreen: document.querySelector(".screen.active")?.id || "",
-      pullTracking: !!_pullRefreshState.tracking,
-      pullActive: !!_pullRefreshState.active,
-      pullRefreshing: !!_pullRefreshState.refreshing,
-      targetPointerEvents: targetStyle?.pointerEvents || "",
-      targetZIndex: targetStyle?.zIndex || "",
-      topPointerEvents: topStyle?.pointerEvents || "",
-      topZIndex: topStyle?.zIndex || "",
-      bodyOverflow: window.getComputedStyle(document.body).overflow,
-      htmlOverflow: window.getComputedStyle(document.documentElement).overflow,
-      activeSurfaces: activeTouchSurfaces(),
-    });
-  } catch (_) {}
 }
 
 function setPullRefreshIndicator(distance = 0, refreshing = false) {
@@ -19991,7 +19854,6 @@ async function triggerPullRefresh(context) {
 function handlePullRefreshStart(evt) {
   if (!isPullRefreshMobileMode() || _pullRefreshState.refreshing) return;
   if (evt.touches?.length !== 1) return;
-  if (hasActiveTouchBlockingSurface()) return;
   const context = activeScreenPullRefreshConfig();
   if (!context) return;
   if (!context.scroller.contains(evt.target)) return;
@@ -20009,10 +19871,6 @@ function handlePullRefreshStart(evt) {
 
 function handlePullRefreshMove(evt) {
   if (!_pullRefreshState.tracking || !isPullRefreshMobileMode()) return;
-  if (hasActiveTouchBlockingSurface()) {
-    resetPullRefreshState();
-    return;
-  }
   const context = activeScreenPullRefreshConfig();
   if (!context || context.screenId !== _pullRefreshState.screenId || context.scroller !== _pullRefreshState.scroller) {
     resetPullRefreshState();
@@ -20026,15 +19884,18 @@ function handlePullRefreshMove(evt) {
   const touch = evt.touches[0];
   const dx = touch.clientX - _pullRefreshState.startX;
   const dy = touch.clientY - _pullRefreshState.startY;
-  const absDx = Math.abs(dx);
-  if (dy <= 0 || absDx > Math.max(14, dy * 0.65)) {
+  if (dy <= 0) {
     if (_pullRefreshState.active) {
       settlePullRefreshVisual(context.screen);
       resetPullRefreshState();
     }
     return;
   }
-  if (!_pullRefreshState.active && dy < PULL_REFRESH_ACTIVATION_DISTANCE) {
+  if (Math.abs(dx) > dy * 0.85) {
+    if (_pullRefreshState.active) {
+      settlePullRefreshVisual(context.screen);
+      resetPullRefreshState();
+    }
     return;
   }
   if ((context.scroller.scrollTop || 0) > 0) {
@@ -20046,7 +19907,7 @@ function handlePullRefreshMove(evt) {
   _pullRefreshState.active = true;
   _pullRefreshState.distance = damped;
   applyPullRefreshVisual(context.screen, damped);
-  if (damped >= PULL_REFRESH_ACTIVATION_DISTANCE) evt.preventDefault();
+  evt.preventDefault();
 }
 
 function handlePullRefreshEnd() {
@@ -20064,8 +19925,6 @@ document.addEventListener("touchstart", handlePullRefreshStart, { passive: true 
 document.addEventListener("touchmove", handlePullRefreshMove, { passive: false });
 document.addEventListener("touchend", handlePullRefreshEnd, { passive: true });
 document.addEventListener("touchcancel", handlePullRefreshEnd, { passive: true });
-document.addEventListener("touchstart", logTouchDiagnostic, { capture: true, passive: true });
-document.addEventListener("click", logTouchDiagnostic, { capture: true, passive: true });
 
 async function runRefreshAction(which, { silentSuccess = false } = {}) {
   if (which === "dash") await loadBoard();
