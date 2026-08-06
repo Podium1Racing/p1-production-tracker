@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="auth-startup-pending">
+<html lang="en">
 <head>
   <link rel="manifest" id="pwa-manifest">
   <script>
@@ -26,21 +26,14 @@
       window.ptAuthLog?.("auth.ready", { reason });
     };
     window.ptShowStartupFailure = function ptShowStartupFailure(message, error) {
-      document.documentElement.classList.remove("auth-startup-pending", "auth-startup-ready");
-      document.documentElement.classList.add("auth-startup-failed");
       window.ptAuthLog?.("startup.failure", {
         message,
         errorName: error?.name || "",
         errorMessage: error?.message || String(error || ""),
       });
-      const render = () => {
-        const panel = document.getElementById("auth-startup-panel");
-        const msg = document.getElementById("auth-startup-message");
-        if (msg) msg.textContent = message || "Production Tracker could not finish login startup.";
-        if (panel) panel.hidden = false;
-      };
-      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", render, { once: true });
-      else render();
+      // Emergency lockout rollback: diagnostics must never block the login path.
+      document.documentElement.classList.remove("auth-startup-pending", "auth-startup-failed");
+      document.documentElement.classList.add("auth-startup-ready");
     };
     window.ptRetryStartup = function ptRetryStartup() {
       window.ptAuthLog?.("recovery.retry");
@@ -65,12 +58,18 @@
     };
     window.addEventListener("error", (event) => {
       if (!document.documentElement.classList.contains("auth-startup-ready")) {
-        window.ptShowStartupFailure?.("Production Tracker hit a startup error before login finished.", event.error || event.message);
+        window.ptAuthLog?.("startup.global_error", {
+          errorName: event.error?.name || "",
+          errorMessage: event.error?.message || String(event.message || ""),
+        });
       }
     });
     window.addEventListener("unhandledrejection", (event) => {
       if (!document.documentElement.classList.contains("auth-startup-ready")) {
-        window.ptShowStartupFailure?.("Production Tracker hit a startup error before login finished.", event.reason);
+        window.ptAuthLog?.("startup.unhandledrejection", {
+          errorName: event.reason?.name || "",
+          errorMessage: event.reason?.message || String(event.reason || ""),
+        });
       }
     });
     window.ptAuthLog("startup.script_loaded");
@@ -1869,8 +1868,8 @@ html.auth-startup-failed #screen-gate input,
 html.auth-startup-failed #screen-gate button,
 html.auth-startup-failed #screen-login button,
 html.auth-startup-failed #screen-login input {
-  pointer-events:none;
-  opacity:.58;
+  pointer-events:auto;
+  opacity:1;
 }
 @keyframes loginLoadSweep {
   0%   { transform:translateX(-120%); opacity:.2; }
