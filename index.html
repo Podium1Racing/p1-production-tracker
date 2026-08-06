@@ -8817,6 +8817,42 @@ function setGateSubmitting(isSubmitting) {
   btn.textContent = isSubmitting ? "Signing In..." : "ENTER";
 }
 
+function activateLoginScreenFallback() {
+  const login = document.getElementById("screen-login");
+  if (!login) return false;
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  login.classList.add("active");
+  login.classList.add("login-selector-mode");
+  login.classList.remove("login-pin-mode", "login-floater-mode");
+  const nav = document.getElementById("bottom-nav");
+  if (nav) nav.style.display = "none";
+  const nameWrap = document.getElementById("name-list-wrap");
+  const pinWrap = document.getElementById("pin-entry-wrap");
+  const floaterWrap = document.getElementById("floater-role-wrap");
+  const adminBtn = document.getElementById("admin-login-btn");
+  const copy = document.getElementById("login-device-copy");
+  if (nameWrap) nameWrap.style.display = "block";
+  if (pinWrap) pinWrap.style.display = "none";
+  if (floaterWrap) floaterWrap.style.display = "none";
+  if (adminBtn) adminBtn.style.display = "flex";
+  if (copy) copy.style.display = "block";
+  try { buildNameList?.(); } catch (e) {
+    ptAuthLog?.("gate.fallback_name_list_error", { errorName: e?.name || "", errorMessage: e?.message || "" });
+  }
+  return true;
+}
+
+function enterLoginAfterGateUnlock() {
+  try {
+    showScreen("screen-login");
+    showLoginEntryPoint();
+    return true;
+  } catch (e) {
+    ptAuthLog?.("gate.navigation_exception", { errorName: e?.name || "", errorMessage: e?.message || "" });
+    return activateLoginScreenFallback();
+  }
+}
+
 async function submitGate(event) {
   event?.preventDefault?.();
   event?.stopPropagation?.();
@@ -8828,11 +8864,14 @@ async function submitGate(event) {
   setGateSubmitting(true);
   const err = document.getElementById("gate-error");
   if (err) err.textContent = "";
+  let gatePhase = "start";
   try {
+    gatePhase = "autofill";
     await new Promise(resolve => {
       if (typeof requestAnimationFrame === "function") requestAnimationFrame(resolve);
       else setTimeout(resolve, 0);
     });
+    gatePhase = "read-inputs";
     const userEl = document.getElementById("gate-user");
     const passEl = document.getElementById("gate-pass");
     const u = normalizeGateCredential(userEl?.value);
@@ -8848,6 +8887,7 @@ async function submitGate(event) {
       setGateSubmitting(false);
       return false;
     }
+    gatePhase = "settings";
     const gateSettings = loadGateAuthSettings();
     const expectedUser = normalizeGateCredential(gateSettings.gate_username);
     const expectedPass = normalizeGateCredential(gateSettings.gate_password, { stripAllWhitespace: true });
@@ -8867,15 +8907,19 @@ async function submitGate(event) {
     if (matchesFallback && (!matchesSaved || expectedUser !== fallbackUser || expectedPass !== fallbackPass)) {
       saveGateAuthDefaults();
     }
+    gatePhase = "navigate";
     ptAuthLog?.("gate.accepted", { matchedSaved: matchesSaved, matchedFallback: matchesFallback });
     document.activeElement?.blur?.();
     localStorage.setItem("pt_gate_passed", "1");
-    showScreen("screen-login");
-    showLoginEntryPoint();
+    if (!enterLoginAfterGateUnlock() && err) {
+      err.textContent = "Login unlocked. Close and reopen the app.";
+      gateSubmitting = false;
+      setGateSubmitting(false);
+    }
     return false;
   } catch (e) {
-    ptAuthLog?.("gate.exception", { errorName: e?.name || "", errorMessage: e?.message || "" });
-    if (err) err.textContent = "Login could not start. Please try again.";
+    ptAuthLog?.("gate.exception", { phase: gatePhase, errorName: e?.name || "", errorMessage: e?.message || "" });
+    if (err) err.textContent = `Login could not start (${gatePhase}). Please try again.`;
     gateSubmitting = false;
     setGateSubmitting(false);
     return false;
