@@ -8778,6 +8778,35 @@ function normalizeGateCredential(value, { stripAllWhitespace = false } = {}) {
   return normalized;
 }
 
+const GATE_AUTH_SETTINGS_KEY = "pt_app_settings";
+const GATE_AUTH_DEFAULTS = {
+  gate_username: "podium1racing",
+  gate_password: "alwaysberacing",
+};
+
+function loadGateAuthSettings() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(GATE_AUTH_SETTINGS_KEY) || "{}") || {};
+    return {
+      gate_username: stored.gate_username || GATE_AUTH_DEFAULTS.gate_username,
+      gate_password: stored.gate_password || GATE_AUTH_DEFAULTS.gate_password,
+    };
+  } catch (_) {
+    return { ...GATE_AUTH_DEFAULTS };
+  }
+}
+
+function saveGateAuthDefaults() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(GATE_AUTH_SETTINGS_KEY) || "{}") || {};
+    localStorage.setItem(GATE_AUTH_SETTINGS_KEY, JSON.stringify({
+      ...stored,
+      gate_username: GATE_AUTH_DEFAULTS.gate_username,
+      gate_password: GATE_AUTH_DEFAULTS.gate_password,
+    }));
+  } catch (_) {}
+}
+
 let gateSubmitting = false;
 
 function setGateSubmitting(isSubmitting) {
@@ -8799,7 +8828,10 @@ async function submitGate(event) {
   const err = document.getElementById("gate-error");
   if (err) err.textContent = "";
   try {
-    await new Promise(resolve => requestAnimationFrame(resolve));
+    await new Promise(resolve => {
+      if (typeof requestAnimationFrame === "function") requestAnimationFrame(resolve);
+      else setTimeout(resolve, 0);
+    });
     const userEl = document.getElementById("gate-user");
     const passEl = document.getElementById("gate-pass");
     const u = normalizeGateCredential(userEl?.value);
@@ -8815,10 +8847,11 @@ async function submitGate(event) {
       setGateSubmitting(false);
       return false;
     }
-    const expectedUser = normalizeGateCredential(getAppSetting("gate_username"));
-    const expectedPass = normalizeGateCredential(getAppSetting("gate_password"), { stripAllWhitespace: true });
-    const fallbackUser = normalizeGateCredential(APP_SETTINGS_DEFAULTS.gate_username);
-    const fallbackPass = normalizeGateCredential(APP_SETTINGS_DEFAULTS.gate_password, { stripAllWhitespace: true });
+    const gateSettings = loadGateAuthSettings();
+    const expectedUser = normalizeGateCredential(gateSettings.gate_username);
+    const expectedPass = normalizeGateCredential(gateSettings.gate_password, { stripAllWhitespace: true });
+    const fallbackUser = normalizeGateCredential(GATE_AUTH_DEFAULTS.gate_username);
+    const fallbackPass = normalizeGateCredential(GATE_AUTH_DEFAULTS.gate_password, { stripAllWhitespace: true });
     const matchesSaved = u === expectedUser && p === expectedPass;
     const matchesFallback = u === fallbackUser && p === fallbackPass;
     ptAuthLog?.("gate.auth_attempted", { hasSavedConfig: !!expectedUser && !!expectedPass });
@@ -8831,11 +8864,7 @@ async function submitGate(event) {
       return false;
     }
     if (matchesFallback && (!matchesSaved || expectedUser !== fallbackUser || expectedPass !== fallbackPass)) {
-      saveAppSettings({
-        ...loadAppSettings(),
-        gate_username: APP_SETTINGS_DEFAULTS.gate_username,
-        gate_password: APP_SETTINGS_DEFAULTS.gate_password,
-      });
+      saveGateAuthDefaults();
     }
     ptAuthLog?.("gate.accepted", { matchedSaved: matchesSaved, matchedFallback: matchesFallback });
     document.activeElement?.blur?.();
