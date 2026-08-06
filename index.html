@@ -3,7 +3,9 @@
 <head>
   <link rel="manifest" id="pwa-manifest">
   <script>
-      window.PT_APP_VERSION = "p0-disable-standalone-2026-08-06-1";
+      window.PT_APP_VERSION = "p0-standalone-containment-2026-08-06-1";
+    window.PT_DEPLOYMENT_TIMESTAMP = "2026-08-06T14:35:00-05:00";
+    window.PT_CACHE_VERSION = "push-cache:pt-push-meta";
     window.PT_DISABLE_STANDALONE_PULL_REFRESH = true;
     window.PT_SW_ACTIVE_VERSION = "unknown";
     window.PT_APP_BASE_PATH = new URL(".", window.location.href).pathname || "/";
@@ -22,7 +24,9 @@
         if (!badge) return;
         const mode = window.ptDisplayMode?.() || "unknown";
         const sw = extra.swVersion || window.PT_SW_ACTIVE_VERSION || "unknown";
-        badge.textContent = `${window.PT_APP_VERSION} | ${mode} | sw:${sw}`;
+        const stamp = window.PT_DEPLOYMENT_TIMESTAMP || "unknown-time";
+        const cache = window.PT_CACHE_VERSION || "unknown-cache";
+        badge.textContent = `${window.PT_APP_VERSION} | ${stamp} | ${mode} | sw:${sw} | ${cache}`;
         badge.hidden = false;
       } catch (_) {}
     };
@@ -1730,6 +1734,7 @@ input.photo-file-inp { display:none; }
   .admin-day-card { min-height:360px; }
 }
 .login-loading-overlay {
+  display:none;
   position:fixed;
   inset:0 0 calc(-1 * var(--splash-bottom-overdraw)) 0;
   width:auto;
@@ -1783,6 +1788,7 @@ input.photo-file-inp { display:none; }
   backface-visibility:hidden;
 }
 .login-loading-overlay.show {
+  display:block;
   opacity:1;
   visibility:visible;
   transition:opacity .32s ease, visibility 0s;
@@ -1791,6 +1797,7 @@ input.photo-file-inp { display:none; }
   animation:podiumSplashLive 1.9s cubic-bezier(.16,1,.3,1) both;
 }
 .login-loading-overlay.hide {
+  display:block;
   visibility:visible;
   animation:podiumSplashFade .86s cubic-bezier(.76,0,.24,1) both;
 }
@@ -4769,9 +4776,12 @@ async function showLoginLoading(nextAction) {
 
   if (!overlay || reduced) {
     await Promise.resolve(nextAction());
+    setTimeout(() => logInteractiveLayerSnapshot("login-loading-skipped"), 0);
     return;
   }
 
+  overlay.style.display = "block";
+  overlay.setAttribute("aria-hidden", "false");
   overlay.classList.remove("hide");
   overlay.classList.add("show");
 
@@ -4783,7 +4793,12 @@ async function showLoginLoading(nextAction) {
     setTimeout(() => {
       overlay.classList.add("hide");
       overlay.classList.remove("show");
-      setTimeout(() => overlay.classList.remove("hide"), 780);
+      setTimeout(() => {
+        overlay.classList.remove("hide");
+        overlay.style.display = "";
+        overlay.setAttribute("aria-hidden", "true");
+        logInteractiveLayerSnapshot("login-loading-hidden");
+      }, 780);
     }, 260);
   }
 }
@@ -4800,6 +4815,7 @@ function showScreen(id) {
   next.classList.add("active");
   if (id === "screen-admin") applyAdminDesktopMode();
   updateBottomNav(id);
+  if (window.ptIsStandaloneMode?.()) setTimeout(() => logInteractiveLayerSnapshot(`show-screen:${id}`), 0);
 }
 
 function syncBottomNavLayout() {
@@ -19848,6 +19864,8 @@ function logStandaloneEnvironment(reason = "startup") {
       navigatorStandalone: !!window.navigator?.standalone,
       href: window.location.href,
       manifest: window.PT_MANIFEST_DIAGNOSTICS || null,
+      deploymentTimestamp: window.PT_DEPLOYMENT_TIMESTAMP || "",
+      cacheVersion: window.PT_CACHE_VERSION || "",
       standalonePullRefreshDisabled: !!window.PT_DISABLE_STANDALONE_PULL_REFRESH,
       serviceWorkerControlled: !!navigator.serviceWorker?.controller,
       activeScreen: document.querySelector(".screen.active")?.id || "",
@@ -19863,6 +19881,46 @@ function logStandaloneEnvironment(reason = "startup") {
     }
   } catch (err) {
     ptAuthLog?.("standalone.environment_error", { errorName: err?.name || "", errorMessage: err?.message || "" });
+  }
+}
+
+function logInteractiveLayerSnapshot(reason = "snapshot") {
+  try {
+    const active = document.querySelector(".screen.active");
+    const candidates = [
+      "#name-list",
+      ".main-content",
+      ".kit-content",
+      ".admin-content",
+      ".team-screen-content",
+      ".config-content",
+      "#pl-content",
+      "#bottom-nav",
+    ];
+    const target = candidates.map(sel => document.querySelector(sel)).find(el => {
+      if (!el) return false;
+      const style = window.getComputedStyle(el);
+      const rect = el.getBoundingClientRect();
+      return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
+    }) || active || document.body;
+    const rect = target.getBoundingClientRect();
+    const x = Math.max(1, Math.min(window.innerWidth - 1, rect.left + rect.width / 2));
+    const y = Math.max(1, Math.min(window.innerHeight - 1, rect.top + Math.min(rect.height / 2, 160)));
+    const top = typeof document.elementFromPoint === "function" ? document.elementFromPoint(x, y) : null;
+    const topStyle = top instanceof Element ? window.getComputedStyle(top) : null;
+    ptAuthLog?.("interactive.layer_snapshot", {
+      reason,
+      activeScreen: active?.id || "",
+      probeTarget: describeDiagnosticElement(target),
+      top: describeDiagnosticElement(top),
+      topPointerEvents: topStyle?.pointerEvents || "",
+      topZIndex: topStyle?.zIndex || "",
+      bodyOverflow: window.getComputedStyle(document.body).overflow,
+      htmlOverflow: window.getComputedStyle(document.documentElement).overflow,
+      overlays: diagnosticOverlayState(),
+    });
+  } catch (err) {
+    ptAuthLog?.("interactive.layer_snapshot_error", { errorName: err?.name || "", errorMessage: err?.message || "" });
   }
 }
 
@@ -20064,13 +20122,22 @@ function handlePullRefreshEnd() {
   if (refreshContext) triggerPullRefresh(refreshContext);
 }
 
-document.addEventListener("touchstart", handlePullRefreshStart, { passive: true });
-document.addEventListener("touchmove", handlePullRefreshMove, { passive: false });
-document.addEventListener("touchend", handlePullRefreshEnd, { passive: true });
-document.addEventListener("touchcancel", handlePullRefreshEnd, { passive: true });
-document.addEventListener("touchstart", logStandaloneTouchDiagnostic, { capture: true, passive: true });
-document.addEventListener("touchmove", logStandaloneTouchDiagnostic, { capture: true, passive: true });
-document.addEventListener("touchend", logStandaloneTouchDiagnostic, { capture: true, passive: true });
+if (window.ptIsStandaloneMode?.()) {
+  resetPullRefreshState();
+  setPullRefreshIndicator(0, false);
+  ptAuthLog?.("standalone.global_touch_handlers.disabled", {
+    pullRefreshDisabled: true,
+    displayMode: window.ptDisplayMode?.() || "",
+  });
+} else {
+  document.addEventListener("touchstart", handlePullRefreshStart, { passive: true });
+  document.addEventListener("touchmove", handlePullRefreshMove, { passive: false });
+  document.addEventListener("touchend", handlePullRefreshEnd, { passive: true });
+  document.addEventListener("touchcancel", handlePullRefreshEnd, { passive: true });
+  document.addEventListener("touchstart", logStandaloneTouchDiagnostic, { capture: true, passive: true });
+  document.addEventListener("touchmove", logStandaloneTouchDiagnostic, { capture: true, passive: true });
+  document.addEventListener("touchend", logStandaloneTouchDiagnostic, { capture: true, passive: true });
+}
 document.addEventListener("click", logStandaloneTouchDiagnostic, { capture: true, passive: true });
 document.addEventListener("DOMContentLoaded", () => logStandaloneEnvironment("dom-content-loaded"), { once: true });
 window.addEventListener("pageshow", () => logStandaloneEnvironment("pageshow"));
