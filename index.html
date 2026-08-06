@@ -3,8 +3,8 @@
 <head>
   <link rel="manifest" id="pwa-manifest">
   <script>
-      window.PT_APP_VERSION = "p0-login-advance-2026-08-06-1";
-    window.PT_DEPLOYMENT_TIMESTAMP = "2026-08-06T15:05:00-05:00";
+      window.PT_APP_VERSION = "p0-login-delegated-2026-08-06-1";
+    window.PT_DEPLOYMENT_TIMESTAMP = "2026-08-06T15:15:00-05:00";
     window.PT_CACHE_VERSION = "push-cache:pt-push-meta";
     window.PT_DISABLE_STANDALONE_PULL_REFRESH = true;
     window.PT_SW_ACTIVE_VERSION = "unknown";
@@ -225,6 +225,16 @@ button,
   -webkit-user-select:none;
   user-select:none;
   touch-action:manipulation;
+}
+#screen-login,
+#name-list-wrap,
+#name-list,
+#name-list *,
+.name-btn,
+.name-btn * {
+  -webkit-touch-callout:none;
+  -webkit-user-select:none;
+  user-select:none;
 }
 :root {
   --bg:#0d0d0d; --surface:#161616; --surface2:#1f1f1f; --surface3:#131313;
@@ -4455,6 +4465,12 @@ function bindStandaloneLoginTap(el, handler, diagnosticName = "login-control") {
 }
 
 let _loginAdvanceInProgress = false;
+let _loginDelegatedTap = {
+  target: null,
+  x: 0,
+  y: 0,
+  moved: false,
+};
 
 function setLoginSelectError(message = "") {
   const el = document.getElementById("login-select-error");
@@ -4468,8 +4484,64 @@ function setLoginSelectorBusy(sourceEl, busy = false) {
   });
 }
 
+function activateLoginNameButton(btn, event) {
+  const memberName = btn?.dataset?.memberName || "";
+  const member = memberName ? getTeamMemberByName(memberName) : null;
+  if (!member) return false;
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
+  ptAuthLog?.("login.name_activate", {
+    role: member.role,
+    standalone: !!window.ptIsStandaloneMode?.(),
+  });
+  if (member.role === FLOAT_ROLE) openFloaterRoleChoice(member);
+  else selectUser(member, undefined, false, btn);
+  return true;
+}
+
+function bindStandaloneNameListTouch() {
+  const list = document.getElementById("name-list");
+  if (!list || list.dataset.standaloneNameTouchBound === "1") return;
+  list.dataset.standaloneNameTouchBound = "1";
+  list.addEventListener("touchstart", event => {
+    if (!window.ptIsStandaloneMode?.() || event.touches?.length !== 1) return;
+    const btn = event.target instanceof Element ? event.target.closest(".name-btn[data-member-name]") : null;
+    if (!btn) {
+      _loginDelegatedTap.target = null;
+      return;
+    }
+    const touch = event.touches[0];
+    _loginDelegatedTap.target = btn;
+    _loginDelegatedTap.x = touch.clientX;
+    _loginDelegatedTap.y = touch.clientY;
+    _loginDelegatedTap.moved = false;
+  }, { passive: true });
+  list.addEventListener("touchmove", event => {
+    if (!_loginDelegatedTap.target || !window.ptIsStandaloneMode?.() || event.touches?.length !== 1) return;
+    const touch = event.touches[0];
+    if (Math.abs(touch.clientX - _loginDelegatedTap.x) > 12 || Math.abs(touch.clientY - _loginDelegatedTap.y) > 12) {
+      _loginDelegatedTap.moved = true;
+    }
+  }, { passive: true });
+  list.addEventListener("touchend", event => {
+    if (!window.ptIsStandaloneMode?.()) return;
+    const btn = _loginDelegatedTap.target;
+    _loginDelegatedTap.target = null;
+    if (!btn || _loginDelegatedTap.moved) return;
+    const touch = event.changedTouches?.[0];
+    if (!touch) return;
+    if (Math.abs(touch.clientX - _loginDelegatedTap.x) > 12 || Math.abs(touch.clientY - _loginDelegatedTap.y) > 12) return;
+    activateLoginNameButton(btn, event);
+  }, { passive: false });
+  list.addEventListener("touchcancel", () => {
+    _loginDelegatedTap.target = null;
+    _loginDelegatedTap.moved = false;
+  }, { passive: true });
+}
+
 function buildNameList() {
   const list = document.getElementById("name-list"); list.innerHTML = "";
+  bindStandaloneNameListTouch();
   [
     {label:"Monitor Stand Builders",role:MS_ROLE},
     {label:"Chassis Builders",role:CHASSIS_ROLE},
@@ -4489,10 +4561,13 @@ function buildNameList() {
         ? `<span class="role-tag" style="margin-left:6px;background:rgba(16,185,129,.14);color:var(--green)">Lead</span>`
         : "";
       const btn = document.createElement("button"); btn.className = "name-btn"; btn.type = "button";
+      btn.dataset.memberName = m.name;
       btn.innerHTML = `<div class="av" style="background:${m.color}25;color:${m.color}">${m.initials}</div>${m.name}${leadPill}<span class="role-tag ${roleTagClass(isFloater ? FLOAT_ROLE : role)}">${isFloater ? "Choose Role" : roleLoginLabel(role)}</span>`;
-      const activate = event => isFloater ? openFloaterRoleChoice(m) : selectUser(m, undefined, false, event?.currentTarget || btn);
-      btn.onclick = activate;
-      bindStandaloneLoginTap(btn, activate, isFloater ? "floater-name" : "builder-name");
+      if (window.ptIsStandaloneMode?.()) {
+        btn.onclick = null;
+      } else {
+        btn.onclick = event => activateLoginNameButton(btn, event);
+      }
       list.appendChild(btn);
     });
   });

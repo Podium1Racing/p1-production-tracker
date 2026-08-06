@@ -1,4 +1,4 @@
-const PT_SW_VERSION = "p0-login-advance-2026-08-06-1";
+const PT_SW_VERSION = "p0-login-delegated-2026-08-06-1";
 const PUSH_USER_CACHE = "pt-push-meta";
 const PUSH_USER_KEY = "/__push_user__";
 
