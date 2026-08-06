@@ -3,7 +3,7 @@
 <head>
   <link rel="manifest" id="pwa-manifest">
   <script>
-      window.PT_APP_VERSION = "p0-disable-standalone-2026-08-06-1";
+      window.PT_APP_VERSION = "p0-standalone-tapfix-2026-08-06-1";
     window.PT_DISABLE_STANDALONE_PULL_REFRESH = true;
     window.PT_SW_ACTIVE_VERSION = "unknown";
     window.PT_APP_BASE_PATH = new URL(".", window.location.href).pathname || "/";
@@ -209,6 +209,14 @@ button:not(:disabled), .name-btn, .srow, .seg-btn {
 button:not(:disabled):active, .name-btn:active, .srow:active, .seg-btn:active {
   transform: scale(0.97);
   filter: brightness(0.92);
+}
+button,
+[onclick],
+[role="button"],
+.name-btn,
+.srow,
+.seg-btn {
+  touch-action:manipulation;
 }
 :root {
   --bg:#0d0d0d; --surface:#161616; --surface2:#1f1f1f; --surface3:#131313;
@@ -19866,6 +19874,84 @@ function logStandaloneEnvironment(reason = "startup") {
   }
 }
 
+const _standaloneTapFallbackState = {
+  target: null,
+  x: 0,
+  y: 0,
+  time: 0,
+  suppressTarget: null,
+  suppressUntil: 0,
+};
+
+function isStandaloneTapFallbackEnabled() {
+  return !!window.ptIsStandaloneMode?.();
+}
+
+function standaloneTapInteractiveTarget(target) {
+  const el = target instanceof Element ? target : null;
+  if (!el) return null;
+  const interactive = el.closest("button, a[href], [onclick], [role='button'], .name-btn, .srow, .seg-btn");
+  if (!interactive) return null;
+  if (interactive.closest("input, textarea, select, option, [contenteditable='true']")) return null;
+  if (interactive.matches("button") && (interactive.disabled || interactive.getAttribute("aria-disabled") === "true")) return null;
+  if (interactive.getAttribute("disabled") !== null || interactive.getAttribute("aria-disabled") === "true") return null;
+  return interactive;
+}
+
+function handleStandaloneTapFallbackStart(evt) {
+  if (!isStandaloneTapFallbackEnabled() || evt.touches?.length !== 1) return;
+  const interactive = standaloneTapInteractiveTarget(evt.target);
+  if (!interactive) {
+    _standaloneTapFallbackState.target = null;
+    return;
+  }
+  const touch = evt.touches[0];
+  _standaloneTapFallbackState.target = interactive;
+  _standaloneTapFallbackState.x = touch.clientX;
+  _standaloneTapFallbackState.y = touch.clientY;
+  _standaloneTapFallbackState.time = Date.now();
+}
+
+function handleStandaloneTapFallbackEnd(evt) {
+  if (!isStandaloneTapFallbackEnabled()) return;
+  const state = _standaloneTapFallbackState;
+  const interactive = state.target;
+  state.target = null;
+  if (!interactive || !document.documentElement.contains(interactive)) return;
+  const touch = evt.changedTouches?.[0];
+  if (!touch) return;
+  const dx = Math.abs(touch.clientX - state.x);
+  const dy = Math.abs(touch.clientY - state.y);
+  const elapsed = Date.now() - state.time;
+  if (dx > 12 || dy > 12 || elapsed > 900) return;
+  const top = typeof document.elementFromPoint === "function"
+    ? document.elementFromPoint(touch.clientX, touch.clientY)
+    : null;
+  if (top && top !== interactive && !interactive.contains(top)) return;
+
+  ptAuthLog?.("standalone.tap_fallback.activate", {
+    target: describeDiagnosticElement(interactive),
+    activeScreen: document.querySelector(".screen.active")?.id || "",
+  });
+  evt.preventDefault();
+  evt.stopPropagation();
+  interactive.click();
+  state.suppressTarget = interactive;
+  state.suppressUntil = Date.now() + 650;
+}
+
+function suppressDuplicateStandaloneClick(evt) {
+  if (!isStandaloneTapFallbackEnabled()) return;
+  const state = _standaloneTapFallbackState;
+  if (!state.suppressTarget || Date.now() > state.suppressUntil) return;
+  const clicked = evt.target instanceof Element ? evt.target.closest("button, a[href], [onclick], [role='button'], .name-btn, .srow, .seg-btn") : null;
+  if (clicked !== state.suppressTarget) return;
+  state.suppressTarget = null;
+  state.suppressUntil = 0;
+  evt.preventDefault();
+  evt.stopPropagation();
+}
+
 const PULL_REFRESH_MAX_DISTANCE = 92;
 const PULL_REFRESH_TRIGGER_DISTANCE = 62;
 const PULL_REFRESH_SETTLE_MS = 180;
@@ -20068,6 +20154,10 @@ document.addEventListener("touchstart", handlePullRefreshStart, { passive: true 
 document.addEventListener("touchmove", handlePullRefreshMove, { passive: false });
 document.addEventListener("touchend", handlePullRefreshEnd, { passive: true });
 document.addEventListener("touchcancel", handlePullRefreshEnd, { passive: true });
+document.addEventListener("touchstart", handleStandaloneTapFallbackStart, { capture: true, passive: true });
+document.addEventListener("touchend", handleStandaloneTapFallbackEnd, { capture: true, passive: false });
+document.addEventListener("touchcancel", () => { _standaloneTapFallbackState.target = null; }, { capture: true, passive: true });
+document.addEventListener("click", suppressDuplicateStandaloneClick, { capture: true });
 document.addEventListener("touchstart", logStandaloneTouchDiagnostic, { capture: true, passive: true });
 document.addEventListener("touchmove", logStandaloneTouchDiagnostic, { capture: true, passive: true });
 document.addEventListener("touchend", logStandaloneTouchDiagnostic, { capture: true, passive: true });
