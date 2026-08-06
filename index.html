@@ -4774,7 +4774,8 @@ function updateBottomNav(activeId) {
   if (activeId === "screen-queue") document.getElementById("bn-queue")?.classList.add("active");
   if (activeId === "screen-history") document.getElementById("bn-history")?.classList.add("active");
   if (activeId === "screen-updates" && _updatesMode === "history") document.getElementById("bn-updates")?.classList.add("active");
-  requestAnimationFrame(syncBottomNavLayout);
+  if (typeof requestAnimationFrame === "function") requestAnimationFrame(syncBottomNavLayout);
+  else setTimeout(syncBottomNavLayout, 0);
   refreshTeamMessagesBadge().catch(() => {});
 }
 
@@ -19457,7 +19458,7 @@ function renderHomeUpdates() {
 }
 
 let _updatesCallerScreen = "screen-dash";
-let _updatesMode = "history";
+var _updatesMode = "history";
 
 async function showBuildUpdates() {
   /* Track which screen opened updates so back button goes to right place */
