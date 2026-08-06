@@ -362,6 +362,7 @@ button, input, select, textarea { font-family:inherit; }
   font-size:13px;
   font-weight:800;
   cursor:pointer;
+  touch-action:manipulation;
   letter-spacing:.12em;
   box-shadow:0 4px 24px rgba(224,32,32,0.35);
 }
@@ -2001,15 +2002,15 @@ html.auth-startup-failed #screen-login input {
   </div>
   <div class="gate-title">PRODUCTION TRACKER</div>
   <div class="gate-subtitle">PODIUM 1 RACING</div>
-  <form class="gate-form" onsubmit="submitGate(event)">
+  <form id="gate-form" class="gate-form" autocomplete="on" onsubmit="return submitGate(event)">
     <input id="gate-user" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="Username"
       class="auth-input" style="text-align:center;font-size:15px"
       onkeydown="if(event.key==='Enter')document.getElementById('gate-pass').focus()">
     <input id="gate-pass" type="password" autocomplete="current-password" autocorrect="off" spellcheck="false" placeholder="Passcode"
       class="auth-input" style="text-align:center;font-size:15px"
-      onkeydown="if(event.key==='Enter')submitGate()">
-    <div id="gate-error" class="auth-error" style="min-height:18px"></div>
-    <button type="submit" class="gate-enter-btn">
+      onkeydown="if(event.key==='Enter'){event.preventDefault();submitGate(event)}">
+    <div id="gate-error" class="auth-error" style="min-height:18px" aria-live="polite"></div>
+    <button id="gate-enter-btn" type="submit" class="gate-enter-btn" onclick="submitGate(event)" ontouchend="submitGate(event)">
       ENTER
     </button>
   </form>
@@ -8777,38 +8778,78 @@ function normalizeGateCredential(value, { stripAllWhitespace = false } = {}) {
   return normalized;
 }
 
+let gateSubmitting = false;
+
+function setGateSubmitting(isSubmitting) {
+  const btn = document.getElementById("gate-enter-btn");
+  if (!btn) return;
+  btn.disabled = !!isSubmitting;
+  btn.textContent = isSubmitting ? "Signing In..." : "ENTER";
+}
+
 async function submitGate(event) {
   event?.preventDefault?.();
+  event?.stopPropagation?.();
+  if (gateSubmitting) {
+    ptAuthLog?.("gate.submit.duplicate_ignored", { eventType: event?.type || "direct" });
+    return false;
+  }
+  gateSubmitting = true;
+  setGateSubmitting(true);
   const err = document.getElementById("gate-error");
   if (err) err.textContent = "";
-  const u = normalizeGateCredential(document.getElementById("gate-user")?.value);
-  const p = normalizeGateCredential(document.getElementById("gate-pass")?.value, { stripAllWhitespace: true });
-  ptAuthLog?.("gate.submit", { hasUsername: !!u, hasPasscode: !!p });
-  if (!u || !p) { err.textContent = "Enter both username and passcode."; return; }
-  const expectedUser = normalizeGateCredential(getAppSetting("gate_username"));
-  const expectedPass = normalizeGateCredential(getAppSetting("gate_password"), { stripAllWhitespace: true });
-  const fallbackUser = normalizeGateCredential(APP_SETTINGS_DEFAULTS.gate_username);
-  const fallbackPass = normalizeGateCredential(APP_SETTINGS_DEFAULTS.gate_password, { stripAllWhitespace: true });
-  const matchesSaved = u === expectedUser && p === expectedPass;
-  const matchesFallback = u === fallbackUser && p === fallbackPass;
-  if (!matchesSaved && !matchesFallback) {
-    ptAuthLog?.("gate.rejected");
-    err.textContent = "Incorrect credentials.";
-    document.getElementById("gate-pass").value = "";
-    return;
-  }
-  if (matchesFallback && (!matchesSaved || expectedUser !== fallbackUser || expectedPass !== fallbackPass)) {
-    saveAppSettings({
-      ...loadAppSettings(),
-      gate_username: APP_SETTINGS_DEFAULTS.gate_username,
-      gate_password: APP_SETTINGS_DEFAULTS.gate_password,
+  try {
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    const userEl = document.getElementById("gate-user");
+    const passEl = document.getElementById("gate-pass");
+    const u = normalizeGateCredential(userEl?.value);
+    const p = normalizeGateCredential(passEl?.value, { stripAllWhitespace: true });
+    ptAuthLog?.("gate.submit", {
+      eventType: event?.type || "direct",
+      hasUsername: !!u,
+      hasPasscode: !!p,
     });
+    if (!u || !p) {
+      if (err) err.textContent = "Enter both username and passcode.";
+      gateSubmitting = false;
+      setGateSubmitting(false);
+      return false;
+    }
+    const expectedUser = normalizeGateCredential(getAppSetting("gate_username"));
+    const expectedPass = normalizeGateCredential(getAppSetting("gate_password"), { stripAllWhitespace: true });
+    const fallbackUser = normalizeGateCredential(APP_SETTINGS_DEFAULTS.gate_username);
+    const fallbackPass = normalizeGateCredential(APP_SETTINGS_DEFAULTS.gate_password, { stripAllWhitespace: true });
+    const matchesSaved = u === expectedUser && p === expectedPass;
+    const matchesFallback = u === fallbackUser && p === fallbackPass;
+    ptAuthLog?.("gate.auth_attempted", { hasSavedConfig: !!expectedUser && !!expectedPass });
+    if (!matchesSaved && !matchesFallback) {
+      ptAuthLog?.("gate.rejected");
+      if (err) err.textContent = "Incorrect credentials.";
+      if (passEl) passEl.value = "";
+      gateSubmitting = false;
+      setGateSubmitting(false);
+      return false;
+    }
+    if (matchesFallback && (!matchesSaved || expectedUser !== fallbackUser || expectedPass !== fallbackPass)) {
+      saveAppSettings({
+        ...loadAppSettings(),
+        gate_username: APP_SETTINGS_DEFAULTS.gate_username,
+        gate_password: APP_SETTINGS_DEFAULTS.gate_password,
+      });
+    }
+    ptAuthLog?.("gate.accepted", { matchedSaved: matchesSaved, matchedFallback: matchesFallback });
+    document.activeElement?.blur?.();
+    localStorage.setItem("pt_gate_passed", "1");
+    showScreen("screen-login");
+    showLoginEntryPoint();
+    return false;
+  } catch (e) {
+    ptAuthLog?.("gate.exception", { errorName: e?.name || "", errorMessage: e?.message || "" });
+    if (err) err.textContent = "Login could not start. Please try again.";
+    gateSubmitting = false;
+    setGateSubmitting(false);
+    return false;
   }
-  ptAuthLog?.("gate.accepted", { matchedSaved: matchesSaved, matchedFallback: matchesFallback });
-  document.activeElement?.blur?.();
-  localStorage.setItem("pt_gate_passed", "1");
-  showScreen("screen-login");
-  showLoginEntryPoint();
 }
 
 /* Check gate on startup */
