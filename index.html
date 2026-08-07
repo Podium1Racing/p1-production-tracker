@@ -2852,8 +2852,15 @@ async function sbGetKitCompletions(sinceDateStr) {
 
 /* ── Real-time subscription for admin view ──────────────────── */
 let _sbRealtimeWs = null;
+const ADMIN_REALTIME_SCREEN_IDS = new Set(["screen-admin"]);
+
+function isAdminRealtimeScreenActive() {
+  const activeId = document.querySelector(".screen.active")?.id || "";
+  return currentUser?.role === "admin" && ADMIN_REALTIME_SCREEN_IDS.has(activeId);
+}
 
 function sbSubscribeAdminRealtime(onTimerChange) {
+  if (!isAdminRealtimeScreenActive()) return;
   if (_sbRealtimeWs) { _sbRealtimeWs.close(); _sbRealtimeWs = null; }
   try {
     const wsUrl = SUPABASE_URL.replace("https://", "wss://") + "/realtime/v1/websocket?apikey=" + SUPABASE_KEY + "&vsn=1.0.0";
@@ -2873,8 +2880,8 @@ function sbSubscribeAdminRealtime(onTimerChange) {
         if (msg.event === "heartbeat") ws.send(JSON.stringify({ topic: "phoenix", event: "heartbeat", payload: {}, ref: null }));
       } catch(err) {}
     };
-    ws.onerror = () => { _sbRealtimeWs = null; };
-    ws.onclose = () => { _sbRealtimeWs = null; };
+    ws.onerror = () => { if (_sbRealtimeWs === ws) _sbRealtimeWs = null; };
+    ws.onclose = () => { if (_sbRealtimeWs === ws) _sbRealtimeWs = null; };
   } catch(e) { console.warn("Realtime subscription failed:", e.message); }
 }
 
@@ -4704,8 +4711,12 @@ async function showLoginLoading(nextAction) {
 function showScreen(id) {
   const next = document.getElementById(id);
   if (!next) return;
+  const previous = document.querySelector(".screen.active");
   document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
   next.classList.add("active");
+  if (previous?.id !== id && ADMIN_REALTIME_SCREEN_IDS.has(previous?.id || "") && !ADMIN_REALTIME_SCREEN_IDS.has(id)) {
+    sbUnsubscribeAdminRealtime();
+  }
   if (id === "screen-admin") applyAdminDesktopMode();
   updateBottomNav(id);
 }
@@ -10026,10 +10037,12 @@ async function loadAdminData() {
     } else {
       renderAdminDash(items, sbTimers, sbKits, sbUpdates || [], allocationSummaryByWo, sbTimerHistory || []);
     }
-    /* Subscribe to real-time timer updates */
-    sbSubscribeAdminRealtime((record) => {
-      if (record) updateAdminTimerDisplay(record);
-    });
+    /* Subscribe to real-time timer updates only while Admin is visible. */
+    if (isAdminRealtimeScreenActive()) {
+      sbSubscribeAdminRealtime((record) => {
+        if (record) updateAdminTimerDisplay(record);
+      });
+    }
   } catch(e) {
     content.innerHTML = `<div class="empty-state">Could not load board.<br><small>${e.message}</small></div>`;
   }
@@ -19465,9 +19478,16 @@ function startRealTimeSync() {
 }
 
 /* Reload data when the user returns to the app (switches tabs or unlocks phone) */
+const FOREGROUND_REFRESH_THROTTLE_MS = 60000;
+const _lastForegroundRefreshByScreen = {};
+
 function refreshVisibleAppScreen() {
   const screen = document.querySelector(".screen.active");
   if (!screen) return;
+  const now = Date.now();
+  const last = _lastForegroundRefreshByScreen[screen.id] || 0;
+  if (now - last < FOREGROUND_REFRESH_THROTTLE_MS) return;
+  _lastForegroundRefreshByScreen[screen.id] = now;
   if (screen.id === "screen-dash") loadBoard();
   else if (screen.id === "screen-config" || screen.id === "screen-config-checklist") loadBoard();
   else if (screen.id === "screen-kit") loadKitBoard();
