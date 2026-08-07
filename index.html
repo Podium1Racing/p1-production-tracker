@@ -2178,6 +2178,102 @@ const P1_API_KEY = "p1r-0ed3fa51376c78f8ad9df9b43728e46d59f6ca7f447d8645";
 const SUPABASE_URL = "https://paufeygvqwyidyasuubr.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBhdWZleWd2cXd5aWR5YXN1dWJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzOTEzNTMsImV4cCI6MjA5Nzk2NzM1M30._LRmmxQdzqUJaFdCa_w6P82rtcQVUJgwec79COxKxGE";
 
+const PICKLIST_REQUEST_METRIC_LIMIT = 500;
+const PICKLIST_SLOW_REQUEST_MS = 1500;
+const PICKLIST_REQUEST_METRICS = [];
+
+function pickListMetricNow() {
+  return (typeof performance !== "undefined" && typeof performance.now === "function") ? performance.now() : Date.now();
+}
+
+function compactPickListRequestPath(path = "") {
+  const raw = String(path || "");
+  if (!raw) return "";
+  try {
+    const [base, query = ""] = raw.split("?");
+    if (!query) return base;
+    const params = query.split("&")
+      .map(part => part.trim())
+      .filter(Boolean)
+      .map(part => part.replace(/=in\.\([^)]+\)/g, "=in.(...)").replace(/=eq\.[^&]+/g, "=eq.(...)"));
+    return `${base}?${params.join("&")}`;
+  } catch (_) {
+    return raw.slice(0, 240);
+  }
+}
+
+function countPickListResponseRows(data) {
+  if (Array.isArray(data)) return data.length;
+  if (Array.isArray(data?.items)) return data.items.length;
+  if (Array.isArray(data?.data?.boards?.[0]?.items_page?.items)) return data.data.boards[0].items_page.items.length;
+  return null;
+}
+
+function recordPickListRequestMetric(metric = {}) {
+  const entry = {
+    source: metric.source || "unknown",
+    method: String(metric.method || "GET").toUpperCase(),
+    path: compactPickListRequestPath(metric.path || ""),
+    rawPath: String(metric.path || "").slice(0, 500),
+    table: String(metric.path || "").split("?")[0] || "",
+    ok: metric.ok !== false,
+    status: metric.status || null,
+    startedAt: Math.round((metric.startedAt || pickListMetricNow()) * 10) / 10,
+    endedAt: Math.round((metric.endedAt || pickListMetricNow()) * 10) / 10,
+    ms: Math.round(Number(metric.ms || 0) * 10) / 10,
+    attempts: metric.attempts || 1,
+    rowCount: typeof metric.rowCount === "number" ? metric.rowCount : null,
+    error: metric.error ? String(metric.error).slice(0, 220) : "",
+  };
+  entry.signature = `${entry.source}:${entry.method}:${entry.path}`;
+  PICKLIST_REQUEST_METRICS.push(entry);
+  if (PICKLIST_REQUEST_METRICS.length > PICKLIST_REQUEST_METRIC_LIMIT) {
+    PICKLIST_REQUEST_METRICS.splice(0, PICKLIST_REQUEST_METRICS.length - PICKLIST_REQUEST_METRIC_LIMIT);
+  }
+  if (typeof window !== "undefined") {
+    window._pickListRequestMetrics = PICKLIST_REQUEST_METRICS;
+  }
+  return entry;
+}
+
+function summarizePickListRequestMetrics(startedAt, endedAt) {
+  const start = Number(startedAt) || 0;
+  const end = Number(endedAt) || pickListMetricNow();
+  const requests = PICKLIST_REQUEST_METRICS
+    .filter(req => req.startedAt >= start && req.startedAt <= end)
+    .map(req => ({ ...req }));
+  const bySource = {};
+  const byTable = {};
+  const duplicateMap = {};
+  requests.forEach(req => {
+    bySource[req.source] = (bySource[req.source] || 0) + 1;
+    const tableKey = req.table || req.source;
+    byTable[tableKey] = (byTable[tableKey] || 0) + 1;
+    duplicateMap[req.signature] = (duplicateMap[req.signature] || 0) + 1;
+  });
+  const duplicateRequests = Object.entries(duplicateMap)
+    .filter(([, count]) => count > 1)
+    .map(([signature, count]) => ({ signature, count }))
+    .sort((a, b) => b.count - a.count);
+  return {
+    requestCount: requests.length,
+    failedRequestCount: requests.filter(req => !req.ok).length,
+    retryCount: requests.reduce((sum, req) => sum + Math.max(0, (req.attempts || 1) - 1), 0),
+    bySource,
+    byTable,
+    duplicateRequests,
+    slowRequests: requests
+      .filter(req => req.ms >= PICKLIST_SLOW_REQUEST_MS)
+      .sort((a, b) => b.ms - a.ms)
+      .slice(0, 12),
+    failedRequests: requests
+      .filter(req => !req.ok)
+      .sort((a, b) => b.ms - a.ms)
+      .slice(0, 12),
+    requests,
+  };
+}
+
 /* ═══════════════════════════════════════
    SUPABASE SYNC LAYER
    All cross-device data (timers, kits) writes here
@@ -2187,6 +2283,7 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 async function sbFetch(path, options = {}) {
   const url = SUPABASE_URL + "/rest/v1/" + path;
   const method = String(options.method || "GET").toUpperCase();
+  const requestStartedAt = pickListMetricNow();
   const timeoutMs = Number.isFinite(options.timeoutMs)
     ? Number(options.timeoutMs)
     : (method === "GET" || method === "HEAD" ? 12000 : 20000);
@@ -2252,13 +2349,52 @@ async function sbFetch(path, options = {}) {
       if (!r.ok) {
         const t = await r.text();
         if (attempt < retryCount && isRetryableStatus(r.status)) continue;
+        const endedAt = pickListMetricNow();
+        recordPickListRequestMetric({
+          source: "supabase",
+          method,
+          path,
+          ok: false,
+          status: r.status,
+          attempts: attempt + 1,
+          startedAt: requestStartedAt,
+          endedAt,
+          ms: endedAt - requestStartedAt,
+          error: t,
+        });
         console.warn("Supabase error:", t);
         return null;
       }
       const text = await r.text();
-      return text ? JSON.parse(text) : null;
+      const data = text ? JSON.parse(text) : null;
+      const endedAt = pickListMetricNow();
+      recordPickListRequestMetric({
+        source: "supabase",
+        method,
+        path,
+        ok: true,
+        status: r.status,
+        attempts: attempt + 1,
+        rowCount: countPickListResponseRows(data),
+        startedAt: requestStartedAt,
+        endedAt,
+        ms: endedAt - requestStartedAt,
+      });
+      return data;
     } catch (e) {
       if (attempt < retryCount && isRetryableError(e)) continue;
+      const endedAt = pickListMetricNow();
+      recordPickListRequestMetric({
+        source: "supabase",
+        method,
+        path,
+        ok: false,
+        attempts: attempt + 1,
+        startedAt: requestStartedAt,
+        endedAt,
+        ms: endedAt - requestStartedAt,
+        error: e?.message || e,
+      });
       console.warn("Supabase fetch failed:", e?.message || e);
       return null;
     } finally {
@@ -2565,18 +2701,96 @@ function sbUnsubscribeAdminRealtime() {
 
 async function p1Api(path, options = {}) {
   /* Route through Netlify proxy to avoid CORS */
-  if (options.method && options.method !== "GET") {
-    const r = await fetch("/.netlify/functions/p1proxy", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ path, method: options.method, body: options.body ? JSON.parse(options.body) : undefined })
-    });
-    if (!r.ok) throw new Error(`P1 proxy returned ${r.status}`);
-    return r.json();
-  } else {
-    const r = await fetch(`/.netlify/functions/p1proxy?path=${encodeURIComponent(path)}`);
-    if (!r.ok) throw new Error(`P1 proxy returned ${r.status}`);
-    return r.json();
+  const method = String(options.method || "GET").toUpperCase();
+  const requestStartedAt = pickListMetricNow();
+  try {
+    if (options.method && options.method !== "GET") {
+      const r = await fetch("/.netlify/functions/p1proxy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path, method: options.method, body: options.body ? JSON.parse(options.body) : undefined })
+      });
+      if (!r.ok) {
+        const endedAt = pickListMetricNow();
+        recordPickListRequestMetric({
+          source: "p1",
+          method,
+          path,
+          ok: false,
+          status: r.status,
+          startedAt: requestStartedAt,
+          endedAt,
+          ms: endedAt - requestStartedAt,
+          error: `P1 proxy returned ${r.status}`,
+        });
+        throw new Error(`P1 proxy returned ${r.status}`);
+      }
+      const data = await r.json();
+      const endedAt = pickListMetricNow();
+      recordPickListRequestMetric({
+        source: "p1",
+        method,
+        path,
+        ok: true,
+        status: r.status,
+        rowCount: countPickListResponseRows(data),
+        startedAt: requestStartedAt,
+        endedAt,
+        ms: endedAt - requestStartedAt,
+      });
+      return data;
+    } else {
+      const r = await fetch(`/.netlify/functions/p1proxy?path=${encodeURIComponent(path)}`);
+      if (!r.ok) {
+        const endedAt = pickListMetricNow();
+        recordPickListRequestMetric({
+          source: "p1",
+          method,
+          path,
+          ok: false,
+          status: r.status,
+          startedAt: requestStartedAt,
+          endedAt,
+          ms: endedAt - requestStartedAt,
+          error: `P1 proxy returned ${r.status}`,
+        });
+        throw new Error(`P1 proxy returned ${r.status}`);
+      }
+      const data = await r.json();
+      const endedAt = pickListMetricNow();
+      recordPickListRequestMetric({
+        source: "p1",
+        method,
+        path,
+        ok: true,
+        status: r.status,
+        rowCount: countPickListResponseRows(data),
+        startedAt: requestStartedAt,
+        endedAt,
+        ms: endedAt - requestStartedAt,
+      });
+      return data;
+    }
+  } catch (err) {
+    const roundedStart = Math.round(requestStartedAt * 10) / 10;
+    const alreadyRecorded = PICKLIST_REQUEST_METRICS.some(req =>
+      req.source === "p1" &&
+      req.startedAt === roundedStart
+    );
+    if (!alreadyRecorded) {
+      const endedAt = pickListMetricNow();
+      recordPickListRequestMetric({
+        source: "p1",
+        method,
+        path,
+        ok: false,
+        startedAt: requestStartedAt,
+        endedAt,
+        ms: endedAt - requestStartedAt,
+        error: err?.message || err,
+      });
+    }
+    throw err;
   }
 }
 
@@ -5069,10 +5283,45 @@ async function showSharedQueue() {
    MONDAY API
 ═══════════════════════════════════════ */
 async function mondayQuery(query, apiVersion) {
-  const r=await fetch("https://api.monday.com/v2",{method:"POST",headers:{"Content-Type":"application/json","Authorization":API_KEY,"API-Version": apiVersion || "2024-01"},body:JSON.stringify({query})});
-  const json=await r.json();
-  if(json.errors?.length) throw new Error(json.errors[0].message);
-  return json;
+  const requestStartedAt = pickListMetricNow();
+  try {
+    const r=await fetch("https://api.monday.com/v2",{method:"POST",headers:{"Content-Type":"application/json","Authorization":API_KEY,"API-Version": apiVersion || "2024-01"},body:JSON.stringify({query})});
+    const json=await r.json();
+    const endedAt = pickListMetricNow();
+    recordPickListRequestMetric({
+      source: "monday",
+      method: "POST",
+      path: String(query || "").replace(/\s+/g, " ").trim().slice(0, 240),
+      ok: r.ok && !json.errors?.length,
+      status: r.status,
+      rowCount: countPickListResponseRows(json),
+      startedAt: requestStartedAt,
+      endedAt,
+      ms: endedAt - requestStartedAt,
+      error: json.errors?.[0]?.message || "",
+    });
+    if(json.errors?.length) throw new Error(json.errors[0].message);
+    return json;
+  } catch (err) {
+    const alreadyRecorded = PICKLIST_REQUEST_METRICS.some(req =>
+      req.source === "monday" &&
+      req.startedAt === Math.round(requestStartedAt * 10) / 10
+    );
+    if (!alreadyRecorded) {
+      const endedAt = pickListMetricNow();
+      recordPickListRequestMetric({
+        source: "monday",
+        method: "POST",
+        path: String(query || "").replace(/\s+/g, " ").trim().slice(0, 240),
+        ok: false,
+        startedAt: requestStartedAt,
+        endedAt,
+        ms: endedAt - requestStartedAt,
+        error: err?.message || err,
+      });
+    }
+    throw err;
+  }
 }
 
 const BOARD_CACHE_KEY = "pt_board_cache";
@@ -15646,11 +15895,11 @@ function getPickListVerificationState(plId) {
 }
 
 function createPickListPerformanceLog(scope = "picklists", meta = {}) {
-  const started = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
+  const started = pickListMetricNow();
   const marks = [];
   return {
     mark(label, extra = {}) {
-      const now = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
+      const now = pickListMetricNow();
       marks.push({
         label,
         ms: Math.round((now - started) * 10) / 10,
@@ -15658,19 +15907,34 @@ function createPickListPerformanceLog(scope = "picklists", meta = {}) {
       });
     },
     finish(extra = {}) {
-      const now = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
+      const now = pickListMetricNow();
       const totalMs = Math.round((now - started) * 10) / 10;
+      const requestSummary = summarizePickListRequestMetrics(started, now);
       const payload = {
         scope,
         totalMs,
         ...meta,
         ...extra,
         marks,
+        requests: requestSummary,
       };
       window._lastPickListPerfLog = payload;
+      if (!window._pickListPerfHistory) window._pickListPerfHistory = [];
+      window._pickListPerfHistory.push(payload);
+      window._pickListPerfHistory = window._pickListPerfHistory.slice(-20);
       try {
         console.groupCollapsed(`[PickList Perf] ${scope} · ${totalMs}ms`);
         console.table(marks);
+        console.table(requestSummary.requests.map(req => ({
+          source: req.source,
+          method: req.method,
+          path: req.path,
+          ms: req.ms,
+          ok: req.ok,
+          status: req.status,
+          attempts: req.attempts,
+          rows: req.rowCount,
+        })));
         console.log(payload);
         console.groupEnd();
       } catch (_) {
