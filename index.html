@@ -4614,7 +4614,7 @@ async function loginSuccess() {
   else setDeviceOwnerName((pendingFloater?.name || pendingUser?.name || "").trim());
   syncPushForActiveSession(false);
   return showLoginLoading(async () => {
-    await showDash();
+    showDash();
     routePendingProductionDeepLink();
   });
 }
@@ -4680,7 +4680,12 @@ async function processAdminPin() {
     ptAuthLog?.("navigation.after_login", { destination: "admin", role: "admin" });
     showScreen("screen-admin");
     document.getElementById("admin-date").textContent = new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
-    return loadAdminData().then(() => routePendingProductionDeepLink());
+    loadAdminData()
+      .then(() => routePendingProductionDeepLink())
+      .catch(err => {
+        ptAuthLog?.("admin.load_after_login_error", { errorName: err?.name || "", errorMessage: err?.message || String(err || "") });
+        showToast("Admin opened, but data refresh failed.", "err");
+      });
   });
 }
 
@@ -4736,13 +4741,16 @@ async function processSetupPin() {
       showLoginLoading(() => {
         showScreen("screen-admin");
         document.getElementById("admin-date").textContent = new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
-        return loadAdminData();
+        loadAdminData().catch(err => {
+          ptAuthLog?.("admin.load_after_setup_error", { errorName: err?.name || "", errorMessage: err?.message || String(err || "") });
+          showToast("Admin opened, but data refresh failed.", "err");
+        });
       });
     } else {
       currentUser = setupUser;
       localStorage.setItem("pt_user", JSON.stringify(currentUser));
       syncPushForActiveSession(false);
-      showLoginLoading(showDash);
+      showLoginLoading(() => showDash());
     }
   }
 }
@@ -5071,8 +5079,8 @@ function openContextSettings() {
 function showDash() {
   ptAuthLog?.("navigation.after_login", { destination: "dashboard", role: currentUser?.role || "" });
   /* Pete goes to the kitting screen instead */
-  if (currentUser.role === KIT_ROLE) { startRealTimeSync(); return showKitScreen(); }
-  if (currentUser.role === CONFIG_ROLE) { startRealTimeSync(); return showConfigScreen(); }
+  if (currentUser.role === KIT_ROLE) { startRealTimeSync(); showKitScreen(); return; }
+  if (currentUser.role === CONFIG_ROLE) { startRealTimeSync(); showConfigScreen(); return; }
   showScreen("screen-dash");
   startRealTimeSync();
   const isMS=currentUser.role===MS_ROLE;
@@ -5091,7 +5099,12 @@ function showDash() {
   if (teamBtn)   teamBtn.style.display   = isTeamLead(currentUser) ? "flex" : "none";
   if (nextUpBtn) nextUpBtn.style.display = isLead() ? "flex" : "none";
   if (updatesBtn) updatesBtn.style.display = isLead() ? "flex" : "none";
-  return loadBoard().then(()=>{ resumeActiveTimers(); updatePickListChangeDots().catch(()=>{}); });
+  loadBoard()
+    .then(()=>{ resumeActiveTimers(); updatePickListChangeDots().catch(()=>{}); })
+    .catch(err => {
+      ptAuthLog?.("dashboard.load_after_login_error", { errorName: err?.name || "", errorMessage: err?.message || String(err || "") });
+      showToast("Dashboard opened, but data refresh failed.", "err");
+    });
 }
 /* ── Lead: Next Up assign modal ── */
 function openNextUpAssign() {
@@ -12113,7 +12126,10 @@ function showKitScreen() {
   av.textContent      = currentUser.initials;
   document.getElementById("kit-date").textContent =
     new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
-  return loadKitBoard();
+  loadKitBoard().catch(err => {
+    ptAuthLog?.("kit.load_after_login_error", { errorName: err?.name || "", errorMessage: err?.message || String(err || "") });
+    showToast("Kitting opened, but data refresh failed.", "err");
+  });
 }
 
 let kitBoardItems = [];  /* cached kit board items — survives re-renders */
@@ -12679,7 +12695,10 @@ function showConfigScreen() {
   const host = document.getElementById("config-content");
   if (host) host.innerHTML = `<div class="loading-state"><div class="spinner"></div>Loading configuration queue…</div>`;
   startRealTimeSync();
-  return loadBoard();
+  loadBoard().catch(err => {
+    ptAuthLog?.("config.load_after_login_error", { errorName: err?.name || "", errorMessage: err?.message || String(err || "") });
+    showToast("Configuration opened, but data refresh failed.", "err");
+  });
 }
 
 async function claimConfigurationWork(woNum, e) {
