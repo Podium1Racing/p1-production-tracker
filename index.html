@@ -3883,11 +3883,15 @@ function renderLoginSelectorState() {
   setLoginDeviceCopyVisibility(!owner);
 }
 
-function showLoginEntryPoint() {
+function showLoginEntryPoint(options = {}) {
   renderLoginSelectorState();
   const mode = getDeviceMode();
   const owner = mode === "personal" ? getTeamMemberByName(getDeviceOwnerName()) : null;
   if (!owner) return;
+  if (options.autoResumeOwner === false) {
+    renderQuickStartPrompt(owner, true);
+    return;
+  }
   if (owner.role === FLOAT_ROLE) openFloaterRoleChoice(owner, true);
   else selectUser(owner, null, true);
 }
@@ -4286,7 +4290,7 @@ function doLogout() {
   const soBtn = document.getElementById("login-signout-btn");
   if (soBtn) soBtn.style.display = "none";
   showScreen("screen-login");
-  showLoginEntryPoint();
+  showLoginEntryPoint({ autoResumeOwner: false });
 }
 
 /* ═══════════════════════════════════════
