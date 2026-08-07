@@ -2039,6 +2039,7 @@ html.auth-startup-failed #screen-login input {
   <div id="name-list-wrap" style="width:100%;max-width:400px;">
     <div class="name-list" id="name-list"></div>
     <div id="login-quick-start-wrap" style="display:none"></div>
+    <div class="auth-error" id="login-select-error" style="min-height:18px" aria-live="polite"></div>
     <div class="device-mode-actions" id="login-device-mode-actions">
       <button class="device-mode-btn" id="login-device-mode-btn" onclick="toggleSharedDeviceMode()">This is a shared device</button>
       <button class="device-mode-btn secondary" id="login-device-reset-btn" onclick="resetRememberedDeviceOwner()" style="display:none">Choose a different builder for this phone</button>
@@ -4249,6 +4250,7 @@ function setLoginScreenMode(mode = "selector") {
 
 function renderLoginSelectorState() {
   clearAuthSelection();
+  setLoginSelectError("");
   buildNameList();
   const mode = getDeviceMode();
   const ownerName = getDeviceOwnerName();
@@ -4340,8 +4342,56 @@ function loginPinAltAction() {
 }
 
 /* ── Name list ─────────────────────────────────────────────── */
+let _loginNameListClickBound = false;
+let _loginSelectionBusy = false;
+
+function setLoginSelectError(message = "") {
+  const el = document.getElementById("login-select-error");
+  if (el) el.textContent = message;
+}
+
+function setLoginSelectorBusy(sourceEl, busy = false) {
+  document.querySelectorAll("#name-list .name-btn").forEach(btn => {
+    btn.disabled = !!busy;
+    btn.style.opacity = busy && btn !== sourceEl ? ".55" : "";
+  });
+}
+
+async function activateLoginNameButton(btn, event) {
+  const memberName = btn?.dataset?.memberName || "";
+  const member = memberName ? getTeamMemberByName(memberName) : null;
+  if (!member) return false;
+  event?.preventDefault?.();
+  if (member.role === FLOAT_ROLE) {
+    openFloaterRoleChoice(member);
+  } else {
+    await selectUser(member, undefined, false, btn);
+  }
+  return true;
+}
+
+function bindLoginNameListClick() {
+  const list = document.getElementById("name-list");
+  if (!list || _loginNameListClickBound) return;
+  _loginNameListClickBound = true;
+  list.addEventListener("click", event => {
+    const btn = event.target instanceof Element ? event.target.closest(".name-btn[data-member-name]") : null;
+    if (!btn || !list.contains(btn)) return;
+    activateLoginNameButton(btn, event).catch(err => {
+      ptAuthLog?.("login.name_click_error", {
+        errorName: err?.name || "",
+        errorMessage: err?.message || String(err || ""),
+      });
+      setLoginSelectError("Could not open dashboard. Please try again.");
+      setLoginSelectorBusy(btn, false);
+      _loginSelectionBusy = false;
+    });
+  });
+}
+
 function buildNameList() {
   const list = document.getElementById("name-list"); list.innerHTML = "";
+  bindLoginNameListClick();
   [
     {label:"Monitor Stand Builders",role:MS_ROLE},
     {label:"Chassis Builders",role:CHASSIS_ROLE},
@@ -4360,9 +4410,9 @@ function buildNameList() {
       const leadPill = isLeadMember
         ? `<span class="role-tag" style="margin-left:6px;background:rgba(16,185,129,.14);color:var(--green)">Lead</span>`
         : "";
-      const btn = document.createElement("button"); btn.className = "name-btn";
+      const btn = document.createElement("button"); btn.className = "name-btn"; btn.type = "button";
+      btn.dataset.memberName = m.name;
       btn.innerHTML = `<div class="av" style="background:${m.color}25;color:${m.color}">${m.initials}</div>${m.name}${leadPill}<span class="role-tag ${roleTagClass(isFloater ? FLOAT_ROLE : role)}">${isFloater ? "Choose Role" : roleLoginLabel(role)}</span>`;
-      btn.onclick = () => isFloater ? openFloaterRoleChoice(m) : selectUser(m);
       list.appendChild(btn);
     });
   });
@@ -4412,7 +4462,7 @@ function renderQuickStartPrompt(member, fromRememberedDevice = false) {
     </div>`;
 }
 
-async function selectUser(m, roleOverride, fromRememberedDevice = false) {
+async function selectUser(m, roleOverride, fromRememberedDevice = false, sourceEl = null) {
   const resolvedRole = roleOverride && m.role === FLOAT_ROLE ? roleOverride : m.role;
   ptAuthLog?.("login.user_select", {
     role: resolvedRole,
@@ -4429,14 +4479,30 @@ async function selectUser(m, roleOverride, fromRememberedDevice = false) {
     quick.innerHTML = "";
   }
   if (!requiresProtectedLogin(pendingUser)) {
-    ptAuthLog?.("login.builder_submit", { role: pendingUser.role });
-    setLoginScreenMode("selector");
-    document.getElementById("name-list-wrap").style.display = "block";
-    document.getElementById("floater-role-wrap").style.display = "none";
-    document.getElementById("pin-entry-wrap").style.display = "none";
-    document.getElementById("login-device-copy").style.display = "none";
-    document.getElementById("admin-login-btn").style.display = "flex";
-    await loginSuccess();
+    if (_loginSelectionBusy) return;
+    _loginSelectionBusy = true;
+    setLoginSelectError("Opening...");
+    setLoginSelectorBusy(sourceEl, true);
+    try {
+      ptAuthLog?.("login.builder_submit", { role: pendingUser.role });
+      setLoginScreenMode("selector");
+      document.getElementById("name-list-wrap").style.display = "block";
+      document.getElementById("floater-role-wrap").style.display = "none";
+      document.getElementById("pin-entry-wrap").style.display = "none";
+      document.getElementById("login-device-copy").style.display = "none";
+      document.getElementById("admin-login-btn").style.display = "flex";
+      await loginSuccess();
+    } catch (err) {
+      ptAuthLog?.("login.builder_submit_error", {
+        role: pendingUser?.role || "",
+        errorName: err?.name || "",
+        errorMessage: err?.message || String(err || ""),
+      });
+      setLoginSelectError("Could not open dashboard. Please try again.");
+      setLoginSelectorBusy(sourceEl, false);
+    } finally {
+      _loginSelectionBusy = false;
+    }
     return;
   }
   setLoginScreenMode("pin");
@@ -4547,7 +4613,7 @@ async function loginSuccess() {
   if (getDeviceMode() === "shared") setDeviceOwnerName("");
   else setDeviceOwnerName((pendingFloater?.name || pendingUser?.name || "").trim());
   syncPushForActiveSession(false);
-  showLoginLoading(async () => {
+  return showLoginLoading(async () => {
     await showDash();
     routePendingProductionDeepLink();
   });
