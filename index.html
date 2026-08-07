@@ -3117,21 +3117,30 @@ function activeTimerHasWork(entry) {
   return !!(entry && (entry.running || entry.totalMs > 0));
 }
 
+function getBuilderSessionTypesForCurrentUser() {
+  const role = currentUser?.role;
+  if (role === MS_ROLE) return ["ms"];
+  if (role === CHASSIS_ROLE) return ["chassis"];
+  return ["ms", "chassis"];
+}
+
 function getActiveBuilderSessionsForCurrentUser() {
   const userName = currentUser?.name || "";
   if (!userName) return [];
   const timers = loadTimers();
+  const allowedTypes = new Set(getBuilderSessionTypesForCurrentUser());
   const sessions = [];
   const seen = new Set();
   const addSession = (session) => {
     if (!session?.itemId || !session?.colType) return;
+    if (!allowedTypes.has(session.colType)) return;
     const key = `${session.itemId}|${session.colType}`;
     if (seen.has(key)) return;
     seen.add(key);
     sessions.push(session);
   };
 
-  ["ms", "chassis"].forEach(colType => {
+  [...allowedTypes].forEach(colType => {
     const whoCol = sideWhoCol(colType);
     (boardItems || []).forEach(item => {
       if (!item?.id || !isMeInPeople(item, whoCol)) return;
@@ -3888,10 +3897,7 @@ function showLoginEntryPoint(options = {}) {
   const mode = getDeviceMode();
   const owner = mode === "personal" ? getTeamMemberByName(getDeviceOwnerName()) : null;
   if (!owner) return;
-  if (options.autoResumeOwner === false) {
-    renderQuickStartPrompt(owner, true);
-    return;
-  }
+  if (options.autoResumeOwner === false) return;
   if (owner.role === FLOAT_ROLE) openFloaterRoleChoice(owner, true);
   else selectUser(owner, null, true);
 }
@@ -3994,28 +4000,6 @@ function openFloaterRoleChoice(m, fromRememberedDevice = false) {
 function chooseFloaterRole(role) {
   if (!pendingFloater) return;
   selectUser(pendingFloater, role);
-}
-
-function renderQuickStartPrompt(member, fromRememberedDevice = false) {
-  const wrap = document.getElementById("login-quick-start-wrap");
-  if (!wrap || !member) return;
-  const roleText = roleLabel(member.role);
-  const first = member.name.split(" ")[0];
-  wrap.style.display = "block";
-  wrap.innerHTML = `
-    <div class="quick-start-card">
-      <div class="quick-start-kicker">Ready to Start</div>
-      <div class="quick-start-title">${escHtml(member.name)}</div>
-      <div class="quick-start-sub">
-        ${fromRememberedDevice
-          ? `You're set up on this device as ${escHtml(first)}. Tap Start Working to open your dashboard.`
-          : `Tap Start Working to open your ${escHtml(roleText)} dashboard and load your assigned projects.`}
-      </div>
-      <div class="quick-start-actions">
-        <button type="button" class="quick-start-btn" onclick="startWorkingSelectedUser()">Start Working</button>
-        <button type="button" class="quick-start-btn secondary" onclick="clearAuthSelection()">Choose Someone Else</button>
-      </div>
-    </div>`;
 }
 
 async function selectUser(m, roleOverride, fromRememberedDevice = false) {
