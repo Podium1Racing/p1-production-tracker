@@ -1,3 +1,5 @@
+const PT_SW_VERSION = "p0-maintenance-2026-08-07";
+const PT_SW_MAINTENANCE_MODE = true;
 const PUSH_USER_CACHE = "pt-push-meta";
 const PUSH_USER_KEY = "/__push_user__";
 
@@ -30,6 +32,7 @@ self.addEventListener("activate", (event) => {
 
 async function fetchLatestAlert(userName) {
   try {
+    if (PT_SW_MAINTENANCE_MODE) return null;
     if (!userName) return null;
     const r = await fetch(`/api/push?action=latest-alert&userName=${encodeURIComponent(userName)}`, { cache: "no-store" });
     if (!r.ok) return null;
@@ -41,6 +44,7 @@ async function fetchLatestAlert(userName) {
 }
 
 self.addEventListener("push", (event) => {
+  if (PT_SW_MAINTENANCE_MODE) return;
   event.waitUntil((async () => {
     const userName = await getStoredPushUser();
     const latest = await fetchLatestAlert(userName);
@@ -64,6 +68,7 @@ self.addEventListener("push", (event) => {
 });
 
 self.addEventListener("notificationclick", (event) => {
+  if (PT_SW_MAINTENANCE_MODE) return;
   event.notification.close();
   event.waitUntil((async () => {
     const url = event.notification?.data?.url || "/#messages";
@@ -79,6 +84,11 @@ self.addEventListener("notificationclick", (event) => {
 });
 
 self.addEventListener("message", (event) => {
+  if (event.data?.type === "GET_VERSION") {
+    event.ports?.[0]?.postMessage?.({ type: "VERSION", version: PT_SW_VERSION });
+    return;
+  }
+  if (PT_SW_MAINTENANCE_MODE) return;
   if (event.data?.type === "SET_PUSH_USER") {
     event.waitUntil?.(setStoredPushUser(event.data?.userName || ""));
     return;
