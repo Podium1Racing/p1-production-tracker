@@ -1,4 +1,3 @@
-const PT_SW_VERSION = "p0-auth-2026-08-06";
 const PUSH_USER_CACHE = "pt-push-meta";
 const PUSH_USER_KEY = "/__push_user__";
 
@@ -22,12 +21,10 @@ async function getStoredPushUser() {
 }
 
 self.addEventListener("install", (event) => {
-  console.info("[P0 Auth] service_worker.install", { version: PT_SW_VERSION });
   event.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener("activate", (event) => {
-  console.info("[P0 Auth] service_worker.activate", { version: PT_SW_VERSION });
   event.waitUntil(self.clients.claim());
 });
 
@@ -82,10 +79,6 @@ self.addEventListener("notificationclick", (event) => {
 });
 
 self.addEventListener("message", (event) => {
-  if (event.data?.type === "GET_VERSION") {
-    event.ports?.[0]?.postMessage?.({ type: "VERSION", version: PT_SW_VERSION });
-    return;
-  }
   if (event.data?.type === "SET_PUSH_USER") {
     event.waitUntil?.(setStoredPushUser(event.data?.userName || ""));
     return;

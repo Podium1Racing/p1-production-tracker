@@ -2,78 +2,6 @@
 <html lang="en">
 <head>
   <link rel="manifest" id="pwa-manifest">
-  <script>
-    window.PT_APP_VERSION = "p0-auth-2026-08-06";
-    window.PT_APP_BASE_PATH = new URL(".", window.location.href).pathname || "/";
-    window.ptDisplayMode = function ptDisplayMode() {
-      if (window.matchMedia?.("(display-mode: standalone)")?.matches) return "standalone";
-      if (window.navigator?.standalone) return "ios-standalone";
-      return "browser";
-    };
-    window.ptAuthLog = function ptAuthLog(event, details = {}) {
-      try {
-        console.info("[P0 Auth]", event, {
-          version: window.PT_APP_VERSION,
-          displayMode: window.ptDisplayMode?.(),
-          path: window.location.pathname,
-          ...details,
-        });
-      } catch (_) {}
-    };
-    window.ptMarkAuthReady = function ptMarkAuthReady(reason = "ready") {
-      document.documentElement.classList.remove("auth-startup-pending", "auth-startup-failed");
-      document.documentElement.classList.add("auth-startup-ready");
-      window.ptAuthLog?.("auth.ready", { reason });
-    };
-    window.ptShowStartupFailure = function ptShowStartupFailure(message, error) {
-      window.ptAuthLog?.("startup.failure", {
-        message,
-        errorName: error?.name || "",
-        errorMessage: error?.message || String(error || ""),
-      });
-      // Emergency lockout rollback: diagnostics must never block the login path.
-      document.documentElement.classList.remove("auth-startup-pending", "auth-startup-failed");
-      document.documentElement.classList.add("auth-startup-ready");
-    };
-    window.ptRetryStartup = function ptRetryStartup() {
-      window.ptAuthLog?.("recovery.retry");
-      window.location.reload();
-    };
-    window.ptCheckForUpdates = async function ptCheckForUpdates() {
-      window.ptAuthLog?.("recovery.check_updates.begin");
-      try {
-        const regs = await navigator.serviceWorker?.getRegistrations?.() || [];
-        await Promise.all(regs.map(reg => reg.update?.()));
-      } catch (err) {
-        window.ptAuthLog?.("recovery.check_updates.error", { errorName: err?.name || "", errorMessage: err?.message || "" });
-      }
-      const url = new URL(window.location.href);
-      url.searchParams.set("auth_update", Date.now().toString());
-      window.location.replace(url.toString());
-    };
-    window.ptOpenInBrowser = function ptOpenInBrowser() {
-      window.ptAuthLog?.("recovery.open_browser");
-      const opened = window.open(window.location.href, "_blank", "noopener,noreferrer");
-      if (!opened) window.location.href = window.location.href;
-    };
-    window.addEventListener("error", (event) => {
-      if (!document.documentElement.classList.contains("auth-startup-ready")) {
-        window.ptAuthLog?.("startup.global_error", {
-          errorName: event.error?.name || "",
-          errorMessage: event.error?.message || String(event.message || ""),
-        });
-      }
-    });
-    window.addEventListener("unhandledrejection", (event) => {
-      if (!document.documentElement.classList.contains("auth-startup-ready")) {
-        window.ptAuthLog?.("startup.unhandledrejection", {
-          errorName: event.reason?.name || "",
-          errorMessage: event.reason?.message || String(event.reason || ""),
-        });
-      }
-    });
-    window.ptAuthLog("startup.script_loaded");
-  </script>
   <link rel="apple-touch-icon" href="data:image/png;base64,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zDCRCAzIwBgYjtaV8tly9UFHsO0sTWanxBnrZAJHAyyMIWITT6/+90IbkTKikeD444+PbCMqKS/HMGZpK1Eo2bFjx8knn4yX7s6/gZjHLsaFnQIAdl7dOe87w0s7n3xpbb0XaZd/ZhfmjnnjDdMdHbyCtkLdYBAAH/zgB3uVFOw5hqybvDyGR3/jG9946KGHZoUdHCBVZV+wi6H6Jau99vxXd3lm14/QPfy1u8KlMjWntr6REK1Vxx577BNPPOG9L4oizAHee+dcLLxt27bTTz8de5+mp483NOKaUqlU/vIv/3LPi8ge8KUvfQkH2OrVx4HAKxvBjDHVanXr1q2f//zn45oyl+yAkSziqvSv//qv+3EDto83CnpVlVeDPtv494i9GLB9i2Ll1+lM8j766KOPPvroo48++uijjz766KOPPvroo48++uijjz766KOPPvroo48++uijjz766KOPPvroo48++uijjz766KOPPvroo48++uijjz766KOPPvroo48++nhdsHepmGLO8lkXtXu23qz0PfFs6TkWfsW3xKyVr1iyzIEZsWvlva2aVecebpUFdk3JXWZcnWNqK1UNIaAnFVZ55RXftdtWoZvxMWLnIUO7fNSsW68pdjuoeyi8m9Mt9pjWeG8Tixlj9leS5N0S+gHCnt+1V538alsy13JEqnr44YefdNJJZZrAeMs5Nz4+vmHDhq1bt6LnUJylS5e++c1v3rXw2NjYxo0bt2zZUlYbb8XsYQAOP/zws846a82aNfPmzQOwY8eORx555NZbb3322WfLYvHBU045ZdWqVeW5giGEPM+np6e3bNny/PPP53kOIB4pV77rsMMOO/XUU+NRcw899NDjjz9eNnjVqlWnnHJKvPXAAw888cQTZY7e2LCFCxe+5S1vWbt27ZIlS6y109PTTzzxxH333XffffeFEN7+9rcPDw9r95TMXjou+RkRTU1N/ehHP6pUKueff348xHRsbOymm27q7WcAixcvPvvss0844YSDDjqImaemph5//PE77rhj/fr1szqhVqudf/758bxOZr711lu3bNlSftTKlSvXrVsXb91yyy1bt27d/yeZRMb127/92y+XbHR8fPyb3/zmEUccASBmH/zgBz/4coUnJia+/e1vL1++vOzEOBuWLVt27bXXNpvNXR+Znp7+8pe/vGDBAnTP9wDw9a9/fbf1N5vNDRs2/P3f//2aNWvKyuMnfPKTnyyL/eEf/mG8Hm9dccUV5a3f//3fj7di8wYHB//zf/7PW7du3e3rbrjhhkql8txzz73c9/bi6aefBrB06dIyP/gjjzyCngMIqtXqF77whR07duz6rHPuf/yP/3HUUUehh4UcdthhvWV++MMfxikRP+q3fuu3ylvveMc7cCBSBcc3fepTn3LOtdtt51yr1arX6zMzM70t27Jly+rVq2Oj3/Oe9zjn8jyPj9Tr9Uaj0Vv47rvvzrKs5KKHH374008/rd0lfMeOHbfccsttt902OTlZPvLwww8vWbKkzH755S9/ObbEOddsNuv1ep7nva+o1+uXX3557Mr4CZdddplzrl6vO+d++7d/u5c4fvM3f9M5NzMz45z7j//xPwJI05SIFi9efO+99/ZWu379+p/+9Kd33HHHCy+8oKqtVmtgYOCuu+6q1+vT09P1er1erxdF4ZyLaZzjlXjrzjvvBLB48eIdO3bEArfffns52CMjI7fcckv5okajceedd/7sZz/bvHmzqkahYfv27fG0q9jsFStWTE1NxRe1221VvfjiiwFkWQbg0ksvdc41Gg3n3K/+6q8eQOKIcyu24HOf+9zSpUsPPfTQM84446abbhKROOOvvPLK+MiFF16oqnG0vvjFLy5btmzlypUXXHDBc889F0IoikJVTzzxRHTJ/K677oodrapf+9rXli1bFus57LDDrrvuuvLWD37wg5I4rrrqKlWNVb3//e9funTp0Ucf/c53vvOf/umfyuuqeuGFF5adFU9Jjp/wO7/zO73E8YlPfKJ8y2c/+1kA8YCHH/3oR+X1u+6668wzz4zLAYB58+a9+93vvvrqqwcHBxctWrRs2bJly5YtXbp09erVzz77bHz7M888s3LlyqVLl8ZbBx10EIAlS5ZMTEzEAnfddVc5ZldffXX5rptvvjlyPgALFy78q7/6q7LlGzduHBoaipNwxYoV9Xq9nFQhhC1btixatChWeNlll5WjcN55571GxPGpT32qvH7cccdp94CEu+++e1fi+PM///OyqjiisZLTTjstXnznO99ZFr733nvjxZJzZlkWD6OM4x0zqc8ijjPPPLO3wbGp8daTTz5ZqVRip+wVcQB4+9vfHhsmIhs3bhwdHS3b1itVzJKUrbVPPvlkHPsou8zqz12JA8Dq1auLoojduG3btkhGvRLo9ddfXzY+ckS8lDgajUYkka9+9avx7qshjn2Xe6O4570HcOihh6KroMZTfWehWq3WarWRkZHTTjvtnHPOQXe8H3nkkdjWt73tbfHzAHz9618HkCRJ1NySJMnz/Fvf+ha6yti555676yviEpAkSTzs54tf/OK9996bJIn3ftWqVevWrdtVXZwLLrjggtgwIrrqqqsmJycj24gfG9fE8pjtUv+My2WsofzzFU+ZOeuss2KDiej666/ftm1bbycwcznkqvq2t71t1uNEdO211955552q+vGPf/ztb387Xh2f2MfjyuOXtFotZl65cuUVV1wRj+dJkuT6668vPwBd1vKJT3ziQx/6EDMvXrzYGBOX3t/93d9tNBppmoYQli1bVnbcU089RUSlQh/7fePGjeXboyQ7C3EWxsPn4gExP//5z0899dSYr33lypXx5Pq9xaGHHlo27OGHH45HkvW+tPxTe44Z1JeqA+UV3aOaEL8rltmwYUOvWhG7N+prUaVfsmRJ2SHo9tLWrVuvvvrqKCH99//+34855hjn3D58dcS+EEckxksvvfTSSy+ddf3GG2/8u7/7u1J7LDE0NDQ0NBR/e+8nJyf/8i//8sEHHyxL6kvtNru+tHfC7dYQNAuq2msamssjL1fPbttwINBrG5z1rl3V491+0YIFC+67775rr7324osvPuqoo6644opIT/uGff/adrs9PT09PT09Njb29NNP33DDDZdffvk73/nOer2+6zf85Cc/+exnP/s3f/M309PT1trly5ffdNNN73rXu+IsBxDFt1j46KOPVtWSH0amXYpmsfBuvoQ5qrhJksTVJ0ohSZL0Mp5ZAxBnYbk6oGtpKLs+ig7xz1NPPTXSHHVRKkH7Bc8++2zJpY499ljtOSMxtjNaCuLXbdq0KT6lLz3fiIh+7/d+b+vWrSLyx3/8x3EJPrAWvF0F0j/4gz84+OCDly5dunDhwlqtVpYsVdP3vve9pSj0J3/yJ/HuW97ylna7HeXEF154YXR0NBZ+61vfWsp9jz76aNQsSoyOjsbzSuNxcVHHwUsF0lJKjfizP/uz8u0PPfRQkiTxRe94xzvKR6666ir0SHxRHYiPfOhDH4r1nHXWWbF8PPp0tysaeno/jmWtVnvqqafiarJx48b4Ob2zf7cC6SGHHNJsNuMpepOTk4cddtist0QtN/b/hz/84XgxCqSR6P/2b/82Xrz44ou154C9SE+vnbbyyU9+srdAOQvL1/cSx3/5L//FWhtp6Atf+EJZyRe+8AV0bU033nhjqSxcf/31J5xwQpIkWZatW7fu1ltvLW/98z//M7p2tl7i+PjHP37CCSecddZZl19++Q9/+MPy1d77KALHT1i4cOHExEQ8SGp8fPz888+PMuyv/MqvbN261XvvvW82m1GRjh/y7W9/u2zwL3/5ywsvvHDhwoVRzFy1atUnPvGJ6667bnBwED2GrH0gjti8SKDxSx966KGzzz67Wq0aY4444oion8dm3H///ZVKpVeV7SWOKDLH/oxk8VoQx3/4D/8hhNBsNkMIV1xxRdQOyh4pEV//nve8J4TQarVCCJ///OfRNRuMjo6+8MIL0dTdaDSOPPLI+MjixYvvv/9+7aLdbj/22GOPP/54PG8w4uabbx4dHWXmSBxXXnllrCd+/K7YtGnTu9/9bnSX8Niwz3zmM71lHn/88ccee6y3hj/6oz9Cl5Mz8/Dw8A033ND7yObNm9evX//EE09EG2Ce59VqdRZxxBPdQwgbNmzYLXGMjY3FAnfccQe6DCzLsu9+97u973riiSceeeSRqKyW1BaNpKURbHp6OvKbv/mbvymJ48gjj4y2rzgTQggH1gjW262f+cxn8NL9wFnE8f73v78s/Nd//dfosShE5Tvixz/+cXl9eHj4r/7qr7Zs2bLrMD///PN/+qd/WqlU0LNyXXPNNbuWbLVaL7744u233/65z33u4IMPxkuFu/g7Smq7JaZo/CgX+9K6/5nPfOaxxx7b9ZGZmZlvfOMbUZHuJY4XX3yxrHNX4li6dGnkAar6wAMPoIewiOizn/3sE088seu7xsfHr7zyysWLF6NnNVy5cmVpiY8npkVlHsDnPve53sfPP//8vSKOvdt4W7JkyerVq+MuzpNPPvniiy/udhcnXpw/f/4xxxwTC7/wwgvPPPMMdQ+oJqLTTz89njLJzHfddZdzrtzfWrBgwbp169asWRMtTmNjY48++ujPf/7zqampsvJyI3Dx4sXlnyISbdXbt28fHx8vKXWW6hQLDw8Pn3HGGcccc8y8efOIaGJi4pe//OVdd901MTEx66PKP9M0PeWUU4477ri48TYzM7Nx48YHHnggbpf0gplPPvnkSMqtVuv++++fpVykaXryySfHKTEzM/Pggw/Oele1Wl23bt1xxx1Xbrxt2LDh3nvvffHFF/HSjbcsy04++eRIzZs3b46GgPLbTz/99LLH1q9fPzk5uf833l4b0B53q/dqy56Iym2z3Va1h7fsbcPm3qo5Yn91wqvE3r2m18D3iodz9RbWHuUwovf7d53Zs4zT2t04mPWK3TqFlFx0Lt8yl7fs+ZFdP21W216uQNkDuy2wV817uapmGWT756n10UcfffTRRx999PHvCv8f7Hjv2mYupfcAAAAASUVORK5CYII=">
   <link rel="apple-touch-icon" id="apple-touch-icon-link">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -84,8 +12,7 @@
     const _manifest = {
       name: "Podium 1 Production",
       short_name: "Production",
-      start_url: window.PT_APP_BASE_PATH || "/",
-      scope: window.PT_APP_BASE_PATH || "/",
+      start_url: "/",
       display: "standalone",
       background_color: "#000000",
       theme_color: "#000000",
@@ -115,41 +42,18 @@
       const iconType = loginLogoImg.src.startsWith("data:image/jpeg") ? "image/jpeg" : "image/png";
       applyAppIcon(loginLogoImg.src, iconType);
     });
-    let _stableAppViewportHeight = 0;
-    function getAppViewportHeight() {
-      return Math.round(
+    function syncAppViewportSize() {
+      const root = document.documentElement;
+      if (!root) return;
+      const viewportHeight = Math.round(
         window.visualViewport?.height ||
         window.innerHeight ||
         document.documentElement?.clientHeight ||
         0
       );
-    }
-    function gateFieldFocused() {
-      const active = document.activeElement;
-      return active?.id === "gate-user" || active?.id === "gate-pass";
-    }
-    function syncAppViewportSize() {
-      const root = document.documentElement;
-      if (!root) return;
-      const viewportHeight = getAppViewportHeight();
-      const freezeGateViewport = gateFieldFocused() && gateKeyboardLikelyOpen();
       if (viewportHeight) {
-        if (!_stableAppViewportHeight || viewportHeight > _stableAppViewportHeight || !freezeGateViewport) {
-          _stableAppViewportHeight = viewportHeight;
-        }
-        root.style.setProperty("--app-vh", `${freezeGateViewport ? _stableAppViewportHeight : viewportHeight}px`);
+        root.style.setProperty("--app-vh", `${viewportHeight}px`);
       }
-      updateGateKeyboardLayout();
-    }
-    function gateKeyboardLikelyOpen() {
-      const viewportHeight = getAppViewportHeight();
-      const windowHeight = window.innerHeight || document.documentElement?.clientHeight || 0;
-      return viewportHeight > 0 && windowHeight - viewportHeight > 120;
-    }
-    function updateGateKeyboardLayout() {
-      const gate = document.getElementById("screen-gate");
-      if (!gate) return;
-      gate.classList.toggle("keyboard-open", gateFieldFocused() && gateKeyboardLikelyOpen());
     }
     window.addEventListener("DOMContentLoaded", syncAppViewportSize);
     window.addEventListener("load", syncAppViewportSize);
@@ -157,12 +61,6 @@
     window.addEventListener("orientationchange", () => setTimeout(syncAppViewportSize, 120));
     window.addEventListener("resize", syncAppViewportSize);
     window.visualViewport?.addEventListener?.("resize", syncAppViewportSize);
-    document.addEventListener("focusin", () => {
-      setTimeout(syncAppViewportSize, 60);
-    });
-    document.addEventListener("focusout", () => {
-      setTimeout(syncAppViewportSize, 120);
-    });
   </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -277,96 +175,6 @@ button, input, select, textarea { font-family:inherit; }
 @keyframes softPop { 0% { transform:scale(.92); } 70% { transform:scale(1.06); } 100% { transform:scale(1); } }
 
 /* LOGIN */
-#screen-gate {
-  align-items:center;
-  justify-content:center;
-  min-height:var(--app-vh);
-  height:var(--app-vh);
-  padding:calc(28px + env(safe-area-inset-top)) 1.5rem calc(28px + env(safe-area-inset-bottom));
-  position:relative;
-  overflow-y:auto;
-}
-#screen-gate.keyboard-open {
-  justify-content:flex-start;
-  padding-top:calc(18px + env(safe-area-inset-top));
-  padding-bottom:calc(18px + env(safe-area-inset-bottom));
-}
-.gate-top-accent {
-  position:fixed;
-  top:0;
-  left:0;
-  right:0;
-  height:3px;
-  background:var(--accent);
-  z-index:100;
-}
-.gate-panel {
-  width:min(100%, 320px);
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  flex-shrink:0;
-  margin:auto 0;
-  transition:transform .18s ease, margin .18s ease;
-}
-#screen-gate.keyboard-open .gate-panel {
-  margin:0;
-}
-.gate-logo-wrap {
-  width:90px;
-  height:90px;
-  background:#fff;
-  border-radius:20px;
-  overflow:hidden;
-  padding:6px;
-  box-shadow:0 8px 40px rgba(0,0,0,0.4);
-  margin-bottom:24px;
-}
-.gate-title {
-  font-size:20px;
-  font-weight:900;
-  letter-spacing:.06em;
-  text-transform:uppercase;
-  margin-bottom:3px;
-  text-align:center;
-}
-.gate-subtitle {
-  font-size:10px;
-  color:var(--accent);
-  margin-bottom:32px;
-  letter-spacing:.18em;
-  text-transform:uppercase;
-  font-weight:700;
-  text-align:center;
-}
-#screen-gate.keyboard-open .gate-logo-wrap {
-  width:72px;
-  height:72px;
-  margin-bottom:14px;
-}
-#screen-gate.keyboard-open .gate-subtitle {
-  margin-bottom:18px;
-}
-.gate-form {
-  width:100%;
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-}
-.gate-enter-btn {
-  background:var(--accent);
-  color:#fff;
-  border:none;
-  border-radius:6px;
-  padding:14px 48px;
-  font-size:13px;
-  font-weight:800;
-  cursor:pointer;
-  touch-action:manipulation;
-  letter-spacing:.12em;
-  box-shadow:0 4px 24px rgba(224,32,32,0.35);
-}
-
 #screen-login { align-items:center; justify-content:flex-start; height:var(--app-vh); min-height:var(--app-vh); padding:calc(1.6rem + env(safe-area-inset-top)) 1.25rem calc(28px + var(--bottom-nav-safe-bottom)); position:relative; overflow-y:auto; box-sizing:border-box; }
 #screen-login.login-pin-mode,
 #screen-login.login-floater-mode {
@@ -614,7 +422,6 @@ button, input, select, textarea { font-family:inherit; }
 .pick-list-btn .pl-mini-pill { margin-left:auto; font-size:9px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; padding:3px 7px; border-radius:999px; white-space:nowrap; }
 .pick-list-btn .pl-mini-pill.missing_items { background:rgba(224,32,32,0.15); color:var(--accent); }
 .pick-list-btn .pl-mini-pill.fully_kitted { background:rgba(16,185,129,0.15); color:#10b981; }
-.pick-list-btn .pl-mini-pill.syncing { background:rgba(245,158,11,0.14); color:#fbbf24; }
 .pick-list-btn.centered { justify-content:center; }
 .pick-list-btn.centered .pl-mini-pill { margin-left:8px; }
 .pick-list-btn.active { background:rgba(224,32,32,0.08); border-color:rgba(224,32,32,0.28); color:#fff; }
@@ -667,78 +474,6 @@ button, input, select, textarea { font-family:inherit; }
 .updates-project-header:first-child { border-top:none; margin-top:0; }
 @keyframes spin-icon { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
 .spin-icon { animation: spin-icon .7s linear infinite; }
-.pull-refresh-indicator {
-  position:fixed;
-  top:calc(env(safe-area-inset-top) + 10px);
-  left:50%;
-  z-index:160;
-  pointer-events:none;
-  opacity:0;
-  transform:translate(-50%, -54px) scale(.96);
-  transition:opacity .18s ease, transform .18s ease;
-}
-.pull-refresh-indicator.visible {
-  opacity:1;
-}
-.pull-refresh-chip {
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  min-height:38px;
-  padding:9px 14px;
-  border-radius:999px;
-  background:rgba(8,8,8,0.92);
-  border:1px solid rgba(255,255,255,0.08);
-  box-shadow:0 14px 34px rgba(0,0,0,0.28);
-  color:#fff;
-  font-size:11px;
-  font-weight:800;
-  letter-spacing:.08em;
-  text-transform:uppercase;
-  backdrop-filter:blur(12px);
-}
-[data-theme="light"] .pull-refresh-chip {
-  background:rgba(255,255,255,0.96);
-  border-color:rgba(0,0,0,0.08);
-  color:#111;
-}
-.pull-refresh-icon {
-  width:14px;
-  height:14px;
-  flex-shrink:0;
-  transition:transform .18s ease, opacity .18s ease;
-}
-.screen.pull-refresh-active .main-content,
-.screen.pull-refresh-active .kit-content,
-.screen.pull-refresh-active .admin-content,
-.screen.pull-refresh-active .hist-content,
-.screen.pull-refresh-active .team-screen-content,
-.screen.pull-refresh-active .config-content,
-.screen.pull-refresh-active .config-checklist-content,
-.screen.pull-refresh-active #screen-login,
-.screen.pull-refresh-active #pl-content,
-.screen.pull-refresh-settling .main-content,
-.screen.pull-refresh-settling .kit-content,
-.screen.pull-refresh-settling .admin-content,
-.screen.pull-refresh-settling .hist-content,
-.screen.pull-refresh-settling .team-screen-content,
-.screen.pull-refresh-settling .config-content,
-.screen.pull-refresh-settling .config-checklist-content,
-.screen.pull-refresh-settling #screen-login,
-.screen.pull-refresh-settling #pl-content {
-  transform:translateY(var(--pull-refresh-offset, 0px));
-}
-.screen.pull-refresh-settling .main-content,
-.screen.pull-refresh-settling .kit-content,
-.screen.pull-refresh-settling .admin-content,
-.screen.pull-refresh-settling .hist-content,
-.screen.pull-refresh-settling .team-screen-content,
-.screen.pull-refresh-settling .config-content,
-.screen.pull-refresh-settling .config-checklist-content,
-.screen.pull-refresh-settling #screen-login,
-.screen.pull-refresh-settling #pl-content {
-  transition:transform .18s ease;
-}
 
 /* PARTS PULLED — PRIORITY QUEUE */
 .avail-section { margin-top:20px; }
@@ -1314,7 +1049,7 @@ input.photo-file-inp { display:none; }
 .picklist-progress-stage { font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--text); line-height:1.25; }
 .picklist-progress-percent { font-size:12px; font-weight:900; color:var(--accent2); flex-shrink:0; }
 .picklist-progress-track { width:100%; height:8px; border-radius:999px; background:rgba(255,255,255,0.06); overflow:hidden; margin-bottom:8px; }
-.picklist-progress-fill { height:100%; border-radius:999px; background:linear-gradient(90deg, rgba(224,32,32,0.7) 0%, rgba(255,64,64,1) 100%); width:0; transition:width .45s cubic-bezier(.22,.61,.36,1); }
+.picklist-progress-fill { height:100%; border-radius:999px; background:linear-gradient(90deg, rgba(224,32,32,0.7) 0%, rgba(255,64,64,1) 100%); transition:width .18s ease; }
 .picklist-progress-detail { font-size:11px; line-height:1.45; color:var(--muted); }
 .picklist-progress-steps { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
 .picklist-progress-step { font-size:9px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; border-radius:999px; padding:4px 7px; background:rgba(255,255,255,0.04); color:var(--muted2); border:1px solid rgba(255,255,255,0.05); }
@@ -1811,67 +1546,6 @@ input.photo-file-inp { display:none; }
   background:linear-gradient(90deg, transparent, var(--accent), #fff, var(--accent), transparent);
   animation:loginLoadSweep 1.05s ease-in-out infinite;
 }
-.auth-startup-panel {
-  position:fixed;
-  inset:0;
-  z-index:10080;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:24px;
-  background:rgba(0,0,0,.82);
-}
-.auth-startup-panel[hidden] { display:none; }
-.auth-startup-card {
-  width:min(100%, 380px);
-  background:var(--surface);
-  border:1px solid var(--border2);
-  border-radius:16px;
-  padding:18px;
-  box-shadow:0 20px 70px rgba(0,0,0,.45);
-  text-align:center;
-}
-.auth-startup-title {
-  font-size:18px;
-  font-weight:900;
-  margin-bottom:8px;
-}
-.auth-startup-message {
-  color:var(--muted);
-  font-size:13px;
-  line-height:1.5;
-  margin-bottom:14px;
-}
-.auth-startup-actions {
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-}
-.auth-startup-actions button {
-  min-height:44px;
-  border-radius:10px;
-  border:1px solid var(--border2);
-  background:var(--accent);
-  color:#fff;
-  font-weight:850;
-  letter-spacing:.06em;
-  text-transform:uppercase;
-}
-.auth-startup-actions button.secondary {
-  background:transparent;
-  color:var(--muted);
-}
-html.auth-startup-pending #screen-gate input,
-html.auth-startup-pending #screen-gate button,
-html.auth-startup-pending #screen-login button,
-html.auth-startup-pending #screen-login input,
-html.auth-startup-failed #screen-gate input,
-html.auth-startup-failed #screen-gate button,
-html.auth-startup-failed #screen-login button,
-html.auth-startup-failed #screen-login input {
-  pointer-events:auto;
-  opacity:1;
-}
 @keyframes loginLoadSweep {
   0%   { transform:translateX(-120%); opacity:.2; }
   50%  { opacity:1; }
@@ -1980,40 +1654,26 @@ html.auth-startup-failed #screen-login input {
     <div>Loading Workspace</div>
   </div>
 </div>
-<div id="auth-startup-panel" class="auth-startup-panel" hidden>
-  <div class="auth-startup-card">
-    <div class="auth-startup-title">Login Could Not Start</div>
-    <div id="auth-startup-message" class="auth-startup-message">Production Tracker could not finish login startup.</div>
-    <div class="auth-startup-actions">
-      <button type="button" onclick="ptRetryStartup()">Retry</button>
-      <button type="button" class="secondary" onclick="ptCheckForUpdates()">Check for Updates</button>
-      <button type="button" class="secondary" onclick="ptOpenInBrowser()">Open in Browser</button>
-    </div>
-  </div>
-</div>
 
 <!-- LOGIN -->
 <!-- FIRST LAUNCH GATE -->
-<div id="screen-gate" class="screen active">
-  <div class="gate-top-accent"></div>
-  <div class="gate-panel">
-  <div class="gate-logo-wrap">
+<div id="screen-gate" class="screen active" style="align-items:center;justify-content:center;flex-direction:column;padding:2rem 1.5rem;position:relative"><div style="position:fixed;top:0;left:0;right:0;height:3px;background:var(--accent);z-index:100"></div>
+  <div style="width:90px;height:90px;background:#fff;border-radius:20px;overflow:hidden;padding:6px;box-shadow:0 8px 40px rgba(0,0,0,0.4);margin-bottom:24px">
     <img src="data:image/jpeg;base64,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" style="width:100%;height:100%;object-fit:contain;display:block;" alt="Podium 1 Racing">
   </div>
-  <div class="gate-title">PRODUCTION TRACKER</div>
-  <div class="gate-subtitle">PODIUM 1 RACING</div>
-  <form id="gate-form" class="gate-form" autocomplete="on" onsubmit="return submitGate(event)">
-    <input id="gate-user" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="Username"
+  <div style="font-size:20px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px">PRODUCTION TRACKER</div>
+  <div style="font-size:10px;color:var(--accent);margin-bottom:32px;letter-spacing:.18em;text-transform:uppercase;font-weight:700">PODIUM 1 RACING</div>
+  <div style="width:100%;max-width:320px;display:flex;flex-direction:column;gap:10px">
+    <input id="gate-user" type="text" autocomplete="username" placeholder="Username"
       class="auth-input" style="text-align:center;font-size:15px"
       onkeydown="if(event.key==='Enter')document.getElementById('gate-pass').focus()">
-    <input id="gate-pass" type="password" autocomplete="current-password" autocorrect="off" spellcheck="false" placeholder="Passcode"
+    <input id="gate-pass" type="password" autocomplete="current-password" placeholder="Passcode"
       class="auth-input" style="text-align:center;font-size:15px"
-      onkeydown="if(event.key==='Enter'){event.preventDefault();submitGate(event)}">
-    <div id="gate-error" class="auth-error" style="min-height:18px" aria-live="polite"></div>
-    <button id="gate-enter-btn" type="submit" class="gate-enter-btn" onclick="submitGate(event)" ontouchend="submitGate(event)">
+      onkeydown="if(event.key==='Enter')submitGate()">
+    <div id="gate-error" class="auth-error" style="min-height:18px"></div>
+    <button onclick="submitGate()" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:14px 48px;font-size:13px;font-weight:800;cursor:pointer;letter-spacing:.12em;box-shadow:0 4px 24px rgba(224,32,32,0.35)">
       ENTER
     </button>
-  </form>
   </div>
 </div>
 
@@ -2039,7 +1699,6 @@ html.auth-startup-failed #screen-login input {
   <div id="name-list-wrap" style="width:100%;max-width:400px;">
     <div class="name-list" id="name-list"></div>
     <div id="login-quick-start-wrap" style="display:none"></div>
-    <div class="auth-error" id="login-select-error" style="min-height:18px" aria-live="polite"></div>
     <div class="device-mode-actions" id="login-device-mode-actions">
       <button class="device-mode-btn" id="login-device-mode-btn" onclick="toggleSharedDeviceMode()">This is a shared device</button>
       <button class="device-mode-btn secondary" id="login-device-reset-btn" onclick="resetRememberedDeviceOwner()" style="display:none">Choose a different builder for this phone</button>
@@ -2623,67 +2282,14 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 async function registerPushWorker() {
-  if (!("serviceWorker" in navigator)) {
-    ptAuthLog?.("service_worker.unsupported");
-    return null;
-  }
+  if (!("serviceWorker" in navigator)) return null;
   try {
-    const swUrl = new URL("sw.js", window.location.href);
-    const swScope = new URL(".", window.location.href).pathname || "/";
-    _swRegistration = await navigator.serviceWorker.register(swUrl, { scope: swScope });
-    ptAuthLog?.("service_worker.registered", {
-      scope: _swRegistration.scope,
-      active: _swRegistration.active?.scriptURL || "",
-      installing: !!_swRegistration.installing,
-      waiting: !!_swRegistration.waiting,
-    });
-    logServiceWorkerActiveVersion(_swRegistration);
+    _swRegistration = await navigator.serviceWorker.register("/sw.js");
     return _swRegistration;
   } catch (e) {
-    ptAuthLog?.("service_worker.registration_failed", { errorName: e?.name || "", errorMessage: e?.message || "" });
     console.warn("Service worker registration failed:", e.message);
     return null;
   }
-}
-
-function logServiceWorkerActiveVersion(registration) {
-  try {
-    const worker = registration?.active || navigator.serviceWorker?.controller;
-    if (!worker || !window.MessageChannel) {
-      ptAuthLog?.("service_worker.version_unavailable", { hasWorker: !!worker });
-      return;
-    }
-    const channel = new MessageChannel();
-    const timer = setTimeout(() => {
-      ptAuthLog?.("service_worker.version_timeout");
-    }, 1200);
-    channel.port1.onmessage = (event) => {
-      clearTimeout(timer);
-      ptAuthLog?.("service_worker.active_version", { version: event.data?.version || "unknown" });
-    };
-    worker.postMessage({ type: "GET_VERSION" }, [channel.port2]);
-  } catch (err) {
-    ptAuthLog?.("service_worker.version_error", { errorName: err?.name || "", errorMessage: err?.message || "" });
-  }
-}
-
-async function sbFetchAllRows(path, options = {}) {
-  const { pageSize: requestedPageSize, ...fetchOptions } = options || {};
-  const pageSize = Number.isFinite(requestedPageSize) ? Math.max(1, Number(requestedPageSize)) : 1000;
-  const rows = [];
-  for (let start = 0; ; start += pageSize) {
-    const page = await sbFetch(path, {
-      ...fetchOptions,
-      headers: {
-        ...(fetchOptions.headers || {}),
-        Range: `${start}-${start + pageSize - 1}`,
-      },
-    });
-    const chunk = Array.isArray(page) ? page : [];
-    rows.push(...chunk);
-    if (chunk.length < pageSize) break;
-  }
-  return rows;
 }
 
 async function getPushPublicKey() {
@@ -4250,7 +3856,6 @@ function setLoginScreenMode(mode = "selector") {
 
 function renderLoginSelectorState() {
   clearAuthSelection();
-  setLoginSelectError("");
   buildNameList();
   const mode = getDeviceMode();
   const ownerName = getDeviceOwnerName();
@@ -4279,11 +3884,6 @@ function renderLoginSelectorState() {
 }
 
 function showLoginEntryPoint() {
-  ptAuthLog?.("login.entry.init", {
-    mode: getDeviceMode(),
-    hasOwner: !!getDeviceOwnerName(),
-    teamCount: TEAM.length,
-  });
   renderLoginSelectorState();
   const mode = getDeviceMode();
   const owner = mode === "personal" ? getTeamMemberByName(getDeviceOwnerName()) : null;
@@ -4342,56 +3942,8 @@ function loginPinAltAction() {
 }
 
 /* ── Name list ─────────────────────────────────────────────── */
-let _loginNameListClickBound = false;
-let _loginSelectionBusy = false;
-
-function setLoginSelectError(message = "") {
-  const el = document.getElementById("login-select-error");
-  if (el) el.textContent = message;
-}
-
-function setLoginSelectorBusy(sourceEl, busy = false) {
-  document.querySelectorAll("#name-list .name-btn").forEach(btn => {
-    btn.disabled = !!busy;
-    btn.style.opacity = busy && btn !== sourceEl ? ".55" : "";
-  });
-}
-
-async function activateLoginNameButton(btn, event) {
-  const memberName = btn?.dataset?.memberName || "";
-  const member = memberName ? getTeamMemberByName(memberName) : null;
-  if (!member) return false;
-  event?.preventDefault?.();
-  if (member.role === FLOAT_ROLE) {
-    openFloaterRoleChoice(member);
-  } else {
-    await selectUser(member, undefined, false, btn);
-  }
-  return true;
-}
-
-function bindLoginNameListClick() {
-  const list = document.getElementById("name-list");
-  if (!list || _loginNameListClickBound) return;
-  _loginNameListClickBound = true;
-  list.addEventListener("click", event => {
-    const btn = event.target instanceof Element ? event.target.closest(".name-btn[data-member-name]") : null;
-    if (!btn || !list.contains(btn)) return;
-    activateLoginNameButton(btn, event).catch(err => {
-      ptAuthLog?.("login.name_click_error", {
-        errorName: err?.name || "",
-        errorMessage: err?.message || String(err || ""),
-      });
-      setLoginSelectError("Could not open dashboard. Please try again.");
-      setLoginSelectorBusy(btn, false);
-      _loginSelectionBusy = false;
-    });
-  });
-}
-
 function buildNameList() {
   const list = document.getElementById("name-list"); list.innerHTML = "";
-  bindLoginNameListClick();
   [
     {label:"Monitor Stand Builders",role:MS_ROLE},
     {label:"Chassis Builders",role:CHASSIS_ROLE},
@@ -4410,9 +3962,9 @@ function buildNameList() {
       const leadPill = isLeadMember
         ? `<span class="role-tag" style="margin-left:6px;background:rgba(16,185,129,.14);color:var(--green)">Lead</span>`
         : "";
-      const btn = document.createElement("button"); btn.className = "name-btn"; btn.type = "button";
-      btn.dataset.memberName = m.name;
+      const btn = document.createElement("button"); btn.className = "name-btn";
       btn.innerHTML = `<div class="av" style="background:${m.color}25;color:${m.color}">${m.initials}</div>${m.name}${leadPill}<span class="role-tag ${roleTagClass(isFloater ? FLOAT_ROLE : role)}">${isFloater ? "Choose Role" : roleLoginLabel(role)}</span>`;
+      btn.onclick = () => isFloater ? openFloaterRoleChoice(m) : selectUser(m);
       list.appendChild(btn);
     });
   });
@@ -4462,14 +4014,7 @@ function renderQuickStartPrompt(member, fromRememberedDevice = false) {
     </div>`;
 }
 
-async function selectUser(m, roleOverride, fromRememberedDevice = false, sourceEl = null) {
-  const resolvedRole = roleOverride && m.role === FLOAT_ROLE ? roleOverride : m.role;
-  ptAuthLog?.("login.user_select", {
-    role: resolvedRole,
-    baseRole: m.role,
-    requiresPin: requiresProtectedLogin({ ...m, role: resolvedRole }),
-    fromRememberedDevice: !!fromRememberedDevice,
-  });
+async function selectUser(m, roleOverride, fromRememberedDevice = false) {
   document.querySelectorAll(".name-btn").forEach(b=>b.classList.remove("selected"));
   document.querySelectorAll(".name-btn").forEach(b=>{ if(b.textContent.includes(m.name)) b.classList.add("selected"); });
   pendingUser = roleOverride && m.role === FLOAT_ROLE ? { ...m, role: roleOverride, baseRole: FLOAT_ROLE } : m;
@@ -4479,30 +4024,13 @@ async function selectUser(m, roleOverride, fromRememberedDevice = false, sourceE
     quick.innerHTML = "";
   }
   if (!requiresProtectedLogin(pendingUser)) {
-    if (_loginSelectionBusy) return;
-    _loginSelectionBusy = true;
-    setLoginSelectError("Opening...");
-    setLoginSelectorBusy(sourceEl, true);
-    try {
-      ptAuthLog?.("login.builder_submit", { role: pendingUser.role });
-      setLoginScreenMode("selector");
-      document.getElementById("name-list-wrap").style.display = "block";
-      document.getElementById("floater-role-wrap").style.display = "none";
-      document.getElementById("pin-entry-wrap").style.display = "none";
-      document.getElementById("login-device-copy").style.display = "none";
-      document.getElementById("admin-login-btn").style.display = "flex";
-      await loginSuccess();
-    } catch (err) {
-      ptAuthLog?.("login.builder_submit_error", {
-        role: pendingUser?.role || "",
-        errorName: err?.name || "",
-        errorMessage: err?.message || String(err || ""),
-      });
-      setLoginSelectError("Could not open dashboard. Please try again.");
-      setLoginSelectorBusy(sourceEl, false);
-    } finally {
-      _loginSelectionBusy = false;
-    }
+    setLoginScreenMode("selector");
+    document.getElementById("name-list-wrap").style.display = "block";
+    document.getElementById("floater-role-wrap").style.display = "none";
+    document.getElementById("pin-entry-wrap").style.display = "none";
+    document.getElementById("login-device-copy").style.display = "none";
+    document.getElementById("admin-login-btn").style.display = "flex";
+    await loginSuccess();
     return;
   }
   setLoginScreenMode("pin");
@@ -4550,7 +4078,6 @@ function resetLoginPin() {
 function loginPinKey(d) {
   if (loginPinBuf.length >= 4) return;
   loginPinBuf += d;
-  ptAuthLog?.("login.pin_key", { length: loginPinBuf.length });
   document.getElementById("lpd"+(loginPinBuf.length-1)).classList.add("filled");
   if (loginPinBuf.length === 4) setTimeout(()=>processLoginPin(), 200);
 }
@@ -4564,11 +4091,6 @@ function loginPinDel() {
 
 async function processLoginPin() {
   const pins = loadPins();
-  ptAuthLog?.("login.pin_submit", {
-    stage: loginPinStage,
-    hasExistingPin: !!pins[pendingUser?.name],
-    role: pendingUser?.role || "",
-  });
   if (!pins[pendingUser.name]) {
     /* First time — set PIN flow */
     if (loginPinStage === "enter") {
@@ -4580,7 +4102,6 @@ async function processLoginPin() {
       document.getElementById("login-pin-error").textContent = "";
     } else {
       if (loginPinBuf !== loginPinFirst) {
-        ptAuthLog?.("login.pin_confirm_mismatch", { role: pendingUser?.role || "" });
         document.getElementById("login-pin-error").textContent = "PINs don't match. Try again.";
         resetLoginPin();
         document.getElementById("pin-entry-label").textContent = `Set a 4-digit PIN, ${pendingUser.name.split(" ")[0]}`;
@@ -4588,33 +4109,29 @@ async function processLoginPin() {
       }
       const hash = await sha256(loginPinBuf);
       await savePinToSupabase(pendingUser.name, hash);
-      ptAuthLog?.("login.pin_created", { role: pendingUser?.role || "" });
       await loginSuccess();
     }
   } else {
     /* Existing user — verify */
     const hash = await sha256(loginPinBuf);
     if (hash !== pins[pendingUser.name]) {
-      ptAuthLog?.("login.pin_rejected", { role: pendingUser?.role || "" });
       document.getElementById("login-pin-error").textContent = "Incorrect PIN. Try again.";
       loginPinBuf = "";
       [0,1,2,3].forEach(i=>document.getElementById("lpd"+i).classList.remove("filled"));
       return;
     }
-    ptAuthLog?.("login.pin_accepted", { role: pendingUser?.role || "" });
     await loginSuccess();
   }
 }
 
 async function loginSuccess() {
-  ptAuthLog?.("login.success", { role: pendingUser?.role || "", baseRole: pendingUser?.baseRole || "" });
   currentUser = pendingUser;
   localStorage.setItem("pt_user", JSON.stringify(currentUser));
   if (getDeviceMode() === "shared") setDeviceOwnerName("");
   else setDeviceOwnerName((pendingFloater?.name || pendingUser?.name || "").trim());
   syncPushForActiveSession(false);
-  return showLoginLoading(async () => {
-    showDash();
+  showLoginLoading(async () => {
+    await showDash();
     routePendingProductionDeepLink();
   });
 }
@@ -4625,7 +4142,6 @@ let adminPinStage = "enter";
 let adminPinFirst = "";
 
 function showAdminLogin() {
-  ptAuthLog?.("login.admin_open");
   adminPinBuf = ""; adminPinStage = "enter"; adminPinFirst = "";
   [0,1,2,3].forEach(i=>document.getElementById("apd"+i).classList.remove("filled"));
   document.getElementById("admin-pin-error").textContent = "";
@@ -4635,7 +4151,6 @@ function showAdminLogin() {
 function adminPinKey(d) {
   if (adminPinBuf.length >= 4) return;
   adminPinBuf += d;
-  ptAuthLog?.("login.admin_pin_key", { length: adminPinBuf.length });
   document.getElementById("apd"+(adminPinBuf.length-1)).classList.add("filled");
   if (adminPinBuf.length === 4) setTimeout(()=>processAdminPin(), 200);
 }
@@ -4649,11 +4164,9 @@ function adminPinDel() {
 
 async function processAdminPin() {
   const pins = loadPins();
-  ptAuthLog?.("login.admin_pin_submit", { hasExistingPin: !!pins[ADMIN_NAME] });
   if (!pins[ADMIN_NAME]) {
     /* First time — accept setup code */
     if (adminPinBuf === SETUP_CODE) {
-      ptAuthLog?.("login.admin_setup_code_accepted");
       /* Move to PIN setup for admin */
       setupUser = { name:ADMIN_NAME, initials:"EM", color:"#6366f1", role:"admin", _isAdmin:true };
       startSetupPin();
@@ -4666,26 +4179,18 @@ async function processAdminPin() {
   }
   const hash = await sha256(adminPinBuf);
   if (hash !== pins[ADMIN_NAME]) {
-    ptAuthLog?.("login.admin_pin_rejected");
     document.getElementById("admin-pin-error").textContent = "Incorrect PIN.";
     adminPinBuf = "";
     [0,1,2,3].forEach(i=>document.getElementById("apd"+i).classList.remove("filled"));
     return;
   }
-  ptAuthLog?.("login.admin_pin_accepted");
   currentUser = { name:ADMIN_NAME, initials:"EM", color:"#6366f1", role:"admin" };
   localStorage.setItem("pt_user", JSON.stringify(currentUser));
   syncPushForActiveSession(false);
   showLoginLoading(() => {
-    ptAuthLog?.("navigation.after_login", { destination: "admin", role: "admin" });
     showScreen("screen-admin");
     document.getElementById("admin-date").textContent = new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
-    loadAdminData()
-      .then(() => routePendingProductionDeepLink())
-      .catch(err => {
-        ptAuthLog?.("admin.load_after_login_error", { errorName: err?.name || "", errorMessage: err?.message || String(err || "") });
-        showToast("Admin opened, but data refresh failed.", "err");
-      });
+    return loadAdminData().then(() => routePendingProductionDeepLink());
   });
 }
 
@@ -4741,16 +4246,13 @@ async function processSetupPin() {
       showLoginLoading(() => {
         showScreen("screen-admin");
         document.getElementById("admin-date").textContent = new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
-        loadAdminData().catch(err => {
-          ptAuthLog?.("admin.load_after_setup_error", { errorName: err?.name || "", errorMessage: err?.message || String(err || "") });
-          showToast("Admin opened, but data refresh failed.", "err");
-        });
+        return loadAdminData();
       });
     } else {
       currentUser = setupUser;
       localStorage.setItem("pt_user", JSON.stringify(currentUser));
       syncPushForActiveSession(false);
-      showLoginLoading(() => showDash());
+      showLoginLoading(showDash);
     }
   }
 }
@@ -4817,12 +4319,6 @@ async function showLoginLoading(nextAction) {
 function showScreen(id) {
   const next = document.getElementById(id);
   if (!next) return;
-  document.querySelectorAll(".screen").forEach(s => {
-    s.classList.remove("pull-refresh-active", "pull-refresh-settling");
-    s.style.removeProperty("--pull-refresh-offset");
-  });
-  setPullRefreshIndicator(0, false);
-  resetPullRefreshState();
   document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
   next.classList.add("active");
   if (id === "screen-admin") applyAdminDesktopMode();
@@ -4848,8 +4344,7 @@ function updateBottomNav(activeId) {
   if (activeId === "screen-queue") document.getElementById("bn-queue")?.classList.add("active");
   if (activeId === "screen-history") document.getElementById("bn-history")?.classList.add("active");
   if (activeId === "screen-updates" && _updatesMode === "history") document.getElementById("bn-updates")?.classList.add("active");
-  if (typeof requestAnimationFrame === "function") requestAnimationFrame(syncBottomNavLayout);
-  else setTimeout(syncBottomNavLayout, 0);
+  requestAnimationFrame(syncBottomNavLayout);
   refreshTeamMessagesBadge().catch(() => {});
 }
 
@@ -5077,10 +4572,9 @@ function openContextSettings() {
 }
 
 function showDash() {
-  ptAuthLog?.("navigation.after_login", { destination: "dashboard", role: currentUser?.role || "" });
   /* Pete goes to the kitting screen instead */
-  if (currentUser.role === KIT_ROLE) { startRealTimeSync(); showKitScreen(); return; }
-  if (currentUser.role === CONFIG_ROLE) { startRealTimeSync(); showConfigScreen(); return; }
+  if (currentUser.role === KIT_ROLE) { startRealTimeSync(); return showKitScreen(); }
+  if (currentUser.role === CONFIG_ROLE) { startRealTimeSync(); return showConfigScreen(); }
   showScreen("screen-dash");
   startRealTimeSync();
   const isMS=currentUser.role===MS_ROLE;
@@ -5099,12 +4593,7 @@ function showDash() {
   if (teamBtn)   teamBtn.style.display   = isTeamLead(currentUser) ? "flex" : "none";
   if (nextUpBtn) nextUpBtn.style.display = isLead() ? "flex" : "none";
   if (updatesBtn) updatesBtn.style.display = isLead() ? "flex" : "none";
-  loadBoard()
-    .then(()=>{ resumeActiveTimers(); updatePickListChangeDots().catch(()=>{}); })
-    .catch(err => {
-      ptAuthLog?.("dashboard.load_after_login_error", { errorName: err?.name || "", errorMessage: err?.message || String(err || "") });
-      showToast("Dashboard opened, but data refresh failed.", "err");
-    });
+  return loadBoard().then(()=>{ resumeActiveTimers(); updatePickListChangeDots().catch(()=>{}); });
 }
 /* ── Lead: Next Up assign modal ── */
 function openNextUpAssign() {
@@ -5646,8 +5135,6 @@ async function loadBoard() {
     resolveInventoryContacts(subs);
     boardItems = cached.items;
     window.boardItems = boardItems;
-    window._pickListStatusVerified = false;
-    window._pickListStatusByWo = {};
     if (currentUser?.role === CONFIG_ROLE) renderConfigurationDash(boardItems);
     else renderDash(boardItems);
     /* Show subtle refresh indicator */
@@ -5687,15 +5174,6 @@ async function loadBoard() {
     window._allBuildUpdates = Array.isArray(buildUpdatesRes) ? buildUpdatesRes : cachedUpdates;
     saveBoardCache({ columns, subscribers: subs, items });
 
-    window._pickListStatusVerified = false;
-    window._pickListStatusByWo = {};
-    if (currentUser?.role === CONFIG_ROLE) {
-      await ensureConfigurationRecords(boardItems);
-      renderConfigurationDash(boardItems);
-    } else {
-      renderDash(boardItems);
-    }
-
     const woNums = Array.from(new Set(items.map(getWorkOrderNumber).filter(Boolean)));
     if (woNums.length) {
       const woVariants = getWorkOrderQueryVariants(woNums);
@@ -5708,7 +5186,10 @@ async function loadBoard() {
         `picklists?wo_number=in.(${woVariants.map(encodeURIComponent).join(",")})&select=id,wo_number,status`,
         { method: "GET", headers: { "Prefer": "return=representation" } }
       ).catch(() => []) || [];
-      const plItems = await loadPickListAllocationSummaryRows(woNums).catch(() => []) || [];
+      const plItems = await sbFetch(
+        `picklist_items?wo_number=in.(${woVariants.map(encodeURIComponent).join(",")})&select=wo_number,allocated`,
+        { method: "GET", headers: { "Prefer": "return=representation" } }
+      ).catch(() => []) || [];
       const itemsByWo = {};
       plItems.forEach(row => {
         const ownerWo = canonicalWoByKey[canonicalWorkOrderKey(row?.wo_number)] || row?.wo_number;
@@ -5720,18 +5201,15 @@ async function loadBoard() {
       picklists.forEach(pl => {
         const ownerWo = canonicalWoByKey[canonicalWorkOrderKey(pl?.wo_number)] || pl.wo_number;
         if (!ownerWo) return;
-        const status = derivePickListStatusFromAllocation(itemsByWo[ownerWo] || [], pl.status);
-        statusByWo[ownerWo] = status;
-        const canonicalOwner = canonicalWorkOrderKey(ownerWo);
-        if (canonicalOwner) statusByWo[canonicalOwner] = status;
+        statusByWo[ownerWo] = derivePickListStatusFromAllocation(itemsByWo[ownerWo] || [], pl.status);
       });
       window._pickListStatusByWo = statusByWo;
     } else {
       window._pickListStatusByWo = {};
     }
-    window._pickListStatusVerified = true;
 
     if (currentUser?.role === CONFIG_ROLE) {
+      await ensureConfigurationRecords(boardItems);
       renderConfigurationDash(boardItems);
     } else {
       renderDash(boardItems);
@@ -5789,10 +5267,8 @@ function getWorkOrderNumber(item) {
 
 function getCachedPickListStatus(woNum) {
   if (!woNum) return null;
-  if (window._pickListStatusVerified === false) return "__syncing";
   const cached = window._pickListStatusByWo || {};
-  const canonical = canonicalWorkOrderKey(woNum);
-  return cached[woNum] || (canonical ? cached[canonical] : null) || cached[String(woNum || "").trim().toUpperCase()] || null;
+  return cached[woNum] || null;
 }
 
 function getRoleDueForWeek(items, isMS, weekOffset = 0) {
@@ -6498,13 +5974,12 @@ function buildPickListBtn(item, centered = false) {
   const woRaw = COL.work_order_num ? (cvText(item, COL.work_order_num) || "") : "";
   const woNum = getWoFromText(woRaw) || null;
   const plStatus = getCachedPickListStatus(woNum);
-  const plStatusLabel = plStatus === "__syncing" ? "Syncing" : plStatus === "fully_kitted" ? "Fully Kitted" : plStatus === "missing_items" ? "Missing Items" : "";
-  const plStatusClass = plStatus === "__syncing" ? "syncing" : plStatus;
+  const plStatusLabel = plStatus === "fully_kitted" ? "Fully Kitted" : plStatus === "missing_items" ? "Missing Items" : "";
   return woNum
     ? `<button class="pick-list-btn${centered ? " centered" : ""}" id="pl-btn-${item.id}" onclick="openPickListForItem('${item.id}','${woNum}',event)" style="margin-top:4px">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
         Pick List
-        ${plStatusLabel ? `<span class="pl-mini-pill ${plStatusClass}">${escHtml(plStatusLabel)}</span>` : ``}
+        ${plStatusLabel ? `<span class="pl-mini-pill ${plStatus}">${escHtml(plStatusLabel)}</span>` : ``}
         <span id="pl-changes-dot-${item.id}" style="display:none" class="pl-changes-dot"></span>
       </button>`
     : "";
@@ -7262,16 +6737,8 @@ async function primeLeadPickListVerificationState(itemId, colType, opts = {}) {
   }
 
   try {
-    let activePickListId = "";
     const updateLoadingState = (stage, detail) => {
       const existing = LEAD_PICKLIST_VERIFICATION_STATE[stateKey] || {};
-      if (activePickListId) {
-        setPickListVerificationState(activePickListId, {
-          state: "loading",
-          stage: stage || "Loading pick list",
-          detail: detail || "",
-        });
-      }
       LEAD_PICKLIST_VERIFICATION_STATE[stateKey] = {
         ...existing,
         itemId,
@@ -7292,37 +6759,9 @@ async function primeLeadPickListVerificationState(itemId, colType, opts = {}) {
     };
 
     const pl = await ensurePrimaryPickListForWorkOrder(woNum);
-    activePickListId = String(pl?.id || "");
-    if (activePickListId) {
-      setPickListVerificationState(activePickListId, {
-        state: "loading",
-        stage: "Loading Work Order",
-        detail: `Opening the live Work Order checklist for ${woNum}.`,
-      });
-    }
-    let items = await loadResolvedPickListItems(pl?.id, woNum, { onStage: updateLoadingState });
-    let filtered = (items || []).filter(row => !isServiceItem(row));
-    if (filtered.length && !filtered.some(row => !!row?.allocated)) {
-      updateLoadingState(
-        "Verifying allocation quantities",
-        `Restoring the saved allocation snapshot for ${woNum} before this Lead update opens.`
-      );
-      const completions = await sbGetKitCompletions().catch(() => []);
-      const repairResult = await repairKittedPickListAllocation(woNum, completions).catch(() => "needs_review");
-      if (["repaired", "repaired_full", "full_confirmed", "already_matched", "live_allocations_preserved"].includes(String(repairResult || ""))) {
-        items = await loadResolvedPickListItems(pl?.id, woNum, { onStage: updateLoadingState });
-        filtered = (items || []).filter(row => !isServiceItem(row));
-      }
-    }
-    const verifiedState = {
-      state: "ready",
-      stage: "Pick list ready",
-      detail: `${filtered.length} item${filtered.length === 1 ? "" : "s"} verified for ${woNum || "this Work Order"}.`,
-    };
-    if (activePickListId) {
-      setPickListVerificationState(activePickListId, verifiedState);
-    }
-    const viewState = getVerifiedPickListViewState(pl, filtered, verifiedState);
+    const items = await loadResolvedPickListItems(pl?.id, woNum, { onStage: updateLoadingState });
+    const filtered = (items || []).filter(row => !isServiceItem(row));
+    const viewState = getVerifiedPickListViewState(pl, filtered);
     const existing = LEAD_PICKLIST_VERIFICATION_STATE[stateKey] || {};
     const previousRows = new Map((existing.checklistItems || []).map(row => [String(row.itemId), row]));
     const checklistItems = viewState.checklist.map(row => {
@@ -7352,11 +6791,11 @@ async function primeLeadPickListVerificationState(itemId, colType, opts = {}) {
       itemName: item?.name || woNum,
       customerName: cleanMondayName(item?.name || pl?.customer_name || woNum),
       loaded: true,
-      stage: verifiedState.stage,
-      detail: verifiedState.detail,
+      stage: viewState.verification?.stage || "Pick list ready",
+      detail: viewState.verification?.detail || `${viewState.checklist.length} item${viewState.checklist.length === 1 ? "" : "s"} verified for today’s Lead check.`,
       loadError: "",
       checklistItems,
-      verification: verifiedState,
+      verification: viewState.verification,
       generalNote: existing.generalNote || "",
       missingItems,
       availableItems,
@@ -7366,13 +6805,6 @@ async function primeLeadPickListVerificationState(itemId, colType, opts = {}) {
     };
     renderLeadPickListVerificationSection(itemId, colType);
   } catch (err) {
-    if (activePickListId) {
-      setPickListVerificationState(activePickListId, {
-        state: "error",
-        stage: "Verification failed",
-        detail: err?.message || "Could not load the shared pick list for Lead verification.",
-      });
-    }
     LEAD_PICKLIST_VERIFICATION_STATE[stateKey] = {
       itemId,
       colType,
@@ -8852,157 +8284,32 @@ async function doAddMember() {
    before the app is accessible at all.
 ═══════════════════════════════════════ */
 
-function normalizeGateCredential(value, { stripAllWhitespace = false } = {}) {
-  let normalized = String(value || "").normalize("NFKC").replace(/\u00A0/g, " ").trim().toLowerCase();
-  normalized = stripAllWhitespace ? normalized.replace(/\s+/gu, "") : normalized.replace(/\s+/gu, " ");
-  return normalized;
-}
-
-const GATE_AUTH_SETTINGS_KEY = "pt_app_settings";
-const GATE_AUTH_DEFAULTS = {
-  gate_username: "podium1racing",
-  gate_password: "alwaysberacing",
-};
-
-function loadGateAuthSettings() {
-  try {
-    const stored = JSON.parse(localStorage.getItem(GATE_AUTH_SETTINGS_KEY) || "{}") || {};
-    return {
-      gate_username: stored.gate_username || GATE_AUTH_DEFAULTS.gate_username,
-      gate_password: stored.gate_password || GATE_AUTH_DEFAULTS.gate_password,
-    };
-  } catch (_) {
-    return { ...GATE_AUTH_DEFAULTS };
-  }
-}
-
-function saveGateAuthDefaults() {
-  try {
-    const stored = JSON.parse(localStorage.getItem(GATE_AUTH_SETTINGS_KEY) || "{}") || {};
-    localStorage.setItem(GATE_AUTH_SETTINGS_KEY, JSON.stringify({
-      ...stored,
-      gate_username: GATE_AUTH_DEFAULTS.gate_username,
-      gate_password: GATE_AUTH_DEFAULTS.gate_password,
-    }));
-  } catch (_) {}
-}
-
-let gateSubmitting = false;
-
-function setGateSubmitting(isSubmitting) {
-  const btn = document.getElementById("gate-enter-btn");
-  if (!btn) return;
-  btn.disabled = !!isSubmitting;
-  btn.textContent = isSubmitting ? "Signing In..." : "ENTER";
-}
-
-function activateLoginScreenFallback() {
-  const login = document.getElementById("screen-login");
-  if (!login) return false;
-  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
-  login.classList.add("active");
-  login.classList.add("login-selector-mode");
-  login.classList.remove("login-pin-mode", "login-floater-mode");
-  const nav = document.getElementById("bottom-nav");
-  if (nav) nav.style.display = "none";
-  const nameWrap = document.getElementById("name-list-wrap");
-  const pinWrap = document.getElementById("pin-entry-wrap");
-  const floaterWrap = document.getElementById("floater-role-wrap");
-  const adminBtn = document.getElementById("admin-login-btn");
-  const copy = document.getElementById("login-device-copy");
-  if (nameWrap) nameWrap.style.display = "block";
-  if (pinWrap) pinWrap.style.display = "none";
-  if (floaterWrap) floaterWrap.style.display = "none";
-  if (adminBtn) adminBtn.style.display = "flex";
-  if (copy) copy.style.display = "block";
-  try { buildNameList?.(); } catch (e) {
-    ptAuthLog?.("gate.fallback_name_list_error", { errorName: e?.name || "", errorMessage: e?.message || "" });
-  }
-  return true;
-}
-
-function enterLoginAfterGateUnlock() {
-  try {
-    showScreen("screen-login");
-    showLoginEntryPoint();
-    return true;
-  } catch (e) {
-    ptAuthLog?.("gate.navigation_exception", { errorName: e?.name || "", errorMessage: e?.message || "" });
-    return activateLoginScreenFallback();
-  }
-}
-
-async function submitGate(event) {
-  event?.preventDefault?.();
-  event?.stopPropagation?.();
-  if (gateSubmitting) {
-    ptAuthLog?.("gate.submit.duplicate_ignored", { eventType: event?.type || "direct" });
-    return false;
-  }
-  gateSubmitting = true;
-  setGateSubmitting(true);
+async function submitGate() {
+  const u = (document.getElementById("gate-user")?.value || "").trim().toLowerCase();
+  const p = (document.getElementById("gate-pass")?.value || "").replace(/\s+/g, "").trim().toLowerCase();
   const err = document.getElementById("gate-error");
-  if (err) err.textContent = "";
-  let gatePhase = "start";
-  try {
-    gatePhase = "autofill";
-    await new Promise(resolve => {
-      if (typeof requestAnimationFrame === "function") requestAnimationFrame(resolve);
-      else setTimeout(resolve, 0);
-    });
-    gatePhase = "read-inputs";
-    const userEl = document.getElementById("gate-user");
-    const passEl = document.getElementById("gate-pass");
-    const u = normalizeGateCredential(userEl?.value);
-    const p = normalizeGateCredential(passEl?.value, { stripAllWhitespace: true });
-    ptAuthLog?.("gate.submit", {
-      eventType: event?.type || "direct",
-      hasUsername: !!u,
-      hasPasscode: !!p,
-    });
-    if (!u || !p) {
-      if (err) err.textContent = "Enter both username and passcode.";
-      gateSubmitting = false;
-      setGateSubmitting(false);
-      return false;
-    }
-    gatePhase = "settings";
-    const gateSettings = loadGateAuthSettings();
-    const expectedUser = normalizeGateCredential(gateSettings.gate_username);
-    const expectedPass = normalizeGateCredential(gateSettings.gate_password, { stripAllWhitespace: true });
-    const fallbackUser = normalizeGateCredential(GATE_AUTH_DEFAULTS.gate_username);
-    const fallbackPass = normalizeGateCredential(GATE_AUTH_DEFAULTS.gate_password, { stripAllWhitespace: true });
-    const matchesSaved = u === expectedUser && p === expectedPass;
-    const matchesFallback = u === fallbackUser && p === fallbackPass;
-    ptAuthLog?.("gate.auth_attempted", { hasSavedConfig: !!expectedUser && !!expectedPass });
-    if (!matchesSaved && !matchesFallback) {
-      ptAuthLog?.("gate.rejected");
-      if (err) err.textContent = "Incorrect credentials.";
-      if (passEl) passEl.value = "";
-      gateSubmitting = false;
-      setGateSubmitting(false);
-      return false;
-    }
-    if (matchesFallback && (!matchesSaved || expectedUser !== fallbackUser || expectedPass !== fallbackPass)) {
-      saveGateAuthDefaults();
-    }
-    gatePhase = "navigate";
-    ptAuthLog?.("gate.accepted", { matchedSaved: matchesSaved, matchedFallback: matchesFallback });
-    document.activeElement?.blur?.();
-    localStorage.setItem("pt_gate_passed", "1");
-    if (!enterLoginAfterGateUnlock() && err) {
-      err.textContent = "Login unlocked. Close and reopen the app.";
-      gateSubmitting = false;
-      setGateSubmitting(false);
-    }
-    return false;
-  } catch (e) {
-    ptAuthLog?.("gate.exception", { phase: gatePhase, errorName: e?.name || "", errorMessage: e?.message || "" });
-    if (err) err.textContent = `Login could not start (${gatePhase}). Please try again.`;
-    gateSubmitting = false;
-    setGateSubmitting(false);
-    return false;
+  if (!u || !p) { err.textContent = "Enter both username and passcode."; return; }
+  const expectedUser = normalizeAppSettingText(getAppSetting("gate_username")).toLowerCase();
+  const expectedPass = normalizeAppSettingText(getAppSetting("gate_password")).replace(/\s+/g, "").toLowerCase();
+  const fallbackUser = normalizeAppSettingText(APP_SETTINGS_DEFAULTS.gate_username).toLowerCase();
+  const fallbackPass = normalizeAppSettingText(APP_SETTINGS_DEFAULTS.gate_password).replace(/\s+/g, "").toLowerCase();
+  const matchesSaved = u === expectedUser && p === expectedPass;
+  const matchesFallback = u === fallbackUser && p === fallbackPass;
+  if (!matchesSaved && !matchesFallback) {
+    err.textContent = "Incorrect credentials.";
+    document.getElementById("gate-pass").value = "";
+    return;
   }
+  if (matchesFallback && (!matchesSaved || expectedUser !== fallbackUser || expectedPass !== fallbackPass)) {
+    saveAppSettings({
+      ...loadAppSettings(),
+      gate_username: APP_SETTINGS_DEFAULTS.gate_username,
+      gate_password: APP_SETTINGS_DEFAULTS.gate_password,
+    });
+  }
+  localStorage.setItem("pt_gate_passed", "1");
+  showScreen("screen-login");
+  showLoginEntryPoint();
 }
 
 /* Check gate on startup */
@@ -9029,18 +8336,6 @@ function buildAllocationSummaryByWo(items = []) {
     }
   });
   return summary;
-}
-
-async function loadPickListAllocationSummaryRows(woNums = []) {
-  const variants = getWorkOrderQueryVariants(woNums);
-  if (!variants.length) return [];
-  const chunks = await Promise.all(chunkArray(variants, 25).map(woChunk => (
-    sbFetchAllRows(
-      `picklist_items?wo_number=in.(${woChunk.map(encodeURIComponent).join(",")})&select=id,wo_number,allocated,label,item_name,brand,quantity`,
-      { method: "GET", headers: { "Prefer": "return=representation" } }
-    ).catch(() => [])
-  )));
-  return dedupePickListItemRows(chunks.flat().filter(Boolean));
 }
 
 function getAllocationSummaryForWo(allocationSummaryByWo = {}, woNum = "") {
@@ -10279,7 +9574,7 @@ async function loadAdminData() {
       d.setDate(d.getDate() - (isDesktop() ? 30 : 7));
       return d.toISOString().slice(0,10);
     })();
-    const [boardRes, sbTimers, sbTimerHistory, sbKits, sbUpdates] = await Promise.all([
+    const [boardRes, sbTimers, sbTimerHistory, sbKits, sbUpdates, sbPickItems] = await Promise.all([
       mondayQuery(`{
         boards(ids:[${BOARD_ID}]) {
           columns { id title type }
@@ -10296,12 +9591,11 @@ async function loadAdminData() {
       sbGetTimerHistory(),
       sbGetKitCompletions(kitSince),
       sbFetch("build_updates?order=created_at.desc&limit=500",{method:"GET",headers:{"Prefer":"return=representation"}}),
+      sbFetchOrThrow("picklist_items?select=wo_number,allocated,label,item_name,brand,quantity",{method:"GET",headers:{"Prefer":"return=representation"}}, "Could not load admin pick list allocation summary."),
     ]);
     const board = boardRes.data.boards[0];
     discoverColumns(board.columns);
     const items = board.items_page.items;
-    const adminWos = items.map(getWorkOrderNumber).filter(Boolean);
-    const sbPickItems = await loadPickListAllocationSummaryRows(adminWos);
     const allocationSummaryByWo = buildAllocationSummaryByWo(sbPickItems || []);
     await hydrateKitHistoryBoardItems(sbKits, items);
     window._sbBuildUpdates = sbUpdates || [];
@@ -12126,10 +11420,7 @@ function showKitScreen() {
   av.textContent      = currentUser.initials;
   document.getElementById("kit-date").textContent =
     new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
-  loadKitBoard().catch(err => {
-    ptAuthLog?.("kit.load_after_login_error", { errorName: err?.name || "", errorMessage: err?.message || String(err || "") });
-    showToast("Kitting opened, but data refresh failed.", "err");
-  });
+  return loadKitBoard();
 }
 
 let kitBoardItems = [];  /* cached kit board items — survives re-renders */
@@ -12695,10 +11986,7 @@ function showConfigScreen() {
   const host = document.getElementById("config-content");
   if (host) host.innerHTML = `<div class="loading-state"><div class="spinner"></div>Loading configuration queue…</div>`;
   startRealTimeSync();
-  loadBoard().catch(err => {
-    ptAuthLog?.("config.load_after_login_error", { errorName: err?.name || "", errorMessage: err?.message || String(err || "") });
-    showToast("Configuration opened, but data refresh failed.", "err");
-  });
+  return loadBoard();
 }
 
 async function claimConfigurationWork(woNum, e) {
@@ -12738,12 +12026,12 @@ function closeConfigChecklist() {
   showConfigScreen();
 }
 
-function refreshActiveConfigChecklist({ silentSuccess = false } = {}) {
+function refreshActiveConfigChecklist() {
   if (!_activeConfigChecklistWo) return showConfigScreen();
   return fetchConfigurationRecordsByWo([_activeConfigChecklistWo]).then(map => {
     if (map[_activeConfigChecklistWo]) _configRecordsByWo[_activeConfigChecklistWo] = map[_activeConfigChecklistWo];
     renderConfigurationChecklist(_activeConfigChecklistWo);
-    if (!silentSuccess) showToast("Refreshed", "ok");
+    showToast("Refreshed", "ok");
   }).catch(err => showToast("Refresh failed: " + (err.message || err), "err"));
 }
 
@@ -14389,7 +13677,6 @@ const PICKLIST_BACKGROUND_SYNC_INFLIGHT = {};
 const PICKLIST_ITEMS_CACHE_MS = 8000;
 const PICKLIST_HEADER_CACHE_MS = 30000;
 const PICKLIST_BACKGROUND_SYNC_MS = 45000;
-const PICKLIST_ITEM_SELECT = "id,picklist_id,wo_number,customer_name,brand,item_name,memo,quantity,allocated,label,first_seen_at,last_synced_at";
 
 function normalizePickListText(value) {
   return String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
@@ -14440,14 +13727,16 @@ async function fetchPickListItemsForPicklists(picklists = []) {
   const woNums = [...new Set(lists.map(pl => pl.wo_number).filter(Boolean))];
   const woVariants = getWorkOrderQueryVariants(woNums);
 
-  const idRequests = chunkArray(plIds, 20).map(idChunk => sbFetchAllRows(
-    `picklist_items?picklist_id=in.(${idChunk.join(",")})&select=${PICKLIST_ITEM_SELECT}&order=id.asc`,
-    { method: "GET", headers: { "Prefer": "return=representation" } }
+  const idRequests = chunkArray(plIds, 20).map(idChunk => sbFetchOrThrow(
+    `picklist_items?picklist_id=in.(${idChunk.join(",")})&select=*&order=id.asc`,
+    { method: "GET", headers: { "Prefer": "return=representation" } },
+    "Could not load pick list items by pick list id."
   ));
 
-  const woRequests = chunkArray(woVariants, 25).map(woChunk => sbFetchAllRows(
-    `picklist_items?wo_number=in.(${woChunk.map(encodeURIComponent).join(",")})&select=${PICKLIST_ITEM_SELECT}&order=id.asc`,
-    { method: "GET", headers: { "Prefer": "return=representation" } }
+  const woRequests = chunkArray(woVariants, 25).map(woChunk => sbFetchOrThrow(
+    `picklist_items?wo_number=in.(${woChunk.map(encodeURIComponent).join(",")})&select=*&order=id.asc`,
+    { method: "GET", headers: { "Prefer": "return=representation" } },
+    "Could not load pick list items by work order."
   ));
 
   const chunks = await Promise.all([...idRequests, ...woRequests]);
@@ -14544,52 +13833,6 @@ function clonePickListItems(items = []) {
   return Array.isArray(items) ? items.map(item => normalizePickListItemRow(item)) : [];
 }
 
-async function buildPickListItemsByPickList(picklists = [], sourceItems = [], opts = {}) {
-  const lists = Array.isArray(picklists) ? picklists.filter(Boolean) : [];
-  const options = { relink: true, sort: true, ...opts };
-  const plIdByWo = {};
-  const plIdByCanonicalWo = {};
-  const plById = {};
-  lists.forEach(pl => {
-    if (pl.id) plById[String(pl.id)] = pl;
-    if (!pl.wo_number) return;
-    getWorkOrderQueryVariants([pl.wo_number]).forEach(candidate => { plIdByWo[candidate] = pl.id; });
-    const canonical = canonicalWorkOrderKey(pl.wo_number);
-    if (canonical) plIdByCanonicalWo[canonical] = pl.id;
-  });
-
-  const grouped = {};
-  const relinkWrites = [];
-  clonePickListItems(sourceItems).forEach(it => {
-    const canonical = canonicalWorkOrderKey(it.wo_number);
-    const canonicalOwnerId = canonical ? plIdByCanonicalWo[canonical] : null;
-    const linkedPickList = it.picklist_id ? plById[String(it.picklist_id)] : null;
-    const ownerId = canonicalOwnerId || (linkedPickList ? it.picklist_id : plIdByWo[it.wo_number]);
-    if (!ownerId) return;
-    if (!grouped[ownerId]) grouped[ownerId] = [];
-    grouped[ownerId].push(it);
-    const ownerPickList = plById[String(ownerId)];
-    if (!options.relink || !it.id || !ownerPickList) return;
-    if (String(it.picklist_id || "") === String(ownerId) && String(it.wo_number || "") === String(ownerPickList.wo_number || "")) return;
-    relinkWrites.push(sbFetch(`picklist_items?id=eq.${encodeURIComponent(it.id)}`, {
-      method: "PATCH",
-      prefer: "return=minimal",
-      body: JSON.stringify({
-        picklist_id: ownerId,
-        wo_number: ownerPickList.wo_number,
-      }),
-    }).catch(() => {}));
-  });
-  if (relinkWrites.length) Promise.all(relinkWrites).catch(() => {});
-  if (options.sort) {
-    await Promise.all(lists.map(async pl => {
-      if (!grouped[pl.id]?.length) return;
-      grouped[pl.id] = await sortPickListItemsByWorkOrder(grouped[pl.id], pl.wo_number);
-    }));
-  }
-  return grouped;
-}
-
 function invalidatePickListCache(woNum = null, plId = null) {
   const woKey = canonicalWorkOrderKey(woNum);
   const idKey = String(plId || "").trim();
@@ -14684,13 +13927,13 @@ async function loadWorkOrderPickListItems(woNum, plId = null, opts = {}) {
     const requests = [];
     if (plId) {
       requests.push(sbFetch(
-        `picklist_items?picklist_id=eq.${encodeURIComponent(plId)}&select=${PICKLIST_ITEM_SELECT}&order=id.asc`,
+        `picklist_items?picklist_id=eq.${encodeURIComponent(plId)}&select=*&order=id.asc`,
         { method: "GET", headers: { "Prefer": "return=representation" } }
       ).catch(() => []));
     }
     if (variants.length) {
       requests.push(sbFetch(
-        `picklist_items?wo_number=in.(${variants.map(encodeURIComponent).join(",")})&select=${PICKLIST_ITEM_SELECT}&order=id.asc`,
+        `picklist_items?wo_number=in.(${variants.map(encodeURIComponent).join(",")})&select=*&order=id.asc`,
         { method: "GET", headers: { "Prefer": "return=representation" } }
       ).catch(() => []));
     }
@@ -16471,80 +15714,25 @@ async function runAdminMissingPickListRefresh(woNums = [], completions = []) {
   }
 }
 
-const PICKLIST_PROGRESS_STEPS = [
-  { label: "Loading Work Order", pct: 12 },
-  { label: "Loading pick-list items", pct: 38 },
-  { label: "Verifying allocation quantities", pct: 68 },
-  { label: "Confirming latest updates", pct: 88 },
-  { label: "Pick list ready", pct: 100 }
-];
-let _pickListProgressLastPct = 0;
-let _pickListProgressPanelSeq = 0;
-
-function clampPickListProgressPct(value) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) return 0;
-  return Math.max(0, Math.min(100, Math.round(numeric)));
-}
-
-function easePickListProgress(t) {
-  return 1 - Math.pow(1 - t, 3);
-}
-
-function animatePickListProgressPanel(panelId, startPct, targetPct) {
-  if (typeof document === "undefined") return;
-  const startedAt = (typeof performance !== "undefined" && typeof performance.now === "function") ? performance.now() : Date.now();
-  const distance = Math.abs(targetPct - startPct);
-  const duration = Math.max(650, Math.min(1600, distance * 18));
-  const tick = (now) => {
-    const panel = document.querySelector(`[data-picklist-progress-id="${panelId}"]`);
-    if (!panel) return;
-    const elapsed = Math.max(0, now - startedAt);
-    const pct = clampPickListProgressPct(startPct + ((targetPct - startPct) * easePickListProgress(Math.min(1, elapsed / duration))));
-    const fill = panel.querySelector("[data-picklist-progress-fill]");
-    const percent = panel.querySelector("[data-picklist-progress-percent]");
-    if (fill) fill.style.width = `${pct}%`;
-    if (percent) percent.textContent = `${pct}%`;
-    if (elapsed < duration && pct !== targetPct) {
-      requestAnimationFrame(tick);
-    } else {
-      if (fill) fill.style.width = `${targetPct}%`;
-      if (percent) percent.textContent = `${targetPct}%`;
-    }
-  };
-  const run = () => {
-    if (typeof requestAnimationFrame === "function") {
-      requestAnimationFrame(tick);
-    } else {
-      const panel = document.querySelector(`[data-picklist-progress-id="${panelId}"]`);
-      if (!panel) return;
-      const fill = panel.querySelector("[data-picklist-progress-fill]");
-      const percent = panel.querySelector("[data-picklist-progress-percent]");
-      if (fill) fill.style.width = `${targetPct}%`;
-      if (percent) percent.textContent = `${targetPct}%`;
-    }
-  };
-  setTimeout(run, 30);
-}
-
 function renderPickListLoadingPanel(stage = "Loading pick list", detail = "") {
-  const steps = PICKLIST_PROGRESS_STEPS;
+  const steps = [
+    { label: "Loading Work Order", pct: 18 },
+    { label: "Loading pick-list items", pct: 46 },
+    { label: "Verifying allocation quantities", pct: 78 },
+    { label: "Confirming latest updates", pct: 92 },
+    { label: "Pick list ready", pct: 100 }
+  ];
   const normalizedStage = String(stage || "Loading pick list").trim();
   const activeIndex = Math.max(0, steps.findIndex(step => step.label.toLowerCase() === normalizedStage.toLowerCase()));
   const matchedStep = steps[activeIndex] || steps[0];
-  const targetProgress = clampPickListProgressPct(matchedStep.pct);
-  const shouldReset = activeIndex === 0 || targetProgress < _pickListProgressLastPct || _pickListProgressLastPct >= 100;
-  const startProgress = shouldReset ? 0 : _pickListProgressLastPct;
-  _pickListProgressLastPct = targetProgress;
-  const panelId = `picklist-progress-${++_pickListProgressPanelSeq}`;
-  animatePickListProgressPanel(panelId, startProgress, targetProgress);
-  return `<div class="picklist-progress-panel" role="status" aria-live="polite" data-picklist-progress-id="${panelId}">
+  const progress = matchedStep.pct;
+  return `<div class="picklist-progress-panel" role="status" aria-live="polite">
     <div class="picklist-progress-head">
       <div class="picklist-progress-stage">${escHtml(normalizedStage || "Loading pick list")}</div>
-      <div class="picklist-progress-percent" data-picklist-progress-percent>${startProgress}%</div>
+      <div class="picklist-progress-percent">${progress}%</div>
     </div>
     <div class="picklist-progress-track" aria-hidden="true">
-      <div class="picklist-progress-fill" data-picklist-progress-fill style="width:${startProgress}%"></div>
+      <div class="picklist-progress-fill" style="width:${progress}%"></div>
     </div>
     <div class="picklist-progress-detail">${escHtml(detail || "Please wait while we confirm the latest Work Order and allocation data.")}</div>
     <div class="picklist-progress-steps" aria-hidden="true">
@@ -17383,8 +16571,49 @@ async function renderPickLists() {
     });
   };
 
+  const buildItemsByPl = async (sourceItems = []) => {
+    const plIdByWo = {};
+    const plIdByCanonicalWo = {};
+    const plById = {};
+    allPicklists.forEach(pl => {
+      if (pl.id) plById[String(pl.id)] = pl;
+      if (!pl.wo_number) return;
+      getWorkOrderQueryVariants([pl.wo_number]).forEach(candidate => { plIdByWo[candidate] = pl.id; });
+      const canonical = canonicalWorkOrderKey(pl.wo_number);
+      if (canonical) plIdByCanonicalWo[canonical] = pl.id;
+    });
+    const grouped = {};
+    const relinkWrites = [];
+    sourceItems.forEach(it => {
+      const canonical = canonicalWorkOrderKey(it.wo_number);
+      const canonicalOwnerId = canonical ? plIdByCanonicalWo[canonical] : null;
+      const linkedPickList = it.picklist_id ? plById[String(it.picklist_id)] : null;
+      const ownerId = canonicalOwnerId || (linkedPickList ? it.picklist_id : plIdByWo[it.wo_number]);
+      if (!ownerId) return;
+      if (!grouped[ownerId]) grouped[ownerId] = [];
+      grouped[ownerId].push(it);
+      const ownerPickList = plById[String(ownerId)];
+      if (it.id && ownerPickList && (String(it.picklist_id || "") !== String(ownerId) || String(it.wo_number || "") !== String(ownerPickList.wo_number || ""))) {
+        relinkWrites.push(sbFetch(`picklist_items?id=eq.${encodeURIComponent(it.id)}`, {
+          method: "PATCH",
+          prefer: "return=minimal",
+          body: JSON.stringify({
+            picklist_id: ownerId,
+            wo_number: ownerPickList.wo_number,
+          }),
+        }).catch(() => {}));
+      }
+    });
+    if (relinkWrites.length) Promise.all(relinkWrites).catch(() => {});
+    await Promise.all(allPicklists.map(async pl => {
+      if (!grouped[pl.id]?.length) return;
+      grouped[pl.id] = await sortPickListItemsByWorkOrder(grouped[pl.id], pl.wo_number);
+    }));
+    return grouped;
+  };
+
   let allItems = dedupePickListItems(allItemsFetched);
-  let itemsByPl = await buildPickListItemsByPickList(allPicklists, allItems);
+  let itemsByPl = await buildItemsByPl(allItems);
   perf.mark("work_order_grouping", {
     uniqueItems: allItems.length,
     groupedPicklists: Object.keys(itemsByPl || {}).length,
@@ -17443,11 +16672,11 @@ async function renderPickLists() {
     const missingWoVariants = getWorkOrderQueryVariants(missingWos);
     if (missingWoVariants.length) {
       const refreshedMissingItems = await sbFetch(
-        `picklist_items?wo_number=in.(${missingWoVariants.map(encodeURIComponent).join(",")})&select=${PICKLIST_ITEM_SELECT}&order=id.asc`,
+        `picklist_items?wo_number=in.(${missingWoVariants.map(encodeURIComponent).join(",")})&select=*&order=id.asc`,
         { method: "GET", headers: { "Prefer": "return=representation" } }
       ) || [];
       allItems = dedupePickListItems([...allItems, ...refreshedMissingItems]);
-      itemsByPl = await buildPickListItemsByPickList(allPicklists, allItems);
+      itemsByPl = await buildItemsByPl(allItems);
     }
     perf.mark("missing_picklist_sync", {
       syncTargets: syncTargets.length,
@@ -17493,14 +16722,14 @@ async function renderPickLists() {
 
     const repairWoVariants = getWorkOrderQueryVariants(repairTargets);
     const repairedItems = repairWoVariants.length ? await sbFetch(
-      `picklist_items?wo_number=in.(${repairWoVariants.map(encodeURIComponent).join(",")})&select=${PICKLIST_ITEM_SELECT}&order=id.asc`,
+      `picklist_items?wo_number=in.(${repairWoVariants.map(encodeURIComponent).join(",")})&select=*&order=id.asc`,
       { method: "GET", headers: { "Prefer": "return=representation" } }
     ) || [] : [];
     const byItemId = new Map();
     allItems.forEach(item => { if (item?.id) byItemId.set(String(item.id), item); });
     repairedItems.forEach(item => { if (item?.id) byItemId.set(String(item.id), item); });
     allItems = [...byItemId.values()];
-    itemsByPl = await buildPickListItemsByPickList(allPicklists, allItems);
+    itemsByPl = await buildItemsByPl(allItems);
     perf.mark("allocation_calculation", {
       repairTargets: repairTargets.length,
       repairedRows: repairedItems.length,
@@ -18695,7 +17924,11 @@ async function openPeteKittedPickLists(forceRefresh = false, preserveSearch = fa
   const search = document.getElementById("pete-pl-search");
   if (search && !preserveSearch) search.value = "";
   const listEl = document.getElementById("pete-pl-list");
-  if (listEl) {
+  const cachedLists = !forceRefresh ? loadTimedCache(PETE_KITTED_CACHE_KEY, 5 * 60 * 1000) : null;
+  if (Array.isArray(cachedLists) && cachedLists.length) {
+    window._petePlLists = cachedLists;
+    renderPetePlList();
+  } else if (listEl) {
     listEl.innerHTML = renderPickListLoadingPanel("Loading Work Order", "Gathering Pete’s completed Initial Kit work orders and their latest pick-list records.");
   }
 
@@ -18705,9 +17938,6 @@ async function openPeteKittedPickLists(forceRefresh = false, preserveSearch = fa
     window._kitCompletions = completions;
     const { completedItemIds, completedItemNames } = getKitCompletionSets(completions);
     await ensurePeteKittedPickListsFromKnownItems(completedItemIds, completedItemNames);
-    if (listEl) {
-      listEl.innerHTML = renderPickListLoadingPanel("Loading pick-list items", "Reading Pete’s latest pick-list rows from the database.");
-    }
 
     const rows = await sbFetch("picklists?status=neq.complete&status=neq.exclude&order=created_at.desc", {
       method: "GET", headers: { "Prefer": "return=representation" }
@@ -18727,77 +17957,33 @@ async function openPeteKittedPickLists(forceRefresh = false, preserveSearch = fa
     });
 
     const itemStateByWo = {};
-    let allItemsFetched = await fetchPickListItemsForPicklists(rows);
-    let itemsByPl = await buildPickListItemsByPickList(rows, allItemsFetched);
-    const missingItemRows = rows.filter(pl => pl?.wo_number && pl?.id && !(itemsByPl[pl.id] || []).length);
-    if (missingItemRows.length) {
-      await Promise.all(missingItemRows.map(async pl => {
-        try {
-          await syncPickListItems(pl.wo_number);
-        } catch (err) {
-          console.warn(`Pete kitted pick list sync skipped for ${pl.wo_number}:`, err?.message || err);
-        }
-      }));
-      const refreshedItems = await fetchPickListItemsForPicklists(missingItemRows).catch(() => []);
-      allItemsFetched = dedupePickListItemRows([...allItemsFetched, ...refreshedItems]);
-      itemsByPl = await buildPickListItemsByPickList(rows, allItemsFetched);
-    }
-
-    if (listEl) {
-      listEl.innerHTML = renderPickListLoadingPanel("Verifying allocation quantities", "Confirming Pete’s latest allocated and missing item counts.");
-    }
-    const unresolvedRows = rows.filter(pl => pl?.wo_number && pl?.id && !(itemsByPl[pl.id] || []).length);
-    if (unresolvedRows.length) {
-      await Promise.all(unresolvedRows.map(async pl => {
-        try {
-          const resolvedItems = await loadResolvedPickListItems(pl.id, pl.wo_number);
-          allItemsFetched = dedupePickListItemRows([...allItemsFetched, ...resolvedItems]);
-        } catch (err) {
-          console.warn(`Pete kitted pick list verification failed for ${pl.wo_number}:`, err?.message || err);
-        }
-      }));
-      itemsByPl = await buildPickListItemsByPickList(rows, allItemsFetched);
-    }
-    if (listEl) {
-      listEl.innerHTML = renderPickListLoadingPanel("Confirming latest updates", "Finishing the verified pick-list view.");
-    }
-
-    rows.forEach(pl => {
+    await Promise.all(rows.map(async pl => {
       const canonicalWo = canonicalWoByKey[canonicalWorkOrderKey(pl?.wo_number)] || pl?.wo_number;
       if (!canonicalWo || !pl?.id) return;
-      const liveItems = itemsByPl[pl.id] || [];
-      if (liveItems.length) {
-        const verification = {
+      try {
+        const liveItems = await loadResolvedPickListItems(pl.id, canonicalWo, { backgroundSync: false });
+        const viewState = getVerifiedPickListViewState(pl, liveItems, {
           state: "ready",
           stage: "Pick list ready",
           detail: `Pete’s kitted pick list for ${canonicalWo} is verified.`,
-        };
-        setPickListVerificationState(pl.id, verification);
-        const viewState = getVerifiedPickListViewState(pl, liveItems, verification);
+        });
+        const sortedItems = await sortPickListItemsByWorkOrder(viewState.checklist, canonicalWo);
         itemStateByWo[canonicalWo] = {
           total: viewState.allocation.total,
           allocated: viewState.allocation.allocated,
-          items: viewState.checklist,
+          items: sortedItems,
           allocation: viewState.allocation,
-          verification,
-        };
-      } else {
-        const verification = {
-          state: "error",
-          stage: "Verification failed",
-          detail: "Could not verify pick list items.",
-        };
-        setPickListVerificationState(pl.id, verification);
+          };
+      } catch (err) {
         reviewByWo[canonicalWo] = true;
         itemStateByWo[canonicalWo] = {
           total: 0,
           allocated: 0,
           items: [],
-          error: verification.detail,
-          verification,
+          error: err?.message || "Could not verify pick list items.",
         };
       }
-    });
+    }));
 
     /* Sort by when Pete kitted it, while still showing ship date */
     const withDates = rows
@@ -18833,7 +18019,6 @@ async function openPeteKittedPickLists(forceRefresh = false, preserveSearch = fa
           kittedAt,
           checklistItems: itemState?.items || [],
           checklistError: itemState?.error || "",
-          verification: itemState?.verification || null,
           needsReview
         };
       })
@@ -18923,7 +18108,7 @@ function renderPetePlList() {
     const kittedStr = pl.kittedAt ? fmtTs(pl.kittedAt) : "Unknown";
     const isExpanded = window._peteExpandedWo === pl.wo_number;
     const completionMissingEntries = normalizeMissingItems(pl.kitCompletion?.missing_items);
-    const viewState = getVerifiedPickListViewState(pl, pl.checklistItems || [], pl.verification || getPickListVerificationState(pl.id));
+    const viewState = getVerifiedPickListViewState(pl, pl.checklistItems || [], getPickListVerificationState(pl.id));
     const checklist = viewState.checklist;
     const verification = viewState.verification;
     const allocation = viewState.allocation;
@@ -19587,7 +18772,7 @@ function renderHomeUpdates() {
 }
 
 let _updatesCallerScreen = "screen-dash";
-var _updatesMode = "history";
+let _updatesMode = "history";
 
 async function showBuildUpdates() {
   /* Track which screen opened updates so back button goes to right place */
@@ -19809,221 +18994,6 @@ async function sbGetBuildUpdates() {
   }) || [];
 }
 
-const PULL_REFRESH_MAX_DISTANCE = 92;
-const PULL_REFRESH_TRIGGER_DISTANCE = 62;
-const PULL_REFRESH_SETTLE_MS = 180;
-const _pullRefreshState = {
-  tracking: false,
-  active: false,
-  refreshing: false,
-  startX: 0,
-  startY: 0,
-  distance: 0,
-  screenId: "",
-  scroller: null,
-  pointerId: null,
-};
-
-function isPullRefreshMobileMode() {
-  return window.matchMedia?.("(pointer: coarse)").matches && Math.min(window.innerWidth || 0, window.innerHeight || 0) < 1100;
-}
-
-function activeScreenPullRefreshConfig() {
-  const screen = document.querySelector(".screen.active");
-  if (!screen) return null;
-  const map = {
-    "screen-dash": { scroller: ".main-content", action: () => runRefreshAction("dash", { silentSuccess: true }) },
-    "screen-kit": { scroller: ".kit-content", action: () => runRefreshAction("kit", { silentSuccess: true }) },
-    "screen-config": { scroller: ".config-content", action: () => runRefreshAction("config", { silentSuccess: true }) },
-    "screen-config-checklist": { scroller: ".config-checklist-content", action: () => refreshActiveConfigChecklist({ silentSuccess: true }) },
-    "screen-admin": { scroller: ".admin-content", action: () => runRefreshAction("admin", { silentSuccess: true }) },
-    "screen-team": { scroller: ".team-screen-content", action: () => runRefreshAction("team", { silentSuccess: true }) },
-    "screen-history": { scroller: "#hist-content", action: () => renderHistory() },
-    "screen-queue": { scroller: "#queue-content", action: () => showSharedQueue() },
-    "screen-updates": { scroller: ".main-content", action: () => loadBuildUpdates() },
-    "screen-picklist": { scroller: "#pl-content", action: () => runRefreshAction("picklist", { silentSuccess: true }) },
-  };
-  const entry = map[screen.id];
-  if (!entry) return null;
-  const scroller = screen.querySelector(entry.scroller);
-  if (!scroller) return null;
-  return { screen, screenId: screen.id, scroller, action: entry.action };
-}
-
-function isPullRefreshBlockedTarget(target) {
-  const el = target instanceof Element ? target : null;
-  if (!el) return false;
-  return !!el.closest(
-    "input, textarea, select, option, button, a, label, [contenteditable='true'], .update-sheet, .update-sheet-overlay, #settings-drawer, #settings-overlay, .settings-modal-box, #modal-app-controls, #photo-lightbox, .config-signature-canvas, .pl-status-tab-bar"
-  );
-}
-
-function setPullRefreshIndicator(distance = 0, refreshing = false) {
-  const indicator = document.getElementById("pull-refresh-indicator");
-  const icon = document.getElementById("pull-refresh-icon");
-  const label = document.getElementById("pull-refresh-label");
-  if (!indicator || !icon || !label) return;
-  const progress = Math.max(0, Math.min(1, distance / PULL_REFRESH_TRIGGER_DISTANCE));
-  const ready = distance >= PULL_REFRESH_TRIGGER_DISTANCE;
-  const offsetY = refreshing ? 0 : -54 + Math.min(distance * 0.78, 54);
-  indicator.classList.toggle("visible", refreshing || distance > 0);
-  indicator.style.transform = `translate(-50%, ${offsetY}px) scale(${refreshing ? 1 : 0.96 + progress * 0.04})`;
-  indicator.style.opacity = refreshing || distance > 0 ? "1" : "0";
-  if (refreshing) {
-    label.textContent = "Refreshing…";
-    icon.classList.add("spin-icon");
-    icon.style.transform = "";
-  } else {
-    label.textContent = ready ? "Release to refresh" : "Pull to refresh";
-    icon.classList.remove("spin-icon");
-    icon.style.transform = `rotate(${progress * 180}deg)`;
-  }
-}
-
-function applyPullRefreshVisual(screen, distance) {
-  if (!screen) return;
-  screen.classList.remove("pull-refresh-settling");
-  if (distance > 0) {
-    screen.classList.add("pull-refresh-active");
-    screen.style.setProperty("--pull-refresh-offset", `${Math.round(distance)}px`);
-  } else {
-    screen.classList.remove("pull-refresh-active");
-    screen.style.removeProperty("--pull-refresh-offset");
-  }
-  setPullRefreshIndicator(distance, _pullRefreshState.refreshing);
-}
-
-function settlePullRefreshVisual(screen) {
-  if (!screen) {
-    setPullRefreshIndicator(0, false);
-    return;
-  }
-  screen.classList.remove("pull-refresh-active");
-  screen.classList.add("pull-refresh-settling");
-  screen.style.setProperty("--pull-refresh-offset", "0px");
-  setPullRefreshIndicator(0, _pullRefreshState.refreshing);
-  setTimeout(() => {
-    screen.classList.remove("pull-refresh-settling");
-    screen.style.removeProperty("--pull-refresh-offset");
-    if (!_pullRefreshState.refreshing) setPullRefreshIndicator(0, false);
-  }, PULL_REFRESH_SETTLE_MS);
-}
-
-function resetPullRefreshState({ preserveRefreshing = false } = {}) {
-  _pullRefreshState.tracking = false;
-  _pullRefreshState.active = false;
-  _pullRefreshState.startX = 0;
-  _pullRefreshState.startY = 0;
-  _pullRefreshState.distance = 0;
-  _pullRefreshState.screenId = "";
-  _pullRefreshState.scroller = null;
-  _pullRefreshState.pointerId = null;
-  if (!preserveRefreshing) _pullRefreshState.refreshing = false;
-}
-
-async function triggerPullRefresh(context) {
-  if (!context || _pullRefreshState.refreshing) return;
-  _pullRefreshState.refreshing = true;
-  setPullRefreshIndicator(PULL_REFRESH_TRIGGER_DISTANCE, true);
-  try {
-    await Promise.resolve(context.action());
-  } catch (err) {
-    showToast("Refresh failed: " + (err?.message || err), "err");
-  } finally {
-    _pullRefreshState.refreshing = false;
-    settlePullRefreshVisual(context.screen);
-    setTimeout(() => setPullRefreshIndicator(0, false), PULL_REFRESH_SETTLE_MS);
-  }
-}
-
-function handlePullRefreshStart(evt) {
-  if (!isPullRefreshMobileMode() || _pullRefreshState.refreshing) return;
-  if (evt.touches?.length !== 1) return;
-  const context = activeScreenPullRefreshConfig();
-  if (!context) return;
-  if (!context.scroller.contains(evt.target)) return;
-  if (isPullRefreshBlockedTarget(evt.target)) return;
-  if ((context.scroller.scrollTop || 0) > 0) return;
-  const touch = evt.touches[0];
-  _pullRefreshState.tracking = true;
-  _pullRefreshState.active = false;
-  _pullRefreshState.startX = touch.clientX;
-  _pullRefreshState.startY = touch.clientY;
-  _pullRefreshState.distance = 0;
-  _pullRefreshState.screenId = context.screenId;
-  _pullRefreshState.scroller = context.scroller;
-}
-
-function handlePullRefreshMove(evt) {
-  if (!_pullRefreshState.tracking || !isPullRefreshMobileMode()) return;
-  const context = activeScreenPullRefreshConfig();
-  if (!context || context.screenId !== _pullRefreshState.screenId || context.scroller !== _pullRefreshState.scroller) {
-    resetPullRefreshState();
-    return;
-  }
-  if (evt.touches?.length !== 1) {
-    settlePullRefreshVisual(context.screen);
-    resetPullRefreshState();
-    return;
-  }
-  const touch = evt.touches[0];
-  const dx = touch.clientX - _pullRefreshState.startX;
-  const dy = touch.clientY - _pullRefreshState.startY;
-  if (dy <= 0) {
-    if (_pullRefreshState.active) {
-      settlePullRefreshVisual(context.screen);
-      resetPullRefreshState();
-    }
-    return;
-  }
-  if (Math.abs(dx) > dy * 0.85) {
-    if (_pullRefreshState.active) {
-      settlePullRefreshVisual(context.screen);
-      resetPullRefreshState();
-    }
-    return;
-  }
-  if ((context.scroller.scrollTop || 0) > 0) {
-    settlePullRefreshVisual(context.screen);
-    resetPullRefreshState();
-    return;
-  }
-  const damped = Math.min(PULL_REFRESH_MAX_DISTANCE, dy * 0.42 + Math.min(dy, 120) * 0.16);
-  _pullRefreshState.active = true;
-  _pullRefreshState.distance = damped;
-  applyPullRefreshVisual(context.screen, damped);
-  evt.preventDefault();
-}
-
-function handlePullRefreshEnd() {
-  if (!_pullRefreshState.tracking) return;
-  const context = activeScreenPullRefreshConfig();
-  const shouldRefresh = !!(_pullRefreshState.active && _pullRefreshState.distance >= PULL_REFRESH_TRIGGER_DISTANCE && context && context.screenId === _pullRefreshState.screenId);
-  const screen = context?.screen || document.getElementById(_pullRefreshState.screenId);
-  if (!shouldRefresh) settlePullRefreshVisual(screen);
-  const refreshContext = shouldRefresh ? context : null;
-  resetPullRefreshState({ preserveRefreshing: shouldRefresh });
-  if (refreshContext) triggerPullRefresh(refreshContext);
-}
-
-document.addEventListener("touchstart", handlePullRefreshStart, { passive: true });
-document.addEventListener("touchmove", handlePullRefreshMove, { passive: false });
-document.addEventListener("touchend", handlePullRefreshEnd, { passive: true });
-document.addEventListener("touchcancel", handlePullRefreshEnd, { passive: true });
-
-async function runRefreshAction(which, { silentSuccess = false } = {}) {
-  if (which === "dash") await loadBoard();
-  else if (which === "config") await loadBoard();
-  else if (which === "kit") await loadKitBoard();
-  else if (which === "admin") await loadAdminData();
-  else if (which === "picklist") await loadPickListRefresh();
-  else if (which === "team") {
-    await loadSharedBoardItems(true);
-    renderTeamScreen();
-  }
-  if (!silentSuccess) showToast("Refreshed", "ok");
-}
-
 /* ── Manual refresh with visible feedback ── */
 async function manualRefresh(which) {
   const btnId  = which + "-refresh-btn";
@@ -20033,7 +19003,16 @@ async function manualRefresh(which) {
   if (btn)  btn.disabled = true;
   if (icon) icon.classList.add("spin-icon");
   try {
-    await runRefreshAction(which);
+    if (which === "dash")     await loadBoard();
+    if (which === "config")   await loadBoard();
+    if (which === "kit")      await loadKitBoard();
+    if (which === "admin")    await loadAdminData();
+    if (which === "picklist") await loadPickListRefresh();
+    if (which === "team") {
+      await loadSharedBoardItems(true);
+      renderTeamScreen();
+    }
+    showToast("Refreshed", "ok");
   } catch(e) {
     showToast("Refresh failed: " + e.message, "err");
   } finally {
@@ -20167,69 +19146,31 @@ function showToast(msg, type, undoFn) {
 /* ═══════════════════════════════════════
    BOOT
 ═══════════════════════════════════════ */
-(function bootProductionApp() {
-  ptAuthLog?.("startup.begin", {
-    gatePassed: localStorage.getItem("pt_gate_passed") === "1",
-    hasSavedUser: !!localStorage.getItem("pt_user"),
-    hasSavedOwner: !!getDeviceOwnerName(),
-    serviceWorkerControlled: !!navigator.serviceWorker?.controller,
-  });
-  syncTeamFromSupabase().then(changed => {
-    ptAuthLog?.("team.sync.complete", { changed: !!changed, hasCurrentUser: !!currentUser });
-    if (changed && !currentUser && localStorage.getItem("pt_gate_passed") === "1") {
-      showScreen("screen-login");
-      showLoginEntryPoint();
-    }
-  }).catch((err)=>ptAuthLog?.("team.sync.error", { errorName: err?.name || "", errorMessage: err?.message || "" }));
-  syncPinsFromSupabase()
-    .then(()=>ptAuthLog?.("pins.sync.complete"))
-    .catch((err)=>ptAuthLog?.("pins.sync.error", { errorName: err?.name || "", errorMessage: err?.message || "" }));
-  registerPushWorker().catch(()=>{});
-  try {
-    const gatePassed = localStorage.getItem("pt_gate_passed") === "1";
-    const saved = localStorage.getItem("pt_user");
-    if (saved && gatePassed) {
-      const u = JSON.parse(saved);
-      const storedMember = TEAM.find(m=>m.name===u.name);
-      currentUser = storedMember && storedMember.role === FLOAT_ROLE && [MS_ROLE, CHASSIS_ROLE, KIT_ROLE].includes(u.role)
-        ? { ...storedMember, role: u.role, baseRole: FLOAT_ROLE }
-        : storedMember || u;
-      ptAuthLog?.("startup.saved_user.restore", {
-        role: currentUser?.role || "",
-        matchedTeamMember: !!storedMember,
-        baseRole: currentUser?.baseRole || "",
-      });
-      syncPushForActiveSession(false);
-      if(currentUser.role==="admin"){
-        ptAuthLog?.("navigation.after_login", { destination: "admin", role: "admin", restored: true });
-        showScreen("screen-admin");
-        document.getElementById("admin-date").textContent=new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
-        loadAdminData().then(() => routePendingProductionDeepLink()).catch(()=>{});
-      }
-      else { showDash(); routePendingProductionDeepLink(); }
-    } else if (gatePassed) {
-      ptAuthLog?.("startup.no_saved_user_show_login");
-      showScreen("screen-login");
-      showLoginEntryPoint();
-    } else if (saved) {
-      ptAuthLog?.("startup.saved_user_gate_missing");
-      const soBtn = document.getElementById("login-signout-btn");
-      if (soBtn) soBtn.style.display = "flex";
-    }
-    sbFetch("build_updates?order=created_at.desc&limit=100",{method:"GET",headers:{"Prefer":"return=representation"}}).then(d=>{ if(d) _allBuildUpdates=d; }).catch(()=>{});
-    ptMarkAuthReady?.("boot.complete");
-  } catch(e) {
-    ptAuthLog?.("startup.saved_user.restore_error", { errorName: e?.name || "", errorMessage: e?.message || "" });
-    localStorage.removeItem("pt_user");
-    if (localStorage.getItem("pt_gate_passed") === "1") {
-      showScreen("screen-login");
-      showLoginEntryPoint();
-      ptMarkAuthReady?.("saved-user-recovered");
-    } else {
-      ptShowStartupFailure?.("Production Tracker could not finish login startup.", e);
-    }
+syncTeamFromSupabase().then(changed => {
+  if (changed && !currentUser) showLoginEntryPoint();
+}).catch(()=>{});
+syncPinsFromSupabase().catch(()=>{});
+registerPushWorker().catch(()=>{});
+try {
+  const saved=localStorage.getItem("pt_user");
+  if(saved && localStorage.getItem("pt_gate_passed")==="1"){
+    const u=JSON.parse(saved);
+    const storedMember = TEAM.find(m=>m.name===u.name);
+    currentUser = storedMember && storedMember.role === FLOAT_ROLE && [MS_ROLE, CHASSIS_ROLE, KIT_ROLE].includes(u.role)
+      ? { ...storedMember, role: u.role, baseRole: FLOAT_ROLE }
+      : storedMember || u;
+    syncPushForActiveSession(false);
+    if(currentUser.role==="admin"){showScreen("screen-admin");document.getElementById("admin-date").textContent=new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});loadAdminData().then(() => routePendingProductionDeepLink()).catch(()=>{});}
+    else { showDash(); routePendingProductionDeepLink(); }
+  } else if (saved) {
+    /* Session exists but user is on login screen — show sign out */
+    const soBtn = document.getElementById("login-signout-btn");
+    if (soBtn) soBtn.style.display = "flex";
   }
-})();
+  if (!saved && localStorage.getItem("pt_gate_passed")==="1") showLoginEntryPoint();
+  /* Pre-load build updates in background for splash screen */
+  sbFetch("build_updates?order=created_at.desc&limit=100",{method:"GET",headers:{"Prefer":"return=representation"}}).then(d=>{ if(d) _allBuildUpdates=d; }).catch(()=>{});
+} catch(e) { localStorage.removeItem("pt_user"); }
 applyAppSettingLabels();
 updateBottomNav(document.querySelector(".screen.active")?.id || "screen-gate");
 handleInitialHashRoute();
@@ -20348,17 +19289,6 @@ window.addEventListener("resize", () => {
 <div id="photo-lightbox" onclick="closeLightbox()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:400;align-items:center;justify-content:center;flex-direction:column;gap:12px">
   <img id="lightbox-img" style="max-width:94vw;max-height:80vh;border-radius:10px;object-fit:contain">
   <div id="lightbox-caption" style="color:#fff;font-size:13px;opacity:.7;text-align:center;padding:0 20px"></div>
-</div>
-
-<div id="pull-refresh-indicator" class="pull-refresh-indicator" aria-hidden="true">
-  <div class="pull-refresh-chip">
-    <svg id="pull-refresh-icon" class="pull-refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 5v11"/>
-      <path d="M7.5 11.5L12 16l4.5-4.5"/>
-      <path d="M20 19H4"/>
-    </svg>
-    <span id="pull-refresh-label">Pull to refresh</span>
-  </div>
 </div>
 
 
