@@ -4517,11 +4517,13 @@ async function processLoginPin() {
 }
 
 async function loginSuccess() {
+  resetTeamMessagesBadgeCache();
   currentUser = pendingUser;
   localStorage.setItem("pt_user", JSON.stringify(currentUser));
   if (getDeviceMode() === "shared") setDeviceOwnerName("");
   else setDeviceOwnerName((pendingFloater?.name || pendingUser?.name || "").trim());
   syncPushForActiveSession(false);
+  refreshTeamMessagesBadge({ force: true }).catch(() => {});
   showLoginLoading(async () => {
     await showDash();
     routePendingProductionDeepLink();
@@ -4576,9 +4578,11 @@ async function processAdminPin() {
     [0,1,2,3].forEach(i=>document.getElementById("apd"+i).classList.remove("filled"));
     return;
   }
+  resetTeamMessagesBadgeCache();
   currentUser = { name:ADMIN_NAME, initials:"EM", color:"#6366f1", role:"admin" };
   localStorage.setItem("pt_user", JSON.stringify(currentUser));
   syncPushForActiveSession(false);
+  refreshTeamMessagesBadge({ force: true }).catch(() => {});
   showLoginLoading(() => {
     showScreen("screen-admin");
     document.getElementById("admin-date").textContent = new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
@@ -4632,18 +4636,22 @@ async function processSetupPin() {
     const hash = await sha256(setupPinBuf);
     await savePinToSupabase(setupUser.name, hash);
     if (setupUser._isAdmin) {
+      resetTeamMessagesBadgeCache();
       currentUser = { name:ADMIN_NAME, initials:"EM", color:"#6366f1", role:"admin" };
       localStorage.setItem("pt_user", JSON.stringify(currentUser));
       syncPushForActiveSession(false);
+      refreshTeamMessagesBadge({ force: true }).catch(() => {});
       showLoginLoading(() => {
         showScreen("screen-admin");
         document.getElementById("admin-date").textContent = new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
         return loadAdminData();
       });
     } else {
+      resetTeamMessagesBadgeCache();
       currentUser = setupUser;
       localStorage.setItem("pt_user", JSON.stringify(currentUser));
       syncPushForActiveSession(false);
+      refreshTeamMessagesBadge({ force: true }).catch(() => {});
       showLoginLoading(showDash);
     }
   }
@@ -4654,6 +4662,7 @@ function signOutCompletely() {
   localStorage.removeItem("pt_user");
   localStorage.removeItem("pt_gate_passed");
   syncPushUserContext("");
+  resetTeamMessagesBadgeCache();
   currentUser = null; pendingUser = null; pendingFloater = null;
   document.getElementById("pin-entry-wrap").style.display  = "none";
   document.getElementById("floater-role-wrap").style.display = "none";
@@ -4674,7 +4683,7 @@ function signOutCompletely() {
 
 function doLogout() {
   stopRealTimeSync();
-  localStorage.removeItem("pt_user"); syncPushUserContext(""); currentUser = null; pendingUser = null; pendingFloater = null;
+  localStorage.removeItem("pt_user"); syncPushUserContext(""); resetTeamMessagesBadgeCache(); currentUser = null; pendingUser = null; pendingFloater = null;
   const soBtn = document.getElementById("login-signout-btn");
   if (soBtn) soBtn.style.display = "none";
   showScreen("screen-login");
@@ -4741,7 +4750,7 @@ function updateBottomNav(activeId) {
   if (activeId === "screen-history") document.getElementById("bn-history")?.classList.add("active");
   if (activeId === "screen-updates" && _updatesMode === "history") document.getElementById("bn-updates")?.classList.add("active");
   requestAnimationFrame(syncBottomNavLayout);
-  refreshTeamMessagesBadge().catch(() => {});
+  updateTeamMessagesBadge(getCachedTeamMessagesBadgeRows());
 }
 
 function returnToHomeScreen() {
@@ -5123,6 +5132,34 @@ async function grabBuildAs(itemId, memberName) {
 
 const TEAM_MESSAGES_KEY = "pt_team_messages_local";
 const TEAM_MESSAGES_SEEN_KEY = "pt_team_messages_seen";
+const TEAM_MESSAGES_BADGE_CACHE_MS = 60000;
+let _teamMessagesBadgeCache = { userKey: "", rows: null, ts: 0 };
+
+function teamMessagesBadgeUserKey() {
+  return String(currentUser?.name || "").trim().toLowerCase();
+}
+
+function resetTeamMessagesBadgeCache() {
+  _teamMessagesBadgeCache = { userKey: "", rows: null, ts: 0 };
+}
+
+function setTeamMessagesBadgeCache(rows = []) {
+  const userKey = teamMessagesBadgeUserKey();
+  _teamMessagesBadgeCache = {
+    userKey,
+    rows: Array.isArray(rows)
+      ? rows.map(row => ({ created_at: row?.created_at || "", user_name: row?.user_name || "" }))
+      : [],
+    ts: Date.now(),
+  };
+  return _teamMessagesBadgeCache.rows;
+}
+
+function getCachedTeamMessagesBadgeRows() {
+  const userKey = teamMessagesBadgeUserKey();
+  if (!userKey || _teamMessagesBadgeCache.userKey !== userKey) return null;
+  return Array.isArray(_teamMessagesBadgeCache.rows) ? _teamMessagesBadgeCache.rows : null;
+}
 
 function messageSeenStorageKey() {
   const name = String(currentUser?.name || "").trim().toLowerCase();
@@ -5137,10 +5174,11 @@ function setTeamMessagesSeenAt(ts) {
   try { localStorage.setItem(messageSeenStorageKey(), String(ts || "")); } catch(e) {}
 }
 
-async function markTeamMessagesSeen() {
-  const rows = await loadTeamMessages();
+async function markTeamMessagesSeen(messages = null) {
+  const rows = Array.isArray(messages) ? messages : await loadTeamMessages();
   const newest = rows[0]?.created_at || new Date().toISOString();
   setTeamMessagesSeenAt(newest);
+  setTeamMessagesBadgeCache(rows);
   updateTeamMessagesBadge(rows);
 }
 
@@ -5175,10 +5213,21 @@ function updateTeamMessagesBadge(messages = null) {
   }
 }
 
-async function refreshTeamMessagesBadge() {
-  const rows = await loadTeamMessages();
-  if (Array.isArray(rows) && rows.length) saveLocalTeamMessages(rows);
+async function refreshTeamMessagesBadge({ force = false } = {}) {
+  if (!currentUser) {
+    resetTeamMessagesBadgeCache();
+    updateTeamMessagesBadge([]);
+    return [];
+  }
+  const cachedRows = getCachedTeamMessagesBadgeRows();
+  if (!force && cachedRows && Date.now() - _teamMessagesBadgeCache.ts < TEAM_MESSAGES_BADGE_CACHE_MS) {
+    updateTeamMessagesBadge(cachedRows);
+    return cachedRows;
+  }
+  const rows = await loadTeamMessagesForBadge();
+  setTeamMessagesBadgeCache(rows);
   updateTeamMessagesBadge(rows);
+  return rows;
 }
 
 function loadLocalTeamMessages() {
@@ -5194,6 +5243,16 @@ async function loadTeamMessages() {
   });
   if (Array.isArray(rows)) return rows;
   return loadLocalTeamMessages().sort((a,b) => String(b.created_at || "").localeCompare(String(a.created_at || "")));
+}
+async function loadTeamMessagesForBadge() {
+  const rows = await sbFetch("team_messages?select=created_at,user_name&order=created_at.desc&limit=100", {
+    method: "GET",
+    headers: { "Prefer": "return=representation" },
+  });
+  if (Array.isArray(rows)) return rows;
+  return loadLocalTeamMessages()
+    .map(row => ({ created_at: row?.created_at || "", user_name: row?.user_name || "" }))
+    .sort((a,b) => String(b.created_at || "").localeCompare(String(a.created_at || "")));
 }
 async function postTeamMessage(text) {
   const payload = {
@@ -5217,15 +5276,18 @@ async function postTeamMessage(text) {
 async function showHistory() {
   showScreen("screen-history");
   document.getElementById("hist-title").textContent = getAppText("messages_tab_label", "Messages");
-  await markTeamMessagesSeen().catch(() => {});
-  clearMessageBadge().catch(() => {});
-  await renderHistory();
-}
-async function renderHistory() {
-  const content = document.getElementById("hist-content");
-  content.innerHTML = `<div class="loading-state"><div class="spinner"></div>Loading messages…</div>`;
   const messages = await loadTeamMessages();
   if (Array.isArray(messages) && messages.length) saveLocalTeamMessages(messages);
+  await markTeamMessagesSeen(messages).catch(() => {});
+  clearMessageBadge().catch(() => {});
+  await renderHistory(messages);
+}
+async function renderHistory(prefetchedMessages = null) {
+  const content = document.getElementById("hist-content");
+  content.innerHTML = `<div class="loading-state"><div class="spinner"></div>Loading messages…</div>`;
+  const messages = Array.isArray(prefetchedMessages) ? prefetchedMessages : await loadTeamMessages();
+  if (Array.isArray(messages) && messages.length) saveLocalTeamMessages(messages);
+  setTeamMessagesBadgeCache(messages);
   updateTeamMessagesBadge(messages);
   const canPost = !!currentUser;
   const notifSupported = pushNotificationsSupported();
@@ -5300,8 +5362,10 @@ async function submitTeamMessage() {
     }).catch(() => {});
     if (input) input.value = "";
     showToast("Message posted.", "ok");
-    await markTeamMessagesSeen().catch(() => {});
-    await renderHistory();
+    const messages = await loadTeamMessages();
+    if (Array.isArray(messages) && messages.length) saveLocalTeamMessages(messages);
+    await markTeamMessagesSeen(messages).catch(() => {});
+    await renderHistory(messages);
   } catch(err) {
     showToast("Could not post message.", "err");
   }
@@ -19615,6 +19679,7 @@ try {
       ? { ...storedMember, role: u.role, baseRole: FLOAT_ROLE }
       : storedMember || u;
     syncPushForActiveSession(false);
+    refreshTeamMessagesBadge({ force: true }).catch(() => {});
     if(currentUser.role==="admin"){showScreen("screen-admin");document.getElementById("admin-date").textContent=new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});loadAdminData().then(() => routePendingProductionDeepLink()).catch(()=>{});}
     else { showDash(); routePendingProductionDeepLink(); }
   } else if (saved) {
