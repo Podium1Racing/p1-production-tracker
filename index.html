@@ -11890,6 +11890,7 @@ function confirmAddTime() {
 ═══════════════════════════════════════ */
 const KIT_SOURCE_GROUP  = "Pick Ticket Printed";
 const KIT_TARGET_GROUP  = "Parts Pulled";   /* group title Pete moves items into */
+const KIT_BOARD_BACKGROUND_PREFETCH_ENABLED = false;
 
 /* Local kit checklist storage: { "itemId" : { checks: { label: bool }, ts } } */
 function loadKitChecks() {
@@ -11957,18 +11958,20 @@ async function loadKitBoard() {
     });
     renderKitScreen(kitBoardItems);
 
-    /* Auto-fetch pick lists from P1 API for all kit queue items (full + partial) */
-    const kitItemsToFetch = kitBoardItems.filter(i => {
-      const grp = i.group?.title || "";
-      if (grp === KIT_SOURCE_GROUP) return true;
-      if (NEED_KITTED_GROUPS.includes(grp) && getNeedKittedSide(i)) return true;
-      return false;
-    });
-    kitItemsToFetch.forEach(item => {
-      const woRaw   = COL.work_order_num ? (cvText(item, COL.work_order_num) || "") : "";
-      const woNum   = getWoFromText(woRaw) || null;
-      if (woNum && !KIT_LINE_CACHE[item.id]) fetchPickListFromApi(item.id, woNum);
-    });
+    if (KIT_BOARD_BACKGROUND_PREFETCH_ENABLED) {
+      /* Auto-fetch pick lists from P1 API for all kit queue items (full + partial) */
+      const kitItemsToFetch = kitBoardItems.filter(i => {
+        const grp = i.group?.title || "";
+        if (grp === KIT_SOURCE_GROUP) return true;
+        if (NEED_KITTED_GROUPS.includes(grp) && getNeedKittedSide(i)) return true;
+        return false;
+      });
+      kitItemsToFetch.forEach(item => {
+        const woRaw   = COL.work_order_num ? (cvText(item, COL.work_order_num) || "") : "";
+        const woNum   = getWoFromText(woRaw) || null;
+        if (woNum && !KIT_LINE_CACHE[item.id]) fetchPickListFromApi(item.id, woNum);
+      });
+    }
   } catch(e) {
     content.innerHTML = `<div class="empty-state">Could not load board.<br><small>${e.message}</small></div>`;
   }
