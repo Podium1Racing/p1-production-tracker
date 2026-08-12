@@ -14380,10 +14380,11 @@ async function getPrimaryPickListForWorkOrder(woNum) {
   if (cached && Date.now() - cached.ts < PICKLIST_HEADER_CACHE_MS) return cached.value ? { ...cached.value } : null;
   if (cacheKey && PICKLIST_HEADER_INFLIGHT[cacheKey]) return PICKLIST_HEADER_INFLIGHT[cacheKey];
 
-  const request = sbFetch(
+  const request = sbFetchOrThrow(
     `picklists?wo_number=in.(${variants.map(encodeURIComponent).join(",")})&order=updated_at.desc&limit=1`,
-    { method: "GET", headers: { "Prefer": "return=representation" } }
-  ).catch(() => []).then(rows => {
+    { method: "GET", headers: { "Prefer": "return=representation" } },
+    "Pick list data could not be verified."
+  ).then(rows => {
     const value = rows?.[0] || null;
     if (cacheKey) PICKLIST_HEADER_CACHE[cacheKey] = { ts: Date.now(), value };
     return value ? { ...value } : null;
@@ -14411,7 +14412,7 @@ async function loadWorkOrderPickListItems(woNum, plId = null, opts = {}) {
     backgroundSync: false,
     ...opts,
   };
-  if (options.sync && woNum) await syncPickListItems(woNum).catch(() => {});
+  if (options.sync && woNum) await syncPickListItems(woNum);
 
   const cacheKey = pickListCacheKey(woNum, plId);
   const cached = PICKLIST_ITEMS_CACHE[cacheKey];
@@ -14426,16 +14427,18 @@ async function loadWorkOrderPickListItems(woNum, plId = null, opts = {}) {
   const request = (async () => {
     const requests = [];
     if (plId) {
-      requests.push(sbFetch(
+      requests.push(sbFetchOrThrow(
         `picklist_items?picklist_id=eq.${encodeURIComponent(plId)}&select=*&order=id.asc`,
-        { method: "GET", headers: { "Prefer": "return=representation" } }
-      ).catch(() => []));
+        { method: "GET", headers: { "Prefer": "return=representation" } },
+        "Pick list data could not be verified."
+      ));
     }
     if (variants.length) {
-      requests.push(sbFetch(
+      requests.push(sbFetchOrThrow(
         `picklist_items?wo_number=in.(${variants.map(encodeURIComponent).join(",")})&select=*&order=id.asc`,
-        { method: "GET", headers: { "Prefer": "return=representation" } }
-      ).catch(() => []));
+        { method: "GET", headers: { "Prefer": "return=representation" } },
+        "Pick list data could not be verified."
+      ));
     }
 
     const chunks = requests.length ? await Promise.all(requests) : [];
@@ -15990,9 +15993,9 @@ async function loadPickLists(woNum) {
       : isAdminMissingOverview
         ? `?status=not.in.(complete,exclude,in_queue)&order=updated_at.desc`
         : `?order=updated_at.desc`;
-    let rows = await sbFetch(`picklists${filter}`, {
+    let rows = await sbFetchOrThrow(`picklists${filter}`, {
       method: "GET", headers: { "Prefer": "return=representation" }
-    }) || [];
+    }, "Pick list data could not be verified.");
     perf.mark("work_order_lookup", { rows: rows.length });
 
     if (!woNum && !isAdminMissingOverview) {
@@ -16001,9 +16004,9 @@ async function loadPickLists(woNum) {
       const createdFromKits = await ensureAdminPickListsFromKitCompletions(completions, rows);
       perf.mark("picklist_header_backfill", { createdFromKits });
       if (createdFromKits) {
-        rows = await sbFetch("picklists?order=updated_at.desc", {
+        rows = await sbFetchOrThrow("picklists?order=updated_at.desc", {
           method: "GET", headers: { "Prefer": "return=representation" }
-        }) || [];
+        }, "Pick list data could not be verified.");
         perf.mark("picklist_header_reload", { rows: rows.length });
       }
     }
@@ -16051,7 +16054,10 @@ async function loadPickLists(woNum) {
     await renderPickLists();
     perf.mark("render_picklists_complete", { renderedRows: _plAllPicklists.length });
     perf.finish({ finalRows: _plAllPicklists.length });
-    if (woNum) maybeBackgroundSyncPickList(woNum);
+    const verifiedForBackgroundSync = woNum && _plAllPicklists.length && _plAllPicklists.every(pl =>
+      getPickListVerificationState(pl?.id)?.state === "ready"
+    );
+    if (verifiedForBackgroundSync) maybeBackgroundSyncPickList(woNum);
   } catch(err) {
     perf.finish({ error: err?.message || String(err) });
     el.innerHTML = `<div class="empty-state">Failed to load pick lists.<br><small>${err.message}</small></div>`;
@@ -16700,9 +16706,9 @@ async function syncPickListItems(woNum) {
     /* Get existing items for this WO. Older rows may be saved as WO0271 vs W00271,
        so load all equivalent formats and relink them to this exact pick list. */
     const woVariants = getWorkOrderQueryVariants([woNum]);
-    const existing = await sbFetch(`picklist_items?wo_number=in.(${woVariants.map(encodeURIComponent).join(",")})&select=id,item_name,brand,quantity,memo,label,last_synced_at,first_seen_at,wo_number,picklist_id,allocated`, {
+    const existing = await sbFetchOrThrow(`picklist_items?wo_number=in.(${woVariants.map(encodeURIComponent).join(",")})&select=id,item_name,brand,quantity,memo,label,last_synced_at,first_seen_at,wo_number,picklist_id,allocated`, {
       method: "GET", headers: { "Prefer": "return=representation" }
-    }) || [];
+    }, "Pick list data could not be verified.");
 
     const existingByKey = new Map(existing.map(e => [`${e.brand||""}|${e.item_name}|${e.quantity}`, e]));
     let newItemCount = 0;
@@ -16767,6 +16773,7 @@ async function syncPickListItems(woNum) {
     invalidatePickListCache(woNum, plId);
   } catch(e) {
     console.warn("syncPickListItems error:", e.message);
+    throw e;
   }
 }
 
