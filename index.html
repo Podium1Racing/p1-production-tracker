@@ -1851,7 +1851,7 @@ input.photo-file-inp { display:none; }
       class="auth-input" style="text-align:center;font-size:15px"
       onkeydown="if(event.key==='Enter')submitGate()">
     <div id="gate-error" class="auth-error" style="min-height:18px"></div>
-    <button onclick="submitGate()" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:14px 48px;font-size:13px;font-weight:800;cursor:pointer;letter-spacing:.12em;box-shadow:0 4px 24px rgba(224,32,32,0.35)">
+    <button id="gate-submit-btn" onclick="submitGate()" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:14px 48px;font-size:13px;font-weight:800;cursor:pointer;letter-spacing:.12em;box-shadow:0 4px 24px rgba(224,32,32,0.35)">
       ENTER
     </button>
   </div>
@@ -2697,10 +2697,18 @@ function handleInitialHashRoute() {
     return true;
   }
   if (hash === "messages") {
+    if (!currentUser) {
+      window._pendingProductionDeepLink = location.hash;
+      return false;
+    }
     showHistory().catch(() => {});
     return true;
   }
   if (hash === "queue") {
+    if (!currentUser) {
+      window._pendingProductionDeepLink = location.hash;
+      return false;
+    }
     showSharedQueue().catch(() => {});
     return true;
   }
@@ -2727,7 +2735,7 @@ async function openProductionDeepLink(woNum) {
 function routePendingProductionDeepLink() {
   const pending = window._pendingProductionDeepLink || location.hash || "";
   if (!pending) return;
-  if (String(pending).toLowerCase().startsWith("#wo=")) {
+  if (String(pending).toLowerCase().startsWith("#wo=") || ["#messages", "#queue"].includes(String(pending).toLowerCase())) {
     window._pendingProductionDeepLink = "";
     setTimeout(() => handleInitialHashRoute(), 250);
   }
@@ -4136,74 +4144,339 @@ function isPartsPulled(item) { return groupTitle(item)===PARTS_PULLED; }
    LOGIN + PIN AUTH
 ═══════════════════════════════════════ */
 
-/* ── PIN storage (SHA-256 hashed) ─────────────────────────── */
-async function sha256(str) {
-  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
-  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
-}
-
-/* ── PIN storage — Supabase as source of truth, localStorage as cache ──
-   Table: user_pins (name text PRIMARY KEY, pin_hash text, updated_at timestamptz) */
-
-function loadPins() {
-  try { return JSON.parse(localStorage.getItem("pt_pins") || "{}"); } catch { return {}; }
-}
-
-function savePins(o) {
-  localStorage.setItem("pt_pins", JSON.stringify(o));
-}
-
-/* Write a PIN hash to Supabase and update local cache */
-async function savePinToSupabase(name, hash) {
-  const pins = loadPins();
-  pins[name] = hash;
-  savePins(pins); /* update cache immediately */
-  try {
-    await sbFetch("user_pins", {
-      method: "POST",
-      prefer: "resolution=merge-duplicates,return=minimal",
-      body: JSON.stringify({ name, pin_hash: hash, updated_at: new Date().toISOString() }),
-    });
-  } catch(e) {
-    console.warn("PIN Supabase save failed:", e.message);
-  }
-}
-
-/* Delete a PIN from Supabase and local cache */
-async function deletePinFromSupabase(name) {
-  const pins = loadPins();
-  delete pins[name];
-  savePins(pins);
-  try {
-    await sbFetch(`user_pins?name=eq.${encodeURIComponent(name)}`, {
-      method: "DELETE", prefer: "return=minimal",
-    });
-  } catch(e) {
-    console.warn("PIN Supabase delete failed:", e.message);
-  }
-}
-
-/* Sync all PINs from Supabase into localStorage on startup */
-async function syncPinsFromSupabase() {
-  try {
-    const rows = await sbFetch("user_pins?select=name,pin_hash", {
-      method: "GET", headers: { "Prefer": "return=representation" }
-    }) || [];
-    if (!rows.length) return;
-    const pins = loadPins();
-    rows.forEach(r => { if (r.name && r.pin_hash) pins[r.name] = r.pin_hash; });
-    savePins(pins);
-  } catch(e) {
-    console.warn("PIN sync from Supabase failed:", e.message);
-  }
-}
-const SETUP_CODE   = "5248";
 const ADMIN_NAME   = "Elijah Moosekian";
-let setupCodeUsed  = localStorage.getItem("pt_setup_used") === "1";
 let pendingUser    = null;
 let pendingFloater = null;
+let _sessionRequestBusy = false;
+let _pinVerifyBusy = false;
+let _authGeneration = 0;
+let _authController = null;
+let _logoutBusy = false;
 const DEVICE_MODE_KEY = "pt_device_mode";
 const DEVICE_OWNER_KEY = "pt_device_owner";
+const LEGACY_AUTH_KEYS = ["pt_gate_passed", "pt_user", "pt_pins"];
+
+function beginAuthTransition() {
+  _authGeneration += 1;
+  if (_authController) _authController.abort();
+  _authController = new AbortController();
+  return { generation: _authGeneration, controller: _authController, signal: _authController.signal };
+}
+
+function isCurrentAuthGeneration(generation) {
+  return generation === _authGeneration;
+}
+
+function finishAuthTransition(generation, controller) {
+  if (isCurrentAuthGeneration(generation) && _authController === controller) {
+    _authController = null;
+  }
+}
+
+function invalidateAuthTransitions() {
+  _authGeneration += 1;
+  if (_authController) _authController.abort();
+  _authController = null;
+  return _authGeneration;
+}
+
+function clearLegacyAuthStorage() {
+  LEGACY_AUTH_KEYS.forEach(key => localStorage.removeItem(key));
+  try {
+    const appSettings = JSON.parse(localStorage.getItem("pt_app_settings") || "{}") || {};
+    if ("gate_username" in appSettings || "gate_password" in appSettings) {
+      delete appSettings.gate_username;
+      delete appSettings.gate_password;
+      localStorage.setItem("pt_app_settings", JSON.stringify(appSettings));
+    }
+  } catch (_) {}
+}
+
+async function ptSessionRequest(path, { method = "GET", body = null, timeoutMs = 12000, signal = null } = {}) {
+  if (!String(path || "").startsWith("/api/session/")) {
+    return { ok: false, status: 0, data: null, error: "Invalid session endpoint." };
+  }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  const abortFromCaller = () => controller.abort();
+  try {
+    if (signal) {
+      if (signal.aborted) controller.abort();
+      else signal.addEventListener("abort", abortFromCaller, { once: true });
+    }
+    const headers = { "Accept": "application/json" };
+    const options = {
+      method,
+      credentials: "same-origin",
+      cache: "no-store",
+      signal: controller.signal,
+      headers,
+    };
+    if (body !== null) {
+      headers["Content-Type"] = "application/json";
+      options.body = JSON.stringify(body);
+    }
+    const response = await fetch(path, options);
+    const type = response.headers.get("content-type") || "";
+    let data = null;
+    if (type.includes("application/json")) {
+      try { data = await response.json(); } catch (_) { data = null; }
+    } else {
+      await response.text().catch(() => "");
+    }
+    return {
+      ok: response.ok,
+      status: response.status,
+      data,
+      error: response.ok ? "" : (data?.error || "Request failed."),
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      status: 0,
+      data: null,
+      error: err?.name === "AbortError" ? "Session verification timed out." : "Unable to verify session.",
+    };
+  } finally {
+    clearTimeout(timeout);
+    if (signal) signal.removeEventListener("abort", abortFromCaller);
+  }
+}
+
+function setAuthBlockingState(message, actionsHtml = "") {
+  let overlay = document.getElementById("auth-blocking-overlay");
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "auth-blocking-overlay";
+    overlay.style.cssText = "position:fixed;inset:0;z-index:9999;background:rgba(11,15,25,.86);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;padding:22px;text-align:center";
+    document.body.appendChild(overlay);
+  }
+  overlay.innerHTML = `
+    <div style="width:min(360px,100%);background:#111827;border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:24px;box-shadow:0 24px 80px rgba(0,0,0,.42)">
+      <div style="font-size:13px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#fff;margin-bottom:10px">Secure Session</div>
+      <div style="font-size:13px;line-height:1.55;color:rgba(255,255,255,.74)">${escHtml(message)}</div>
+      ${actionsHtml ? `<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:18px">${actionsHtml}</div>` : ""}
+    </div>`;
+}
+
+function clearAuthBlockingState() {
+  document.getElementById("auth-blocking-overlay")?.remove();
+}
+
+function authBlockButton(label, action, primary = false) {
+  return `<button class="auth-back-btn" onclick="${action}" style="margin-top:0;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.16);${primary ? "background:var(--accent);color:#fff" : "background:rgba(255,255,255,.06);color:var(--text)"}">${escHtml(label)}</button>`;
+}
+
+function setGateBusy(busy, label = "ENTER") {
+  const btn = document.getElementById("gate-submit-btn");
+  const user = document.getElementById("gate-user");
+  const pass = document.getElementById("gate-pass");
+  if (btn) { btn.disabled = !!busy; btn.textContent = busy ? label : "ENTER"; }
+  if (user) user.disabled = !!busy;
+  if (pass) pass.disabled = !!busy;
+}
+
+function setGateError(message = "", { retry = false } = {}) {
+  const err = document.getElementById("gate-error");
+  if (!err) return;
+  if (retry) {
+    err.innerHTML = `${escHtml(message)}<br><button class="auth-back-btn" style="margin-top:10px" onclick="bootstrapTrustedSession()">Retry</button>`;
+  } else {
+    err.textContent = message;
+  }
+}
+
+function showSessionVerifying() {
+  currentUser = null;
+  pendingUser = null;
+  pendingFloater = null;
+  _sessionRequestBusy = false;
+  _pinVerifyBusy = false;
+  clearAuthBlockingState();
+  showScreen("screen-gate");
+  setGateBusy(true, "VERIFYING...");
+  setGateError("Verifying secure session...");
+}
+
+function showSessionVerificationError(message = "Unable to verify your secure session.") {
+  currentUser = null;
+  pendingUser = null;
+  pendingFloater = null;
+  _sessionRequestBusy = false;
+  _pinVerifyBusy = false;
+  clearAuthBlockingState();
+  showScreen("screen-gate");
+  setGateBusy(true, "VERIFYING...");
+  setGateError(`${message} Please check your connection and retry.`, { retry: true });
+}
+
+function showSessionIdentityError() {
+  currentUser = null;
+  pendingUser = null;
+  pendingFloater = null;
+  _sessionRequestBusy = false;
+  _pinVerifyBusy = false;
+  stopRealTimeSync();
+  resetTeamMessagesBadgeCache();
+  showScreen("screen-gate");
+  setGateBusy(true, "SESSION LOCKED");
+  setGateError("");
+  setAuthBlockingState(
+    "Your secure session is missing required trusted identity fields. Please retry session verification or sign out.",
+    authBlockButton("Retry", "bootstrapTrustedSession()", true) +
+      authBlockButton("Sign Out", "doLogout()")
+  );
+}
+
+function showGateLogin(message = "") {
+  currentUser = null;
+  pendingUser = null;
+  pendingFloater = null;
+  _sessionRequestBusy = false;
+  _pinVerifyBusy = false;
+  clearAuthBlockingState();
+  stopRealTimeSync();
+  resetTeamMessagesBadgeCache();
+  clearLegacyAuthStorage();
+  showScreen("screen-gate");
+  setGateBusy(false);
+  setGateError(message);
+  const pass = document.getElementById("gate-pass");
+  if (pass) pass.value = "";
+}
+
+function trustedUserFromSession(user = {}) {
+  if (!user || typeof user !== "object") return null;
+  const id = String(user.id || "").trim();
+  const name = String(user.name || "").trim();
+  const role = String(user.role || "").trim();
+  const hasBaseRole = Object.prototype.hasOwnProperty.call(user, "baseRole");
+  const baseRole = user.baseRole === null ? null : String(user.baseRole || "").trim();
+  const allowedRoles = new Set([MS_ROLE, CHASSIS_ROLE, KIT_ROLE, CONFIG_ROLE, FLOAT_ROLE, "admin"]);
+  if (!id || !name || !allowedRoles.has(role) || !hasBaseRole) return null;
+  if (baseRole !== null && !allowedRoles.has(baseRole)) return null;
+  if (typeof user.isLead !== "boolean" || typeof user.isAdmin !== "boolean") return null;
+  if ((role === "admin") !== user.isAdmin) return null;
+  const local = TEAM.find(member => member.name === name) || {};
+  return {
+    id,
+    name,
+    initials: local.initials || nameToInitials(name),
+    color: local.color || autoColor(),
+    role,
+    baseRole,
+    isLead: user.isLead,
+    isAdmin: user.isAdmin,
+  };
+}
+
+async function enterAuthenticatedApp(user, generation) {
+  if (!isCurrentAuthGeneration(generation)) return;
+  const trusted = trustedUserFromSession(user);
+  if (!trusted) {
+    showSessionIdentityError();
+    return;
+  }
+  clearLegacyAuthStorage();
+  resetTeamMessagesBadgeCache();
+  clearAuthBlockingState();
+  currentUser = trusted;
+  pendingUser = null;
+  pendingFloater = null;
+  syncPushForActiveSession(false);
+  refreshTeamMessagesBadge({ force: true }).catch(() => {});
+  syncTeamFromSupabase().catch(() => {});
+  sbFetch("build_updates?order=created_at.desc&limit=100",{method:"GET",headers:{"Prefer":"return=representation"}}).then(d=>{ if(d) _allBuildUpdates=d; }).catch(()=>{});
+  showLoginLoading(async () => {
+    if (!isCurrentAuthGeneration(generation)) return;
+    if (currentUser.role === "admin") {
+      showScreen("screen-admin");
+      document.getElementById("admin-date").textContent = new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
+      await loadAdminData().then(() => { if (isCurrentAuthGeneration(generation)) routePendingProductionDeepLink(); }).catch(()=>{});
+    } else {
+      await showDash();
+      if (!isCurrentAuthGeneration(generation)) return;
+      routePendingProductionDeepLink();
+    }
+  });
+}
+
+function showPersonSelector(generation = _authGeneration) {
+  if (!isCurrentAuthGeneration(generation)) return;
+  currentUser = null;
+  pendingUser = null;
+  pendingFloater = null;
+  _sessionRequestBusy = false;
+  _pinVerifyBusy = false;
+  clearAuthBlockingState();
+  resetTeamMessagesBadgeCache();
+  clearLegacyAuthStorage();
+  setGateBusy(false);
+  renderLoginSelectorState();
+  showScreen("screen-login");
+}
+
+function showPendingPin(user, generation = _authGeneration) {
+  if (!isCurrentAuthGeneration(generation)) return;
+  const trusted = trustedUserFromSession(user);
+  if (!trusted) {
+    showSessionIdentityError();
+    return;
+  }
+  currentUser = null;
+  pendingUser = trusted;
+  pendingFloater = null;
+  _sessionRequestBusy = false;
+  _pinVerifyBusy = false;
+  setLoginScreenMode("pin");
+  document.getElementById("name-list-wrap").style.display  = "none";
+  document.getElementById("floater-role-wrap").style.display = "none";
+  document.getElementById("login-device-copy").style.display = "none";
+  document.getElementById("admin-login-btn").style.display = "none";
+  document.getElementById("pin-entry-wrap").style.display = "flex";
+  document.getElementById("pin-entry-label").textContent = `Enter PIN for ${trusted.name.split(" ")[0]}`;
+  document.getElementById("login-pin-note").textContent = "PIN verification is handled securely by the server.";
+  document.getElementById("login-pin-alt-btn").style.display = "none";
+  resetLoginPin();
+  showScreen("screen-login");
+}
+
+async function applyTrustedSessionState(data, generation) {
+  if (!isCurrentAuthGeneration(generation)) return;
+  if (data?.authenticated && data?.user) {
+    await enterAuthenticatedApp(data.user, generation);
+    return;
+  }
+  if (data?.gatePassed) {
+    if (data.authLevel === "pin_required" && data.user) {
+      showPendingPin(data.user, generation);
+    } else {
+      showPersonSelector(generation);
+    }
+    return;
+  }
+  showGateLogin();
+}
+
+async function bootstrapTrustedSession() {
+  const { generation, controller, signal } = beginAuthTransition();
+  showSessionVerifying();
+  try {
+    const result = await ptSessionRequest("/api/session/me", { method: "GET", signal });
+    if (!isCurrentAuthGeneration(generation)) return;
+    if (result.ok) {
+      await applyTrustedSessionState(result.data || {}, generation);
+      return;
+    }
+    if (result.status === 401) {
+      showGateLogin();
+      return;
+    }
+    showSessionVerificationError(result.error);
+  } finally {
+    finishAuthTransition(generation, controller);
+  }
+}
 
 function getDeviceMode() {
   return localStorage.getItem(DEVICE_MODE_KEY) === "shared" ? "shared" : "personal";
@@ -4233,7 +4506,7 @@ function requiresProtectedLogin(user) {
 }
 
 function canUsePinFeatures(user = currentUser) {
-  return requiresProtectedLogin(user);
+  return false;
 }
 
 function clearAuthSelection() {
@@ -4279,18 +4552,18 @@ function renderLoginSelectorState() {
   const resetBtn = document.getElementById("login-device-reset-btn");
 
   if (mode === "shared") {
-    title.textContent = "Shared device unlocked";
-    sub.textContent = "Choose your name and get to work. Production Leads and Admin use a PIN for protected access.";
+    title.textContent = "Secure session unlocked";
+    sub.textContent = "Choose your name to continue. Production Leads and Admin verify their PIN on the server.";
     modeBtn.textContent = "Use personal device mode";
     resetBtn.style.display = "none";
     setLoginDeviceCopyVisibility(false);
     return;
   }
 
-  title.textContent = owner ? `Welcome back, ${owner.name.split(" ")[0]}` : "Device unlocked";
+  title.textContent = owner ? `Welcome back, ${owner.name.split(" ")[0]}` : "Secure session unlocked";
   sub.textContent = owner
-    ? "Your login is already saved on this phone. Pick your name and start working."
-    : "Choose who this phone belongs to so daily sign-in stays quick and simple.";
+    ? "Pick your name to start. This phone no longer stores trusted login authority."
+    : "Choose who is using this phone. The server will confirm the role.";
   modeBtn.textContent = "This is a shared device";
   resetBtn.style.display = owner ? "inline-flex" : "none";
   setLoginDeviceCopyVisibility(!owner);
@@ -4298,12 +4571,6 @@ function renderLoginSelectorState() {
 
 function showLoginEntryPoint(options = {}) {
   renderLoginSelectorState();
-  const mode = getDeviceMode();
-  const owner = mode === "personal" ? getTeamMemberByName(getDeviceOwnerName()) : null;
-  if (!owner) return;
-  if (options.autoResumeOwner === false) return;
-  if (owner.role === FLOAT_ROLE) openFloaterRoleChoice(owner, true);
-  else selectUser(owner, null, true);
 }
 
 function toggleSharedDeviceMode() {
@@ -4407,6 +4674,8 @@ function chooseFloaterRole(role) {
 }
 
 async function selectUser(m, roleOverride, fromRememberedDevice = false) {
+  if (_logoutBusy) return;
+  const { generation, controller, signal } = beginAuthTransition();
   document.querySelectorAll(".name-btn").forEach(b=>b.classList.remove("selected"));
   document.querySelectorAll(".name-btn").forEach(b=>{ if(b.textContent.includes(m.name)) b.classList.add("selected"); });
   pendingUser = roleOverride && m.role === FLOAT_ROLE ? { ...m, role: roleOverride, baseRole: FLOAT_ROLE } : m;
@@ -4415,37 +4684,30 @@ async function selectUser(m, roleOverride, fromRememberedDevice = false) {
     quick.style.display = "none";
     quick.innerHTML = "";
   }
-  if (!requiresProtectedLogin(pendingUser)) {
-    setLoginScreenMode("selector");
-    document.getElementById("name-list-wrap").style.display = "block";
-    document.getElementById("floater-role-wrap").style.display = "none";
-    document.getElementById("pin-entry-wrap").style.display = "none";
-    document.getElementById("login-device-copy").style.display = "none";
-    document.getElementById("admin-login-btn").style.display = "flex";
-    await loginSuccess();
-    return;
+  _sessionRequestBusy = true;
+  const selectedName = pendingUser?.name || m?.name || "";
+  try {
+    const result = await ptSessionRequest("/api/session/select-user", {
+      method: "POST",
+      body: { name: selectedName },
+      signal,
+    });
+    if (!isCurrentAuthGeneration(generation)) return;
+    if (!result.ok) {
+      document.querySelectorAll(".name-btn").forEach(b=>b.classList.remove("selected"));
+      showToast("Unable to select that user. Please try again.", "err");
+      return;
+    }
+    await applyTrustedSessionState(result.data || {}, generation);
+  } finally {
+    if (isCurrentAuthGeneration(generation)) _sessionRequestBusy = false;
+    finishAuthTransition(generation, controller);
   }
-  setLoginScreenMode("pin");
-  /* Show PIN entry, hide name list + admin button */
-  document.getElementById("name-list-wrap").style.display  = "none";
-  document.getElementById("floater-role-wrap").style.display = "none";
-  document.getElementById("login-device-copy").style.display = "none";
-  document.getElementById("admin-login-btn").style.display = "none";
-  const wrap = document.getElementById("pin-entry-wrap");
-  wrap.style.display = "flex";
-  resetLoginPin();
-  const hasPin     = !!loadPins()[m.name];
-  document.getElementById("pin-entry-label").textContent = hasPin ? `Welcome back, ${m.name.split(" ")[0]}` : `Set a 4-digit PIN, ${m.name.split(" ")[0]}`;
-  updatePinEntryActions(m, fromRememberedDevice);
 }
 
 function authBack() {
-  const rememberedDevice = !!(pendingUser && getDeviceMode() === "personal" && getDeviceOwnerName() === pendingUser.name);
-  if (rememberedDevice) {
-    resetRememberedDeviceOwner();
-    return;
-  }
-  showLoginEntryPoint();
+  const generation = invalidateAuthTransitions();
+  showPersonSelector(generation);
 }
 
 async function startWorkingSelectedUser() {
@@ -4453,7 +4715,7 @@ async function startWorkingSelectedUser() {
     showToast("Choose your name first.", "warn");
     return;
   }
-  await loginSuccess();
+  await selectUser(pendingUser);
 }
 
 /* ── Login PIN keypad ──────────────────────────────────────── */
@@ -4482,52 +4744,31 @@ function loginPinDel() {
 }
 
 async function processLoginPin() {
-  const pins = loadPins();
-  if (!pins[pendingUser.name]) {
-    /* First time — set PIN flow */
-    if (loginPinStage === "enter") {
-      loginPinFirst = loginPinBuf;
-      loginPinStage = "confirm";
-      loginPinBuf = "";
-      [0,1,2,3].forEach(i=>document.getElementById("lpd"+i).classList.remove("filled"));
-      document.getElementById("pin-entry-label").textContent = "Confirm your PIN";
-      document.getElementById("login-pin-error").textContent = "";
-    } else {
-      if (loginPinBuf !== loginPinFirst) {
-        document.getElementById("login-pin-error").textContent = "PINs don't match. Try again.";
-        resetLoginPin();
-        document.getElementById("pin-entry-label").textContent = `Set a 4-digit PIN, ${pendingUser.name.split(" ")[0]}`;
-        return;
-      }
-      const hash = await sha256(loginPinBuf);
-      await savePinToSupabase(pendingUser.name, hash);
-      await loginSuccess();
-    }
-  } else {
-    /* Existing user — verify */
-    const hash = await sha256(loginPinBuf);
-    if (hash !== pins[pendingUser.name]) {
-      document.getElementById("login-pin-error").textContent = "Incorrect PIN. Try again.";
-      loginPinBuf = "";
-      [0,1,2,3].forEach(i=>document.getElementById("lpd"+i).classList.remove("filled"));
+  if (_pinVerifyBusy || !pendingUser) return;
+  const { generation, controller, signal } = beginAuthTransition();
+  _pinVerifyBusy = true;
+  const err = document.getElementById("login-pin-error");
+  if (err) err.textContent = "Verifying PIN...";
+  const pin = loginPinBuf;
+  loginPinBuf = "";
+  [0,1,2,3].forEach(i=>document.getElementById("lpd"+i).classList.remove("filled"));
+  try {
+    const result = await ptSessionRequest("/api/session/verify-pin", {
+      method: "POST",
+      body: { pin },
+      signal,
+    });
+    if (!isCurrentAuthGeneration(generation)) return;
+    if (!result.ok) {
+      if (err) err.textContent = "Invalid credentials. Try again.";
       return;
     }
-    await loginSuccess();
+    if (err) err.textContent = "";
+    await applyTrustedSessionState(result.data || {}, generation);
+  } finally {
+    if (isCurrentAuthGeneration(generation)) _pinVerifyBusy = false;
+    finishAuthTransition(generation, controller);
   }
-}
-
-async function loginSuccess() {
-  resetTeamMessagesBadgeCache();
-  currentUser = pendingUser;
-  localStorage.setItem("pt_user", JSON.stringify(currentUser));
-  if (getDeviceMode() === "shared") setDeviceOwnerName("");
-  else setDeviceOwnerName((pendingFloater?.name || pendingUser?.name || "").trim());
-  syncPushForActiveSession(false);
-  refreshTeamMessagesBadge({ force: true }).catch(() => {});
-  showLoginLoading(async () => {
-    await showDash();
-    routePendingProductionDeepLink();
-  });
 }
 
 /* ── Admin PIN keypad ──────────────────────────────────────── */
@@ -4535,11 +4776,11 @@ let adminPinBuf = "";
 let adminPinStage = "enter";
 let adminPinFirst = "";
 
-function showAdminLogin() {
+async function showAdminLogin() {
   adminPinBuf = ""; adminPinStage = "enter"; adminPinFirst = "";
   [0,1,2,3].forEach(i=>document.getElementById("apd"+i).classList.remove("filled"));
   document.getElementById("admin-pin-error").textContent = "";
-  showScreen("screen-admin-login");
+  await selectUser({ name: ADMIN_NAME, initials:"EM", color:"#6366f1", role:"admin" });
 }
 
 function adminPinKey(d) {
@@ -4557,37 +4798,9 @@ function adminPinDel() {
 }
 
 async function processAdminPin() {
-  const pins = loadPins();
-  if (!pins[ADMIN_NAME]) {
-    /* First time — accept setup code */
-    if (adminPinBuf === SETUP_CODE) {
-      /* Move to PIN setup for admin */
-      setupUser = { name:ADMIN_NAME, initials:"EM", color:"#6366f1", role:"admin", _isAdmin:true };
-      startSetupPin();
-      return;
-    }
-    document.getElementById("admin-pin-error").textContent = "Enter setup code to create your PIN.";
-    adminPinBuf = "";
-    [0,1,2,3].forEach(i=>document.getElementById("apd"+i).classList.remove("filled"));
-    return;
-  }
-  const hash = await sha256(adminPinBuf);
-  if (hash !== pins[ADMIN_NAME]) {
-    document.getElementById("admin-pin-error").textContent = "Incorrect PIN.";
-    adminPinBuf = "";
-    [0,1,2,3].forEach(i=>document.getElementById("apd"+i).classList.remove("filled"));
-    return;
-  }
-  resetTeamMessagesBadgeCache();
-  currentUser = { name:ADMIN_NAME, initials:"EM", color:"#6366f1", role:"admin" };
-  localStorage.setItem("pt_user", JSON.stringify(currentUser));
-  syncPushForActiveSession(false);
-  refreshTeamMessagesBadge({ force: true }).catch(() => {});
-  showLoginLoading(() => {
-    showScreen("screen-admin");
-    document.getElementById("admin-date").textContent = new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
-    return loadAdminData().then(() => routePendingProductionDeepLink());
-  });
+  loginPinBuf = adminPinBuf;
+  adminPinBuf = "";
+  await processLoginPin();
 }
 
 /* ── First-time PIN setup ───────────────────────────────────── */
@@ -4597,97 +4810,91 @@ let setupStage   = "enter"; /* "enter" | "confirm" */
 let setupPinFirst = "";
 
 function startSetupPin() {
-  setupPinBuf = ""; setupStage = "enter"; setupPinFirst = "";
-  [0,1,2,3].forEach(i=>document.getElementById("spd"+i).classList.remove("filled"));
-  document.getElementById("setup-pin-error").textContent = "";
-  document.getElementById("setup-name-label").textContent = `Welcome, ${setupUser.name.split(" ")[0]}! Set your PIN.`;
-  showScreen("screen-setup");
+  showToast("PIN setup is now handled by the secure backend.", "err");
+  const generation = invalidateAuthTransitions();
+  showPersonSelector(generation);
 }
 
 function setupPinKey(d) {
-  if (setupPinBuf.length >= 4) return;
-  setupPinBuf += d;
-  document.getElementById("spd"+(setupPinBuf.length-1)).classList.add("filled");
-  if (setupPinBuf.length === 4) setTimeout(()=>processSetupPin(), 200);
+  document.getElementById("setup-pin-error").textContent = "PIN setup is handled by the secure backend.";
 }
 
 function setupPinDel() {
-  if (!setupPinBuf.length) return;
-  document.getElementById("spd"+(setupPinBuf.length-1)).classList.remove("filled");
-  setupPinBuf = setupPinBuf.slice(0,-1);
   document.getElementById("setup-pin-error").textContent = "";
 }
 
 async function processSetupPin() {
-  if (setupStage === "enter") {
-    setupPinFirst = setupPinBuf;
-    setupStage = "confirm";
-    setupPinBuf = "";
-    [0,1,2,3].forEach(i=>document.getElementById("spd"+i).classList.remove("filled"));
-    document.getElementById("setup-name-label").textContent = "Confirm your PIN";
-  } else {
-    if (setupPinBuf !== setupPinFirst) {
-      document.getElementById("setup-pin-error").textContent = "PINs don't match. Try again.";
-      setupPinBuf = ""; setupStage = "enter"; setupPinFirst = "";
-      [0,1,2,3].forEach(i=>document.getElementById("spd"+i).classList.remove("filled"));
-      document.getElementById("setup-name-label").textContent = `Set your PIN, ${setupUser.name.split(" ")[0]}`;
+  startSetupPin();
+}
+
+async function signOutCompletely() {
+  if (_logoutBusy) return;
+  const { generation, controller, signal } = beginAuthTransition();
+  _logoutBusy = true;
+  setAuthBlockingState("Signing out securely...");
+  stopRealTimeSync();
+  try {
+    const result = await ptSessionRequest("/api/session/logout", { method: "POST", signal });
+    if (!isCurrentAuthGeneration(generation)) return;
+    if (!result.ok) {
+      setAuthBlockingState(
+        "Sign out could not be confirmed. Your current session is still blocked until sign out succeeds or the server re-verifies it.",
+        authBlockButton("Retry Sign Out", "doLogout()", true) +
+          authBlockButton("Reverify Session", "reverifyBlockedSession()")
+      );
+      showToast("Sign out failed. Check connection and try again.", "err");
       return;
     }
-    const hash = await sha256(setupPinBuf);
-    await savePinToSupabase(setupUser.name, hash);
-    if (setupUser._isAdmin) {
-      resetTeamMessagesBadgeCache();
-      currentUser = { name:ADMIN_NAME, initials:"EM", color:"#6366f1", role:"admin" };
-      localStorage.setItem("pt_user", JSON.stringify(currentUser));
-      syncPushForActiveSession(false);
-      refreshTeamMessagesBadge({ force: true }).catch(() => {});
-      showLoginLoading(() => {
-        showScreen("screen-admin");
-        document.getElementById("admin-date").textContent = new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
-        return loadAdminData();
-      });
-    } else {
-      resetTeamMessagesBadgeCache();
-      currentUser = setupUser;
-      localStorage.setItem("pt_user", JSON.stringify(currentUser));
-      syncPushForActiveSession(false);
-      refreshTeamMessagesBadge({ force: true }).catch(() => {});
-      showLoginLoading(showDash);
-    }
+    clearLegacyAuthStorage();
+    syncPushUserContext("");
+    resetTeamMessagesBadgeCache();
+    currentUser = null; pendingUser = null; pendingFloater = null;
+    _sessionRequestBusy = false;
+    _pinVerifyBusy = false;
+    document.getElementById("pin-entry-wrap").style.display  = "none";
+    document.getElementById("floater-role-wrap").style.display = "none";
+    document.getElementById("name-list-wrap").style.display  = "block";
+    document.getElementById("admin-login-btn").style.display = "flex";
+    const soBtn = document.getElementById("login-signout-btn");
+    if (soBtn) soBtn.style.display = "none";
+    document.querySelectorAll(".name-btn").forEach(b=>b.classList.remove("selected"));
+    const gu = document.getElementById("gate-user");
+    const gp = document.getElementById("gate-pass");
+    const ge = document.getElementById("gate-error");
+    if (gu) gu.value = "";
+    if (gp) gp.value = "";
+    if (ge) ge.textContent = "";
+    clearAuthBlockingState();
+    showScreen("screen-gate");
+  } finally {
+    if (isCurrentAuthGeneration(generation)) _logoutBusy = false;
+    finishAuthTransition(generation, controller);
   }
 }
 
-function signOutCompletely() {
-  stopRealTimeSync();
-  localStorage.removeItem("pt_user");
-  localStorage.removeItem("pt_gate_passed");
-  syncPushUserContext("");
-  resetTeamMessagesBadgeCache();
-  currentUser = null; pendingUser = null; pendingFloater = null;
-  document.getElementById("pin-entry-wrap").style.display  = "none";
-  document.getElementById("floater-role-wrap").style.display = "none";
-  document.getElementById("name-list-wrap").style.display  = "block";
-  document.getElementById("admin-login-btn").style.display = "flex";
-  const soBtn = document.getElementById("login-signout-btn");
-  if (soBtn) soBtn.style.display = "none";
-  document.querySelectorAll(".name-btn").forEach(b=>b.classList.remove("selected"));
-  /* Clear gate inputs */
-  const gu = document.getElementById("gate-user");
-  const gp = document.getElementById("gate-pass");
-  const ge = document.getElementById("gate-error");
-  if (gu) gu.value = "";
-  if (gp) gp.value = "";
-  if (ge) ge.textContent = "";
-  showScreen("screen-gate");
+async function doLogout() {
+  await signOutCompletely();
 }
 
-function doLogout() {
-  stopRealTimeSync();
-  localStorage.removeItem("pt_user"); syncPushUserContext(""); resetTeamMessagesBadgeCache(); currentUser = null; pendingUser = null; pendingFloater = null;
-  const soBtn = document.getElementById("login-signout-btn");
-  if (soBtn) soBtn.style.display = "none";
-  showScreen("screen-login");
-  showLoginEntryPoint({ autoResumeOwner: false });
+async function reverifyBlockedSession() {
+  if (_logoutBusy) return;
+  const { generation, controller, signal } = beginAuthTransition();
+  setAuthBlockingState("Re-verifying your secure session...");
+  try {
+    const result = await ptSessionRequest("/api/session/me", { method: "GET", signal });
+    if (!isCurrentAuthGeneration(generation)) return;
+    if (result.ok && result.data?.authenticated) {
+      await applyTrustedSessionState(result.data || {}, generation);
+      return;
+    }
+    setAuthBlockingState(
+      "The server could not re-verify this session. Please retry sign out or reverify again.",
+      authBlockButton("Retry Sign Out", "doLogout()", true) +
+        authBlockButton("Reverify Session", "reverifyBlockedSession()")
+    );
+  } finally {
+    finishAuthTransition(generation, controller);
+  }
 }
 
 /* ═══════════════════════════════════════
@@ -4755,8 +4962,7 @@ function updateBottomNav(activeId) {
 
 function returnToHomeScreen() {
   if (!currentUser) {
-    authBack();
-    showScreen(localStorage.getItem("pt_gate_passed") === "1" ? "screen-login" : "screen-gate");
+    bootstrapTrustedSession();
     return;
   }
   if (currentUser.role === "admin") {
@@ -8532,6 +8738,10 @@ function openAppControls() {
   };
   set("app-setting-gate-user", s.gate_username);
   set("app-setting-gate-pass", s.gate_password);
+  ["app-setting-gate-user", "app-setting-gate-pass"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.value = ""; el.disabled = true; el.placeholder = "Managed by secure backend"; }
+  });
   set("app-setting-ms-lead", s.ms_lead_name);
   set("app-setting-chassis-lead", s.chassis_lead_name);
   set("app-setting-contact-1", s.inventory_contact_1);
@@ -8544,18 +8754,12 @@ function openAppControls() {
 
 function saveAppControls() {
   const next = {
-    gate_username: normalizeAppSettingText(document.getElementById("app-setting-gate-user")?.value),
-    gate_password: normalizeAppSettingText(document.getElementById("app-setting-gate-pass")?.value),
     ms_lead_name: normalizeAppSettingText(document.getElementById("app-setting-ms-lead")?.value),
     chassis_lead_name: normalizeAppSettingText(document.getElementById("app-setting-chassis-lead")?.value),
     inventory_contact_1: normalizeAppSettingText(document.getElementById("app-setting-contact-1")?.value),
     inventory_contact_2: normalizeAppSettingText(document.getElementById("app-setting-contact-2")?.value),
   };
   const err = document.getElementById("app-controls-error");
-  if (!next.gate_username || !next.gate_password) {
-    if (err) err.textContent = "Shared login username and password are required.";
-    return;
-  }
   saveAppSettings(next);
   resolveInventoryContacts(boardSubs || []);
   applyAppSettingLabels();
@@ -8588,35 +8792,9 @@ function cpDel() {
   document.getElementById("cp-error").textContent = "";
 }
 async function processCp() {
-  const pins = loadPins();
-  if (cpStage === "current") {
-    const hash = await sha256(cpBuf);
-    if (hash !== pins[currentUser.name]) {
-      document.getElementById("cp-error").textContent = "Incorrect PIN.";
-      cpBuf = ""; [0,1,2,3].forEach(i=>document.getElementById("cpd"+i).classList.remove("filled")); return;
-    }
-    cpStage = "new"; cpFirst = ""; cpBuf = "";
-    [0,1,2,3].forEach(i=>document.getElementById("cpd"+i).classList.remove("filled"));
-    document.getElementById("change-pin-label").textContent = "Enter new PIN";
-    document.getElementById("cp-error").textContent = "";
-  } else if (cpStage === "new") {
-    cpFirst = cpBuf; cpStage = "confirm"; cpBuf = "";
-    [0,1,2,3].forEach(i=>document.getElementById("cpd"+i).classList.remove("filled"));
-    document.getElementById("change-pin-label").textContent = "Confirm new PIN";
-    document.getElementById("cp-error").textContent = "";
-  } else {
-    if (cpBuf !== cpFirst) {
-      document.getElementById("cp-error").textContent = "PINs don't match.";
-      cpBuf = ""; cpStage = "new"; cpFirst = "";
-      [0,1,2,3].forEach(i=>document.getElementById("cpd"+i).classList.remove("filled"));
-      document.getElementById("change-pin-label").textContent = "Enter new PIN";
-      return;
-    }
-    const hash = await sha256(cpBuf);
-    await savePinToSupabase(currentUser.name, hash);
-    closeModal("modal-change-pin");
-    alert("PIN updated!");
-  }
+  cpBuf = ""; cpStage = "current"; cpFirst = "";
+  [0,1,2,3].forEach(i=>document.getElementById("cpd"+i).classList.remove("filled"));
+  document.getElementById("cp-error").textContent = "PIN changes now require secure backend support.";
 }
 
 /* ── Add Team Member ────────────────────────────────────────── */
@@ -8780,41 +8958,43 @@ async function doAddMember() {
 ═══════════════════════════════════════ */
 
 async function submitGate() {
-  const u = (document.getElementById("gate-user")?.value || "").trim().toLowerCase();
-  const p = (document.getElementById("gate-pass")?.value || "").replace(/\s+/g, "").trim().toLowerCase();
+  if (_sessionRequestBusy || _logoutBusy) return;
+  const { generation, controller, signal } = beginAuthTransition();
+  const u = (document.getElementById("gate-user")?.value || "").trim();
+  const p = (document.getElementById("gate-pass")?.value || "").trim();
   const err = document.getElementById("gate-error");
-  if (!u || !p) { err.textContent = "Enter both username and passcode."; return; }
-  const expectedUser = normalizeAppSettingText(getAppSetting("gate_username")).toLowerCase();
-  const expectedPass = normalizeAppSettingText(getAppSetting("gate_password")).replace(/\s+/g, "").toLowerCase();
-  const fallbackUser = normalizeAppSettingText(APP_SETTINGS_DEFAULTS.gate_username).toLowerCase();
-  const fallbackPass = normalizeAppSettingText(APP_SETTINGS_DEFAULTS.gate_password).replace(/\s+/g, "").toLowerCase();
-  const matchesSaved = u === expectedUser && p === expectedPass;
-  const matchesFallback = u === fallbackUser && p === fallbackPass;
-  if (!matchesSaved && !matchesFallback) {
-    err.textContent = "Incorrect credentials.";
-    document.getElementById("gate-pass").value = "";
+  if (!u || !p) {
+    finishAuthTransition(generation, controller);
+    err.textContent = "Enter both username and passcode.";
     return;
   }
-  if (matchesFallback && (!matchesSaved || expectedUser !== fallbackUser || expectedPass !== fallbackPass)) {
-    saveAppSettings({
-      ...loadAppSettings(),
-      gate_username: APP_SETTINGS_DEFAULTS.gate_username,
-      gate_password: APP_SETTINGS_DEFAULTS.gate_password,
+  _sessionRequestBusy = true;
+  setGateBusy(true, "SIGNING IN...");
+  setGateError("Signing in...");
+  try {
+    const result = await ptSessionRequest("/api/session/gate", {
+      method: "POST",
+      body: { username: u, password: p },
+      signal,
     });
+    if (!isCurrentAuthGeneration(generation)) return;
+    const pass = document.getElementById("gate-pass");
+    if (pass) pass.value = "";
+    if (!result.ok) {
+      setGateBusy(false);
+      setGateError("Invalid credentials.");
+      return;
+    }
+    clearLegacyAuthStorage();
+    await applyTrustedSessionState(result.data || { gatePassed: true }, generation);
+  } finally {
+    if (isCurrentAuthGeneration(generation)) _sessionRequestBusy = false;
+    if (isCurrentAuthGeneration(generation) && document.getElementById("screen-gate")?.classList.contains("active")) {
+      setGateBusy(false);
+    }
+    finishAuthTransition(generation, controller);
   }
-  localStorage.setItem("pt_gate_passed", "1");
-  showScreen("screen-login");
-  showLoginEntryPoint();
 }
-
-/* Check gate on startup */
-(function checkGate() {
-  if (localStorage.getItem("pt_gate_passed") !== "1") {
-    showScreen("screen-gate");
-  }
-})();
-
-showLoginEntryPoint();
 
 function buildAllocationSummaryByWo(items = []) {
   const summary = {};
@@ -9964,8 +10144,6 @@ function removeMember(name) {
     delete overrides[name];
     saveRoleOverrides(overrides);
   }
-  /* Also clear their PIN */
-  deletePinFromSupabase(name).catch(()=>{});
   buildNameList();
   openManageMembers();
 }
@@ -10018,10 +10196,9 @@ function openResetMemberPin() {
 }
 
 function resetMemberPin(name) {
-  if (!confirm(`Reset PIN for ${name}? They will set a new one on next login.`)) return;
-  deletePinFromSupabase(name).catch(()=>{});
+  if (!confirm(`PIN reset for ${name} now requires secure backend support. Continue?`)) return;
   closeModal("modal-reset-pin");
-  alert(`${name}'s PIN has been reset.`);
+  alert("PIN reset was not changed. Use the server-side PIN rotation process.");
 }
 
 /* ── Load extra members on startup ─────────────────────────── */
@@ -10905,8 +11082,8 @@ function adminDeleteSession(userName, itemId, colType, sessionIdx) {
 
 const APP_SETTINGS_KEY = "pt_app_settings";
 const APP_SETTINGS_DEFAULTS = {
-  gate_username: "podium1racing",
-  gate_password: "alwaysberacing",
+  gate_username: "",
+  gate_password: "",
   ms_lead_name: "Thomas Persichina",
   chassis_lead_name: "Sepan Ali",
   inventory_contact_1: "Jake C.",
@@ -10938,6 +11115,8 @@ function loadAppSettings() {
 
 function saveAppSettings(settings) {
   const merged = { ...APP_SETTINGS_DEFAULTS, ...(settings || {}) };
+  delete merged.gate_username;
+  delete merged.gate_password;
   localStorage.setItem(APP_SETTINGS_KEY, JSON.stringify(merged));
   return merged;
 }
@@ -13992,11 +14171,10 @@ function uniqueKitHistoryRows(kits = []) {
 }
 
 function isLead() {
-  return currentUser?.name === getAppSetting("ms_lead_name") || currentUser?.name === getAppSetting("chassis_lead_name");
+  return !!currentUser?.isLead;
 }
 function isLeadUser(user) {
-  const name = String(user?.name || "").trim();
-  return !!name && (name === getAppSetting("ms_lead_name") || name === getAppSetting("chassis_lead_name"));
+  return !!user?.isLead;
 }
 function isChassisLead() { return currentUser?.name === getAppSetting("chassis_lead_name"); }
 function isMSLead()      { return currentUser?.name === getAppSetting("ms_lead_name"); }
@@ -19675,35 +19853,10 @@ function showToast(msg, type, undoFn) {
 /* ═══════════════════════════════════════
    BOOT
 ═══════════════════════════════════════ */
-syncTeamFromSupabase().then(changed => {
-  if (changed && !currentUser) showLoginEntryPoint();
-}).catch(()=>{});
-syncPinsFromSupabase().catch(()=>{});
 registerPushWorker().catch(()=>{});
-try {
-  const saved=localStorage.getItem("pt_user");
-  if(saved && localStorage.getItem("pt_gate_passed")==="1"){
-    const u=JSON.parse(saved);
-    const storedMember = TEAM.find(m=>m.name===u.name);
-    currentUser = storedMember && storedMember.role === FLOAT_ROLE && [MS_ROLE, CHASSIS_ROLE, KIT_ROLE].includes(u.role)
-      ? { ...storedMember, role: u.role, baseRole: FLOAT_ROLE }
-      : storedMember || u;
-    syncPushForActiveSession(false);
-    refreshTeamMessagesBadge({ force: true }).catch(() => {});
-    if(currentUser.role==="admin"){showScreen("screen-admin");document.getElementById("admin-date").textContent=new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});loadAdminData().then(() => routePendingProductionDeepLink()).catch(()=>{});}
-    else { showDash(); routePendingProductionDeepLink(); }
-  } else if (saved) {
-    /* Session exists but user is on login screen — show sign out */
-    const soBtn = document.getElementById("login-signout-btn");
-    if (soBtn) soBtn.style.display = "flex";
-  }
-  if (!saved && localStorage.getItem("pt_gate_passed")==="1") showLoginEntryPoint();
-  /* Pre-load build updates in background for splash screen */
-  sbFetch("build_updates?order=created_at.desc&limit=100",{method:"GET",headers:{"Prefer":"return=representation"}}).then(d=>{ if(d) _allBuildUpdates=d; }).catch(()=>{});
-} catch(e) { localStorage.removeItem("pt_user"); }
+bootstrapTrustedSession().catch(() => showSessionVerificationError());
 applyAppSettingLabels();
 updateBottomNav(document.querySelector(".screen.active")?.id || "screen-gate");
-handleInitialHashRoute();
 window.addEventListener("hashchange", handleInitialHashRoute);
 let _appResizeTimer = null;
 window.addEventListener("resize", () => {
