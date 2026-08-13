@@ -2,7 +2,7 @@ import crypto from "crypto";
 
 export const SESSION_COOKIE_NAME = "__Host-pt_session";
 export const SESSION_MAX_AGE_SECONDS = Number(process.env.PT_SESSION_MAX_AGE_SECONDS || 12 * 60 * 60);
-export const SESSION_VERSION = "1";
+export const SESSION_VERSION = "2";
 
 const SUPABASE_URL = process.env.SUPABASE_URL || "";
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
@@ -13,6 +13,16 @@ const ALLOWED_ORIGIN = process.env.PT_ALLOWED_ORIGIN || "";
 const ADMIN_NAME = process.env.PT_ADMIN_NAME || "Elijah Moosekian";
 const MS_LEAD_NAME = process.env.PT_MS_LEAD_NAME || "Thomas Persichina";
 const CHASSIS_LEAD_NAME = process.env.PT_CHASSIS_LEAD_NAME || "Sepan Ali";
+const AUTH_LEVEL_AUTHENTICATED = "authenticated";
+const AUTH_LEVEL_ROLE_REQUIRED = "role_required";
+const ROLE_MS = "ms";
+const ROLE_CHASSIS = "chassis";
+const ROLE_KIT = "kit";
+const ROLE_CONFIG = "config";
+const ROLE_FLOAT = "float";
+const ROLE_ADMIN = "admin";
+const CANONICAL_ROLES = new Set([ROLE_MS, ROLE_CHASSIS, ROLE_KIT, ROLE_CONFIG, ROLE_FLOAT, ROLE_ADMIN]);
+const FLOATER_ALLOWED_ROLES = Object.freeze([ROLE_MS, ROLE_CHASSIS, ROLE_KIT]);
 
 function base64url(input) {
   return Buffer.from(input).toString("base64url");
@@ -38,6 +48,41 @@ function normalizeName(value) {
 
 function normalizeRole(value) {
   return String(value || "").trim().toLowerCase();
+}
+
+function normalizeAllowedRoles(roles = []) {
+  return Array.from(new Set((Array.isArray(roles) ? roles : [])
+    .map(normalizeRole)
+    .filter(role => FLOATER_ALLOWED_ROLES.includes(role))));
+}
+
+function normalizeTrustedUser(user = {}, { activeRole = undefined } = {}) {
+  const id = normalizeName(user.id || user.name);
+  const name = normalizeName(user.name);
+  if (!id || !name) return null;
+  const baseRole = normalizeRole(user.baseRole || user.role);
+  if (!CANONICAL_ROLES.has(baseRole)) return null;
+  const isFloater = baseRole === ROLE_FLOAT;
+  const allowedRoles = isFloater ? normalizeAllowedRoles(user.allowedRoles?.length ? user.allowedRoles : FLOATER_ALLOWED_ROLES) : [baseRole];
+  const requestedActiveRole = activeRole === undefined ? user.activeRole : activeRole;
+  const normalizedActiveRole = requestedActiveRole === null || requestedActiveRole === undefined || requestedActiveRole === ""
+    ? null
+    : normalizeRole(requestedActiveRole);
+  if (isFloater && normalizedActiveRole !== null && !allowedRoles.includes(normalizedActiveRole)) return null;
+  if (!isFloater && normalizedActiveRole !== baseRole) return null;
+  const role = isFloater ? (normalizedActiveRole || ROLE_FLOAT) : baseRole;
+  if (!CANONICAL_ROLES.has(role)) return null;
+  return {
+    id,
+    name,
+    role,
+    baseRole,
+    activeRole: isFloater ? normalizedActiveRole : baseRole,
+    allowedRoles,
+    isFloater,
+    isLead: !!user.isLead,
+    isAdmin: !!user.isAdmin,
+  };
 }
 
 function nowSeconds() {
@@ -117,12 +162,17 @@ export function createSessionToken({ authLevel = "gate_passed", user = null } = 
     expiresAt: issuedAt + SESSION_MAX_AGE_SECONDS,
   };
   if (user) {
-    payload.userId = user.id || user.name;
-    payload.name = user.name;
-    payload.role = user.role;
-    payload.baseRole = user.baseRole || null;
-    payload.isLead = !!user.isLead;
-    payload.isAdmin = !!user.isAdmin;
+    const trusted = normalizeTrustedUser(user);
+    if (!trusted) throw new Error("Invalid trusted session user.");
+    payload.userId = trusted.id || trusted.name;
+    payload.name = trusted.name;
+    payload.role = trusted.role;
+    payload.baseRole = trusted.baseRole;
+    payload.activeRole = trusted.activeRole;
+    payload.allowedRoles = trusted.allowedRoles;
+    payload.isFloater = trusted.isFloater;
+    payload.isLead = trusted.isLead;
+    payload.isAdmin = trusted.isAdmin;
   }
   return signPayload(payload);
 }
@@ -181,20 +231,26 @@ export function clearSessionCookie(res) {
 
 export function sessionUser(payload) {
   if (!payload?.name) return null;
-  return {
+  const user = normalizeTrustedUser({
     id: payload.userId || payload.name,
     name: payload.name,
-    role: payload.role,
-    baseRole: payload.baseRole || null,
-    isLead: !!payload.isLead,
-    isAdmin: !!payload.isAdmin,
+    role: payload.baseRole || payload.role,
+    baseRole: payload.baseRole,
+    activeRole: payload.activeRole,
+    allowedRoles: payload.allowedRoles,
+    isLead: payload.isLead,
+    isAdmin: payload.isAdmin,
+  });
+  if (!user) return null;
+  return {
+    ...user,
   };
 }
 
 export function sessionResponse(payload) {
   const user = sessionUser(payload);
   return {
-    authenticated: payload?.authLevel === "user" && !!user,
+    authenticated: payload?.authLevel === AUTH_LEVEL_AUTHENTICATED && !!user,
     gatePassed: !!payload,
     authLevel: payload?.authLevel || "none",
     user,
@@ -229,6 +285,10 @@ export async function getTrustedUserByName(name) {
       name: ADMIN_NAME,
       initials: "EM",
       role: "admin",
+      baseRole: "admin",
+      activeRole: "admin",
+      allowedRoles: ["admin"],
+      isFloater: false,
       active: true,
       isLead: false,
       isAdmin: true,
@@ -241,22 +301,55 @@ export async function getTrustedUserByName(name) {
   const member = Array.isArray(rows) ? rows[0] : null;
   if (!member?.name || member.active === false) return null;
   const role = normalizeRole(member.role);
+  if (!CANONICAL_ROLES.has(role)) return null;
   const isLead = member.name === MS_LEAD_NAME || member.name === CHASSIS_LEAD_NAME;
+  const isFloater = role === ROLE_FLOAT;
   return {
     id: member.name,
     name: member.name,
     initials: member.initials || "",
     color: member.color || "",
-    role,
-    baseRole: role === "float" ? "float" : null,
+    role: isFloater ? ROLE_FLOAT : role,
+    baseRole: role,
+    activeRole: isFloater ? null : role,
+    allowedRoles: isFloater ? [...FLOATER_ALLOWED_ROLES] : [role],
+    isFloater,
     active: true,
     isLead,
-    isAdmin: role === "admin",
+    isAdmin: role === ROLE_ADMIN,
   };
 }
 
 export function requiresPin(user) {
   return !!(user?.isAdmin || user?.isLead);
+}
+
+export function requiresRoleSelection(user) {
+  return !!(user?.isFloater && !user.activeRole);
+}
+
+export function selectTrustedRole(user, requestedRole) {
+  const cleanRole = normalizeRole(requestedRole);
+  const trusted = normalizeTrustedUser(user);
+  if (!trusted?.isFloater) return null;
+  if (!trusted.allowedRoles.includes(cleanRole)) return null;
+  return normalizeTrustedUser(trusted, { activeRole: cleanRole });
+}
+
+export function publicUser(user) {
+  const trusted = normalizeTrustedUser(user);
+  if (!trusted) return null;
+  return {
+    id: trusted.id,
+    name: trusted.name,
+    role: trusted.role,
+    baseRole: trusted.baseRole,
+    activeRole: trusted.activeRole,
+    allowedRoles: trusted.allowedRoles,
+    isFloater: trusted.isFloater,
+    isLead: trusted.isLead,
+    isAdmin: trusted.isAdmin,
+  };
 }
 
 export function createPasswordHash(password, opts = {}) {
@@ -296,7 +389,7 @@ export async function verifyPinForUser(userName, pin) {
   return verifyPassword(pin, record.pin_hash);
 }
 
-export function requireSession(req, res, allowedLevels = ["gate_passed", "pin_required", "user"]) {
+export function requireSession(req, res, allowedLevels = ["gate_passed", "pin_required", AUTH_LEVEL_ROLE_REQUIRED, AUTH_LEVEL_AUTHENTICATED]) {
   const session = getSession(req);
   if (!session || !allowedLevels.includes(session.authLevel)) {
     sendJson(res, 401, { error: "Authentication required." });

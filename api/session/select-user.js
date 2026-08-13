@@ -2,31 +2,22 @@ import {
   createSessionToken,
   getJsonBody,
   getTrustedUserByName,
+  publicUser,
   requireJson,
   requireMethod,
   requireSession,
   requiresPin,
+  requiresRoleSelection,
   sendJson,
   setSessionCookie,
   validateOrigin,
 } from "../_session.js";
 
-function publicUser(user) {
-  return {
-    id: user.id,
-    name: user.name,
-    role: user.role,
-    baseRole: user.baseRole || null,
-    isLead: !!user.isLead,
-    isAdmin: !!user.isAdmin,
-  };
-}
-
 export default async function handler(req, res) {
   if (!requireMethod(req, res, "POST")) return;
   if (!validateOrigin(req, res)) return;
   if (!requireJson(req, res)) return;
-  const gateSession = requireSession(req, res, ["gate_passed", "pin_required", "user"]);
+  const gateSession = requireSession(req, res, ["gate_passed", "pin_required", "role_required", "authenticated"]);
   if (!gateSession) return;
 
   try {
@@ -45,12 +36,26 @@ export default async function handler(req, res) {
       });
     }
 
-    setSessionCookie(res, createSessionToken({ authLevel: "user", user }));
+    if (requiresRoleSelection(user)) {
+      setSessionCookie(res, createSessionToken({ authLevel: "role_required", user }));
+      return sendJson(res, 200, {
+        ok: true,
+        authenticated: false,
+        gatePassed: true,
+        pinRequired: false,
+        roleRequired: true,
+        authLevel: "role_required",
+        user: publicUser(user),
+      });
+    }
+
+    setSessionCookie(res, createSessionToken({ authLevel: "authenticated", user }));
     return sendJson(res, 200, {
       ok: true,
       authenticated: true,
       gatePassed: true,
       pinRequired: false,
+      authLevel: "authenticated",
       user: publicUser(user),
     });
   } catch {
