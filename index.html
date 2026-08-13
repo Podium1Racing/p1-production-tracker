@@ -1892,11 +1892,7 @@ input.photo-file-inp { display:none; }
   <!-- Floater role choice -->
   <div id="floater-role-wrap" style="display:none;width:100%;max-width:400px;">
     <div class="pin-sub" id="floater-role-label" style="margin-bottom:14px">What are you working on?</div>
-    <div class="name-list">
-      <button class="name-btn" onclick="chooseFloaterRole('ms')"><span class="role-tag tag-ms" style="margin-left:0">MS Build</span>Monitor Stand</button>
-      <button class="name-btn" onclick="chooseFloaterRole('chassis')"><span class="role-tag tag-chassis" style="margin-left:0">Chassis</span>Chassis</button>
-      <button class="name-btn" onclick="chooseFloaterRole('kit')"><span class="role-tag tag-kit" style="margin-left:0">Kitting</span>Kitter</button>
-    </div>
+    <div class="name-list"></div>
     <button class="auth-back-btn" onclick="authBack()" style="margin-top:14px">Back</button>
   </div>
 
@@ -4146,7 +4142,6 @@ function isPartsPulled(item) { return groupTitle(item)===PARTS_PULLED; }
 
 const ADMIN_NAME   = "Elijah Moosekian";
 let pendingUser    = null;
-let pendingFloater = null;
 let _sessionRequestBusy = false;
 let _pinVerifyBusy = false;
 let _authGeneration = 0;
@@ -4289,7 +4284,6 @@ function setGateError(message = "", { retry = false } = {}) {
 function showSessionVerifying() {
   currentUser = null;
   pendingUser = null;
-  pendingFloater = null;
   _sessionRequestBusy = false;
   _pinVerifyBusy = false;
   clearAuthBlockingState();
@@ -4301,7 +4295,6 @@ function showSessionVerifying() {
 function showSessionVerificationError(message = "Unable to verify your secure session.") {
   currentUser = null;
   pendingUser = null;
-  pendingFloater = null;
   _sessionRequestBusy = false;
   _pinVerifyBusy = false;
   clearAuthBlockingState();
@@ -4313,7 +4306,6 @@ function showSessionVerificationError(message = "Unable to verify your secure se
 function showSessionIdentityError() {
   currentUser = null;
   pendingUser = null;
-  pendingFloater = null;
   _sessionRequestBusy = false;
   _pinVerifyBusy = false;
   stopRealTimeSync();
@@ -4331,7 +4323,6 @@ function showSessionIdentityError() {
 function showGateLogin(message = "") {
   currentUser = null;
   pendingUser = null;
-  pendingFloater = null;
   _sessionRequestBusy = false;
   _pinVerifyBusy = false;
   clearAuthBlockingState();
@@ -4351,12 +4342,29 @@ function trustedUserFromSession(user = {}) {
   const name = String(user.name || "").trim();
   const role = String(user.role || "").trim();
   const hasBaseRole = Object.prototype.hasOwnProperty.call(user, "baseRole");
+  const hasActiveRole = Object.prototype.hasOwnProperty.call(user, "activeRole");
   const baseRole = user.baseRole === null ? null : String(user.baseRole || "").trim();
+  const activeRole = user.activeRole === null ? null : String(user.activeRole || "").trim();
+  const trustedAllowedRoles = Array.isArray(user.allowedRoles)
+    ? Array.from(new Set(user.allowedRoles.map(r => String(r || "").trim()).filter(Boolean)))
+    : null;
   const allowedRoles = new Set([MS_ROLE, CHASSIS_ROLE, KIT_ROLE, CONFIG_ROLE, FLOAT_ROLE, "admin"]);
-  if (!id || !name || !allowedRoles.has(role) || !hasBaseRole) return null;
+  if (!id || !name || !allowedRoles.has(role) || !hasBaseRole || !hasActiveRole) return null;
   if (baseRole !== null && !allowedRoles.has(baseRole)) return null;
+  if (activeRole !== null && !allowedRoles.has(activeRole)) return null;
+  if (!trustedAllowedRoles || trustedAllowedRoles.some(r => !allowedRoles.has(r))) return null;
+  if (typeof user.isFloater !== "boolean") return null;
   if (typeof user.isLead !== "boolean" || typeof user.isAdmin !== "boolean") return null;
   if ((role === "admin") !== user.isAdmin) return null;
+  if (user.isFloater !== (baseRole === FLOAT_ROLE)) return null;
+  if (user.isFloater) {
+    if (!trustedAllowedRoles.length || trustedAllowedRoles.some(r => ![MS_ROLE, CHASSIS_ROLE, KIT_ROLE].includes(r))) return null;
+    if (activeRole !== null && !trustedAllowedRoles.includes(activeRole)) return null;
+    if (role !== (activeRole || FLOAT_ROLE)) return null;
+    if (user.isAdmin || user.isLead) return null;
+  } else if (activeRole !== role || baseRole !== role) {
+    return null;
+  }
   const local = TEAM.find(member => member.name === name) || {};
   return {
     id,
@@ -4365,6 +4373,9 @@ function trustedUserFromSession(user = {}) {
     color: local.color || autoColor(),
     role,
     baseRole,
+    activeRole,
+    allowedRoles: trustedAllowedRoles,
+    isFloater: user.isFloater,
     isLead: user.isLead,
     isAdmin: user.isAdmin,
   };
@@ -4377,12 +4388,15 @@ async function enterAuthenticatedApp(user, generation) {
     showSessionIdentityError();
     return;
   }
+  if (trusted.isFloater && !trusted.activeRole) {
+    showTrustedFloaterRoleSelector(user, generation);
+    return;
+  }
   clearLegacyAuthStorage();
   resetTeamMessagesBadgeCache();
   clearAuthBlockingState();
   currentUser = trusted;
   pendingUser = null;
-  pendingFloater = null;
   syncPushForActiveSession(false);
   refreshTeamMessagesBadge({ force: true }).catch(() => {});
   syncTeamFromSupabase().catch(() => {});
@@ -4405,7 +4419,6 @@ function showPersonSelector(generation = _authGeneration) {
   if (!isCurrentAuthGeneration(generation)) return;
   currentUser = null;
   pendingUser = null;
-  pendingFloater = null;
   _sessionRequestBusy = false;
   _pinVerifyBusy = false;
   clearAuthBlockingState();
@@ -4425,7 +4438,6 @@ function showPendingPin(user, generation = _authGeneration) {
   }
   currentUser = null;
   pendingUser = trusted;
-  pendingFloater = null;
   _sessionRequestBusy = false;
   _pinVerifyBusy = false;
   setLoginScreenMode("pin");
@@ -4441,10 +4453,49 @@ function showPendingPin(user, generation = _authGeneration) {
   showScreen("screen-login");
 }
 
+function showTrustedFloaterRoleSelector(user, generation = _authGeneration) {
+  if (!isCurrentAuthGeneration(generation)) return;
+  const trusted = trustedUserFromSession(user);
+  if (!trusted?.isFloater || trusted.activeRole) {
+    showSessionIdentityError();
+    return;
+  }
+  const roles = (trusted.allowedRoles || []).filter(role => [MS_ROLE, CHASSIS_ROLE, KIT_ROLE].includes(role));
+  if (!roles.length) {
+    showSessionIdentityError();
+    return;
+  }
+  currentUser = null;
+  pendingUser = trusted;
+  _sessionRequestBusy = false;
+  _pinVerifyBusy = false;
+  clearAuthBlockingState();
+  setLoginScreenMode("floater");
+  document.getElementById("name-list-wrap").style.display = "none";
+  document.getElementById("pin-entry-wrap").style.display = "none";
+  document.getElementById("login-device-copy").style.display = "none";
+  document.getElementById("admin-login-btn").style.display = "none";
+  document.getElementById("floater-role-wrap").style.display = "block";
+  document.getElementById("floater-role-label").textContent = `What is ${trusted.name.split(" ")[0]} working on?`;
+  const list = document.querySelector("#floater-role-wrap .name-list");
+  if (list) {
+    list.innerHTML = roles.map(role => `
+      <button class="name-btn" onclick="selectTrustedFloaterRole('${role}')">
+        <span class="role-tag ${roleTagClass(role)}" style="margin-left:0">${escHtml(roleLoginLabel(role))}</span>
+        ${escHtml(roleLabel(role))}
+      </button>`).join("");
+  }
+  showScreen("screen-login");
+}
+
 async function applyTrustedSessionState(data, generation) {
   if (!isCurrentAuthGeneration(generation)) return;
   if (data?.authenticated && data?.user) {
     await enterAuthenticatedApp(data.user, generation);
+    return;
+  }
+  if (data?.authLevel === "role_required" && data?.user) {
+    showTrustedFloaterRoleSelector(data.user, generation);
     return;
   }
   if (data?.gatePassed) {
@@ -4511,7 +4562,6 @@ function canUsePinFeatures(user = currentUser) {
 
 function clearAuthSelection() {
   pendingUser = null;
-  pendingFloater = null;
   setLoginScreenMode("selector");
   document.getElementById("pin-entry-wrap").style.display = "none";
   document.getElementById("floater-role-wrap").style.display = "none";
@@ -4645,40 +4695,18 @@ function buildNameList() {
         : "";
       const btn = document.createElement("button"); btn.className = "name-btn";
       btn.innerHTML = `<div class="av" style="background:${m.color}25;color:${m.color}">${m.initials}</div>${m.name}${leadPill}<span class="role-tag ${roleTagClass(isFloater ? FLOAT_ROLE : role)}">${isFloater ? "Choose Role" : roleLoginLabel(role)}</span>`;
-      btn.onclick = () => isFloater ? openFloaterRoleChoice(m) : selectUser(m);
+      btn.onclick = () => selectUser(m);
       list.appendChild(btn);
     });
   });
 }
 
-function openFloaterRoleChoice(m, fromRememberedDevice = false) {
-  pendingFloater = m;
-  pendingUser = null;
-  setLoginScreenMode("floater");
-  document.querySelectorAll(".name-btn").forEach(b=>b.classList.remove("selected"));
-  document.querySelectorAll("#name-list .name-btn").forEach(b=>{ if(b.textContent.includes(m.name)) b.classList.add("selected"); });
-  document.getElementById("name-list-wrap").style.display = "none";
-  document.getElementById("pin-entry-wrap").style.display = "none";
-  document.getElementById("login-device-copy").style.display = "none";
-  document.getElementById("admin-login-btn").style.display = "none";
-  const wrap = document.getElementById("floater-role-wrap");
-  document.getElementById("floater-role-label").textContent = fromRememberedDevice
-    ? `What is ${m.name.split(" ")[0]} working on today?`
-    : `What is ${m.name.split(" ")[0]} working on?`;
-  wrap.style.display = "block";
-}
-
-function chooseFloaterRole(role) {
-  if (!pendingFloater) return;
-  selectUser(pendingFloater, role);
-}
-
-async function selectUser(m, roleOverride, fromRememberedDevice = false) {
+async function selectUser(m) {
   if (_logoutBusy) return;
   const { generation, controller, signal } = beginAuthTransition();
   document.querySelectorAll(".name-btn").forEach(b=>b.classList.remove("selected"));
   document.querySelectorAll(".name-btn").forEach(b=>{ if(b.textContent.includes(m.name)) b.classList.add("selected"); });
-  pendingUser = roleOverride && m.role === FLOAT_ROLE ? { ...m, role: roleOverride, baseRole: FLOAT_ROLE } : m;
+  pendingUser = m;
   const quick = document.getElementById("login-quick-start-wrap");
   if (quick) {
     quick.style.display = "none";
@@ -4696,6 +4724,33 @@ async function selectUser(m, roleOverride, fromRememberedDevice = false) {
     if (!result.ok) {
       document.querySelectorAll(".name-btn").forEach(b=>b.classList.remove("selected"));
       showToast("Unable to select that user. Please try again.", "err");
+      return;
+    }
+    await applyTrustedSessionState(result.data || {}, generation);
+  } finally {
+    if (isCurrentAuthGeneration(generation)) _sessionRequestBusy = false;
+    finishAuthTransition(generation, controller);
+  }
+}
+
+async function selectTrustedFloaterRole(role) {
+  if (_logoutBusy || !pendingUser?.isFloater) return;
+  const requestedRole = String(role || "").trim();
+  if (!pendingUser.allowedRoles?.includes(requestedRole)) {
+    showToast("That role is not available for this session.", "err");
+    return;
+  }
+  const { generation, controller, signal } = beginAuthTransition();
+  _sessionRequestBusy = true;
+  try {
+    const result = await ptSessionRequest("/api/session/select-role", {
+      method: "POST",
+      body: { role: requestedRole },
+      signal,
+    });
+    if (!isCurrentAuthGeneration(generation)) return;
+    if (!result.ok) {
+      showToast("Unable to select that role. Please try again.", "err");
       return;
     }
     await applyTrustedSessionState(result.data || {}, generation);
@@ -4848,7 +4903,7 @@ async function signOutCompletely() {
     clearLegacyAuthStorage();
     syncPushUserContext("");
     resetTeamMessagesBadgeCache();
-    currentUser = null; pendingUser = null; pendingFloater = null;
+    currentUser = null; pendingUser = null;
     _sessionRequestBusy = false;
     _pinVerifyBusy = false;
     document.getElementById("pin-entry-wrap").style.display  = "none";
