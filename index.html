@@ -2893,6 +2893,12 @@ function sbUnsubscribeAdminRealtime() {
 const PROTECTED_INTEGRATION_OPERATIONS = Object.freeze({
   pickListGet: "p1.picklist.get",
   attachFileToUpdate: "monday.file.attachToUpdate",
+  mondayProductionBoardGet: "monday.board.production.get",
+  mondayAdminBoardGet: "monday.board.admin.get",
+  mondayKitBoardGet: "monday.board.kit.get",
+  mondaySubscribersGet: "monday.board.subscribers.get",
+  mondayGroupsGet: "monday.board.groups.get",
+  mondayItemsGet: "monday.items.get",
 });
 const PROTECTED_INTEGRATION_TIMEOUT_MS = 15_000;
 const MONDAY_UPDATE_UPLOAD_MAX_BYTES = 3 * 1024 * 1024;
@@ -2971,6 +2977,88 @@ async function fetchP1PickListFromProxy(woNumber) {
 
 function attachFileToMondayUpdate(params) {
   return callProtectedIntegration(PROTECTED_INTEGRATION_OPERATIONS.attachFileToUpdate, params);
+}
+
+function fetchMondayProductionBoard() {
+  return callProtectedIntegration(PROTECTED_INTEGRATION_OPERATIONS.mondayProductionBoardGet);
+}
+
+function fetchMondayAdminBoard() {
+  return callProtectedIntegration(PROTECTED_INTEGRATION_OPERATIONS.mondayAdminBoardGet);
+}
+
+function fetchMondayKitBoard() {
+  return callProtectedIntegration(PROTECTED_INTEGRATION_OPERATIONS.mondayKitBoardGet);
+}
+
+function fetchMondayBoardSubscribers() {
+  return callProtectedIntegration(PROTECTED_INTEGRATION_OPERATIONS.mondaySubscribersGet);
+}
+
+function fetchMondayBoardGroups() {
+  return callProtectedIntegration(PROTECTED_INTEGRATION_OPERATIONS.mondayGroupsGet);
+}
+
+function fetchMondayItems(itemIds) {
+  return callProtectedIntegration(PROTECTED_INTEGRATION_OPERATIONS.mondayItemsGet, { itemIds });
+}
+
+function requireProtectedMondayBoard(response, label = "Monday board") {
+  const board = response?.data?.boards?.[0];
+  if (!board || typeof board !== "object") throw new Error(`${label} response was incomplete.`);
+  return board;
+}
+
+function requireProtectedMondayArray(source, key, label) {
+  const value = source?.[key];
+  if (!Array.isArray(value)) throw new Error(`${label} response was incomplete.`);
+  return value;
+}
+
+function requireProtectedMondayBoardItems(board, label = "Monday board") {
+  const itemsPage = board?.items_page;
+  if (
+    !itemsPage ||
+    typeof itemsPage !== "object" ||
+    !Object.prototype.hasOwnProperty.call(itemsPage, "cursor") ||
+    itemsPage.cursor ||
+    !Array.isArray(itemsPage.items)
+  ) {
+    throw new Error(`${label} response was incomplete.`);
+  }
+  return itemsPage.items;
+}
+
+function requireProtectedMondayItemsResult(response, label = "Monday items") {
+  const items = response?.data?.items;
+  if (!Array.isArray(items)) throw new Error(`${label} response was incomplete.`);
+  return items;
+}
+
+function findSubscriberMondayId(subscribers, user) {
+  const name = String(user?.name || "").trim().toLowerCase();
+  if (!name) return null;
+  const first = name.split(" ")[0];
+  const found = subscribers.find(sub => {
+    const subName = String(sub?.name || "").trim().toLowerCase();
+    return subName === name || subName.split(" ")[0] === first;
+  });
+  return found?.id || null;
+}
+
+async function fetchVerifiedMondaySubscribers(label = "Monday subscribers") {
+  const usersRes = await fetchMondayBoardSubscribers();
+  const board = requireProtectedMondayBoard(usersRes, label);
+  return requireProtectedMondayArray(board, "subscribers", label);
+}
+
+async function verifyCurrentUserMondaySubscriberId() {
+  const subscribers = await fetchVerifiedMondaySubscribers("Monday subscriber verification");
+  const mondayUserId = findSubscriberMondayId(subscribers, currentUser);
+  if (!mondayUserId) {
+    throw new Error(`Could not verify Monday user ID for ${currentUser?.name || "current user"}.`);
+  }
+  return mondayUserId;
 }
 
 function disabledP1Mutation(operation) {
@@ -5028,15 +5116,14 @@ async function loadSharedBoardItems(force = false) {
     boardItems = cached.items;
     return cached.items;
   }
-  const [metaRes, itemsRes] = await Promise.all([
-    mondayQuery(`{ boards(ids:[${BOARD_ID}]) { columns { id title type settings_str } subscribers { id name } } }`),
-    mondayQuery(`{ boards(ids:[${BOARD_ID}]) { items_page(limit:200) { items { id name group { id title } column_values { id type text value ... on StatusValue { updated_at } } } } } }`)
-  ]);
-  const board = metaRes.data.boards[0];
-  const items = itemsRes.data.boards[0].items_page.items;
-  discoverColumns(board.columns || []);
+  const boardRes = await fetchMondayProductionBoard();
+  const board = requireProtectedMondayBoard(boardRes, "Production board");
+  const columns = requireProtectedMondayArray(board, "columns", "Production board");
+  const subscribers = requireProtectedMondayArray(board, "subscribers", "Production board");
+  const items = requireProtectedMondayBoardItems(board, "Production board");
+  discoverColumns(columns);
   boardItems = items;
-  saveBoardCache({ columns: board.columns || [], subscribers: board.subscribers || [], items });
+  saveBoardCache({ columns, subscribers, items });
   return items;
 }
 
@@ -5890,17 +5977,15 @@ async function loadBoard() {
   }
 
   try {
-    /* Run columns/subscribers and items queries in parallel */
-    const [metaRes, itemsRes, buildUpdatesRes] = await Promise.all([
-      mondayQuery(`{ boards(ids:[${BOARD_ID}]) { columns { id title type settings_str } subscribers { id name } } }`),
-      mondayQuery(`{ boards(ids:[${BOARD_ID}]) { items_page(limit:200) { items { id name group { id title } column_values { id type text value ... on StatusValue { updated_at } } } } } }`),
+    const [boardRes, buildUpdatesRes] = await Promise.all([
+      fetchMondayProductionBoard(),
       sbFetch("build_updates?order=created_at.desc&limit=500",{method:"GET",headers:{"Prefer":"return=representation"}}).catch(() => cachedUpdates),
     ]);
 
-    const board   = metaRes.data.boards[0];
-    const columns = board.columns;
-    const subs    = board.subscribers || [];
-    const items   = itemsRes.data.boards[0].items_page.items;
+    const board   = requireProtectedMondayBoard(boardRes, "Production board");
+    const columns = requireProtectedMondayArray(board, "columns", "Production board");
+    const subs    = requireProtectedMondayArray(board, "subscribers", "Production board");
+    const items   = requireProtectedMondayBoardItems(board, "Production board");
 
     discoverColumns(columns);
     discoverStatusLabels(columns);
@@ -6287,15 +6372,8 @@ async function assignCurrentUserToBuildNow(itemId, colType) {
   buildUserIdCache();
   let mondayUserId = findMondayId(currentUser);
   if (!mondayUserId) {
-    const usersRes = await mondayQuery(`{ boards(ids:[${BOARD_ID}]) { subscribers { id name } } }`);
-    const subs = usersRes.data?.boards?.[0]?.subscribers || [];
-    const meFull = currentUser.name.toLowerCase();
-    const meFirst = meFull.split(" ")[0];
-    const found = subs.find(s => {
-      const n = String(s.name || "").toLowerCase();
-      return n === meFull || n.split(" ")[0] === meFirst;
-    });
-    if (found) mondayUserId = found.id;
+    const subs = await fetchVerifiedMondaySubscribers("Monday subscriber lookup");
+    mondayUserId = findSubscriberMondayId(subs, currentUser);
   }
   if (!mondayUserId) throw new Error(`Could not find Monday user ID for ${currentUser.name}.`);
 
@@ -7204,19 +7282,7 @@ async function unassignCurrentUserFromBuild(itemId, colType, note = "") {
   const item     = boardItems.find(i => i.id === itemId);
   if (!item) return;
 
-  buildUserIdCache();
-  let mondayUserId = findMondayId(currentUser);
-  if (!mondayUserId) {
-    const usersRes = await mondayQuery(`{ boards(ids:[${BOARD_ID}]) { subscribers { id name } } }`);
-    const subs = usersRes.data?.boards?.[0]?.subscribers || [];
-    const meFull  = currentUser.name.toLowerCase();
-    const meFirst = meFull.split(" ")[0];
-    const found   = subs.find(s => {
-      const n = s.name.toLowerCase();
-      return n === meFull || n.split(" ")[0] === meFirst;
-    });
-    if (found) mondayUserId = found.id;
-  }
+  const mondayUserId = await verifyCurrentUserMondaySubscriberId();
 
   const colObj = item.column_values?.find(c => c.id === whoColId);
   let persons = [];
@@ -7264,15 +7330,8 @@ async function grabBuild(itemId, e) {
 
     /* Fallback: query board subscribers to find the user by name */
     if (!mondayUserId) {
-      const usersRes = await mondayQuery(`{ boards(ids:[${BOARD_ID}]) { subscribers { id name } } }`);
-      const subs = usersRes.data?.boards?.[0]?.subscribers || [];
-      const meFull  = currentUser.name.toLowerCase();
-      const meFirst = meFull.split(" ")[0];
-      const found   = subs.find(s =>{
-        const n = s.name.toLowerCase();
-        return n === meFull || n.split(" ")[0] === meFirst;
-      });
-      if (found) mondayUserId = found.id;
+      const subs = await fetchVerifiedMondaySubscribers("Monday subscriber lookup");
+      mondayUserId = findSubscriberMondayId(subs, currentUser);
     }
 
     if (!mondayUserId) {
@@ -10280,27 +10339,17 @@ async function loadAdminData() {
       return d.toISOString().slice(0,10);
     })();
     const [boardRes, sbTimers, sbTimerHistory, sbKits, sbUpdates, sbPickItems] = await Promise.all([
-      mondayQuery(`{
-        boards(ids:[${BOARD_ID}]) {
-          columns { id title type }
-          items_page(limit:200) {
-            items {
-              id name
-              group { id title }
-              column_values { id type text value }
-            }
-          }
-        }
-      }`),
+      fetchMondayAdminBoard(),
       sbGetAllTimers(),
       sbGetTimerHistory(),
       sbGetKitCompletions(kitSince),
       sbFetch("build_updates?order=created_at.desc&limit=500",{method:"GET",headers:{"Prefer":"return=representation"}}),
       sbFetchOrThrow("picklist_items?select=wo_number,allocated,label,item_name,brand,quantity",{method:"GET",headers:{"Prefer":"return=representation"}}, "Could not load admin pick list allocation summary."),
     ]);
-    const board = boardRes.data.boards[0];
-    discoverColumns(board.columns);
-    const items = board.items_page.items;
+    const board = requireProtectedMondayBoard(boardRes, "Admin board");
+    const columns = requireProtectedMondayArray(board, "columns", "Admin board");
+    discoverColumns(columns);
+    const items = requireProtectedMondayBoardItems(board, "Admin board");
     const allocationSummaryByWo = buildAllocationSummaryByWo(sbPickItems || []);
     await hydrateKitHistoryBoardItems(sbKits, items);
     window._sbBuildUpdates = sbUpdates || [];
@@ -11736,16 +11785,15 @@ async function saveLeadProjectManagerChanges() {
   }
 
   const orderedNames = [primaryName, ...selectedNames.filter(name => name !== primaryName)];
-  buildUserIdCache();
-  const subscriberLookup = {};
+  let verifiedSubscribers;
   try {
-    const usersRes = await mondayQuery(`{ boards(ids:[${BOARD_ID}]) { subscribers { id name } } }`);
-    (usersRes.data?.boards?.[0]?.subscribers || []).forEach(sub => {
-      subscriberLookup[String(sub.name || "").toLowerCase()] = sub.id;
-    });
-  } catch (e) {}
+    verifiedSubscribers = await fetchVerifiedMondaySubscribers("Lead subscriber verification");
+  } catch (e) {
+    showToast("Could not verify Monday subscribers. Changes were not saved.", "err");
+    return;
+  }
   const peoplePayload = orderedNames.map(name => {
-    const id = findMondayId({ name }) || subscriberLookup[name.toLowerCase()];
+    const id = findSubscriberMondayId(verifiedSubscribers, { name });
     if (!id) return null;
     return { id: parseInt(id, 10), kind: "person" };
   }).filter(Boolean);
@@ -12149,23 +12197,22 @@ async function loadKitBoard() {
     content.innerHTML = `<div class="loading-state"><div class="spinner"></div>Loading kitting queue…</div>`;
   }
   try {
-    /* Fetch board metadata and items in parallel */
-    const [colRes, itemRes] = await Promise.all([
-      mondayQuery(`{ boards(ids:[${BOARD_ID}]) { columns { id title type } groups { id title } subscribers { id name } } }`),
-      mondayQuery(`{ boards(ids:[${BOARD_ID}]) { items_page(limit:200) { items { id name group { id title } column_values { id text value } } } } }`)
-    ]);
-    const board  = colRes.data.boards[0];
-    discoverColumns(board.columns);
-    const gMap = {}; board.groups.forEach(g => { gMap[g.title] = g.id; });
+    const boardRes = await fetchMondayKitBoard();
+    const board  = requireProtectedMondayBoard(boardRes, "Kit board");
+    const columns = requireProtectedMondayArray(board, "columns", "Kit board");
+    const groups = requireProtectedMondayArray(board, "groups", "Kit board");
+    const subscribers = requireProtectedMondayArray(board, "subscribers", "Kit board");
+    discoverColumns(columns);
+    const gMap = {}; groups.forEach(g => { gMap[g.title] = g.id; });
     window._kitGroupMap = gMap;
     /* Resolve Jake and Ayden IDs for kit complete mentions */
-    resolveInventoryContacts(board.subscribers || []);
+    resolveInventoryContacts(subscribers);
 
-    kitBoardItems = itemRes.data.boards[0].items_page.items;
+    kitBoardItems = requireProtectedMondayBoardItems(board, "Kit board");
     saveTimedCache(KIT_BOARD_CACHE_KEY, {
-      columns: board.columns,
-      groups: board.groups,
-      subscribers: board.subscribers || [],
+      columns,
+      groups,
+      subscribers,
       items: kitBoardItems,
     });
     renderKitScreen(kitBoardItems);
@@ -12615,8 +12662,9 @@ function configurationQcRecipients(mondayItem = null) {
 
 async function ensureBoardGroupMap() {
   if (window._boardGroupMap && Object.keys(window._boardGroupMap).length) return window._boardGroupMap;
-  const res = await mondayQuery(`{ boards(ids:[${BOARD_ID}]) { groups { id title } } }`);
-  const groups = res?.data?.boards?.[0]?.groups || [];
+  const res = await fetchMondayBoardGroups();
+  const board = requireProtectedMondayBoard(res, "Monday groups");
+  const groups = requireProtectedMondayArray(board, "groups", "Monday groups");
   const map = {};
   groups.forEach(group => { map[group.title] = group.id; });
   window._boardGroupMap = map;
@@ -14108,14 +14156,8 @@ async function hydrateKitHistoryBoardItems(kits = [], currentItems = []) {
   window._kitHistoryItemById = window._kitHistoryItemById || {};
   if (!ids.length) return;
   try {
-    const res = await mondayQuery(`{
-      items(ids:[${ids.join(",")}]) {
-        id name
-        group { id title }
-        column_values { id type text value }
-      }
-    }`);
-    (res?.data?.items || []).forEach(item => {
+    const res = await fetchMondayItems(ids);
+    requireProtectedMondayItemsResult(res, "Monday item hydration").forEach(item => {
       window._kitHistoryItemById[String(item.id)] = item;
     });
   } catch(e) {
@@ -14132,14 +14174,8 @@ async function hydrateMondayItemById(itemId) {
   if (cached) return cached;
 
   try {
-    const res = await mondayQuery(`{
-      items(ids:[${id}]) {
-        id name
-        group { id title }
-        column_values { id type text value }
-      }
-    }`);
-    const item = res?.data?.items?.[0] || null;
+    const res = await fetchMondayItems([id]);
+    const item = requireProtectedMondayItemsResult(res, "Monday item hydration")[0] || null;
     if (item) {
       window._kitHistoryItemById = window._kitHistoryItemById || {};
       window._kitHistoryItemById[id] = item;
@@ -18265,8 +18301,8 @@ async function confirmSubmitKitFromPickList(plId, woNum, mondayItemId, e) {
 
     /* Fallback: fetch directly from Monday if not in cache */
     if (!mondayItem && mondayItemId && mondayItemId !== "null") {
-      const res = await mondayQuery(`{ items(ids:[${mondayItemId}]) { id name group { id title } column_values { id type text value } } }`);
-      mondayItem = res?.data?.items?.[0] || null;
+      const res = await fetchMondayItems([mondayItemId]);
+      mondayItem = requireProtectedMondayItemsResult(res, "Monday item lookup")[0] || null;
     }
 
     if (!mondayItem) {
@@ -18278,8 +18314,9 @@ async function confirmSubmitKitFromPickList(plId, woNum, mondayItemId, e) {
     /* Ensure group map is loaded */
     let gMap = window._kitGroupMap || {};
     if (!gMap[KIT_TARGET_GROUP]) {
-      const gRes = await mondayQuery(`{ boards(ids:[${BOARD_ID}]) { groups { id title } } }`);
-      const groups = gRes?.data?.boards?.[0]?.groups || [];
+      const gRes = await fetchMondayBoardGroups();
+      const board = requireProtectedMondayBoard(gRes, "Monday groups");
+      const groups = requireProtectedMondayArray(board, "groups", "Monday groups");
       groups.forEach(g => { gMap[g.title] = g.id; });
       window._kitGroupMap = gMap;
     }

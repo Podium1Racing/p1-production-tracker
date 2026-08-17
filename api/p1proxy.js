@@ -18,13 +18,82 @@ const ROLE_CHASSIS = "chassis";
 const ROLE_CONFIG = "config";
 const ROLE_KIT = "kit";
 const ROLE_MS = "ms";
+const ALL_APP_ROLES = Object.freeze([ROLE_ADMIN, ROLE_CHASSIS, ROLE_CONFIG, ROLE_KIT, ROLE_MS]);
 
 const P1_APPROVED_HOSTNAME = "submission-api-331638234113.us-central1.run.app";
+const PRODUCTION_BOARD_ID = "7847112819";
+const MONDAY_GRAPHQL_URL = "https://api.monday.com/v2";
 const MONDAY_FILE_URL = "https://api.monday.com/v2/file";
 const UPSTREAM_TIMEOUT_MS = 12_000;
 const MAX_UPLOAD_BYTES = 3 * 1024 * 1024;
 const MAX_BASE64_CHARS = 4 * Math.ceil(MAX_UPLOAD_BYTES / 3);
 const MAX_PICKLIST_ITEMS = 2_000;
+const MAX_MONDAY_ITEM_IDS = 100;
+
+const MONDAY_PRODUCTION_BOARD_QUERY = `query ProductionBoard {
+  boards(ids: [${PRODUCTION_BOARD_ID}]) {
+    id
+    columns { id title type settings_str }
+    subscribers { id name }
+    items_page(limit: 200) {
+      cursor
+      items {
+        id name
+        group { id title }
+        column_values { id type text value ... on StatusValue { updated_at } }
+      }
+    }
+  }
+}`;
+
+const MONDAY_ADMIN_BOARD_QUERY = `query AdminBoard {
+  boards(ids: [${PRODUCTION_BOARD_ID}]) {
+    id
+    columns { id title type }
+    items_page(limit: 200) {
+      cursor
+      items {
+        id name
+        group { id title }
+        column_values { id type text value }
+      }
+    }
+  }
+}`;
+
+const MONDAY_KIT_BOARD_QUERY = `query KitBoard {
+  boards(ids: [${PRODUCTION_BOARD_ID}]) {
+    id
+    columns { id title type }
+    groups { id title }
+    subscribers { id name }
+    items_page(limit: 200) {
+      cursor
+      items {
+        id name
+        group { id title }
+        column_values { id text value }
+      }
+    }
+  }
+}`;
+
+const MONDAY_SUBSCRIBERS_QUERY = `query BoardSubscribers {
+  boards(ids: [${PRODUCTION_BOARD_ID}]) { id subscribers { id name } }
+}`;
+
+const MONDAY_GROUPS_QUERY = `query BoardGroups {
+  boards(ids: [${PRODUCTION_BOARD_ID}]) { id groups { id title } }
+}`;
+
+const MONDAY_ITEMS_QUERY = `query ProductionItems($ids: [ID!]!) {
+  items(ids: $ids) {
+    id name
+    board { id }
+    group { id title }
+    column_values { id type text value }
+  }
+}`;
 
 const OPERATION_POLICIES = Object.freeze({
   "p1.time.event": Object.freeze({ enabled: false, roles: [ROLE_ADMIN, ROLE_CHASSIS, ROLE_MS] }),
@@ -32,6 +101,12 @@ const OPERATION_POLICIES = Object.freeze({
   "p1.picklist.get": Object.freeze({ enabled: true, roles: [ROLE_ADMIN, ROLE_CHASSIS, ROLE_CONFIG, ROLE_KIT, ROLE_MS] }),
   "p1.picklist.submit": Object.freeze({ enabled: false, roles: [ROLE_ADMIN, ROLE_KIT] }),
   "monday.file.attachToUpdate": Object.freeze({ enabled: true, roles: [ROLE_CHASSIS, ROLE_MS] }),
+  "monday.board.production.get": Object.freeze({ enabled: true, roles: ALL_APP_ROLES }),
+  "monday.board.admin.get": Object.freeze({ enabled: true, roles: [ROLE_ADMIN] }),
+  "monday.board.kit.get": Object.freeze({ enabled: true, roles: [ROLE_ADMIN, ROLE_KIT] }),
+  "monday.board.subscribers.get": Object.freeze({ enabled: true, roles: [ROLE_ADMIN, ROLE_CHASSIS, ROLE_MS] }),
+  "monday.board.groups.get": Object.freeze({ enabled: true, roles: ALL_APP_ROLES }),
+  "monday.items.get": Object.freeze({ enabled: true, roles: ALL_APP_ROLES }),
 });
 
 function cleanString(value, maxLength = 500) {
@@ -73,6 +148,17 @@ function normalizeWorkOrder(value) {
 function normalizeMondayId(value) {
   const id = cleanString(value, 32);
   return /^\d{1,20}$/.test(id) ? id : "";
+}
+
+function normalizeMondayItemIds(value) {
+  if (!Array.isArray(value) || !value.length || value.length > MAX_MONDAY_ITEM_IDS) return null;
+  const ids = value.map(normalizeMondayId);
+  if (ids.some(id => !id)) return null;
+  return [...new Set(ids)];
+}
+
+function hasOnlyParamKeys(params, allowedKeys) {
+  return Object.keys(params || {}).every(key => allowedKeys.includes(key));
 }
 
 function normalizeMimeType(value) {
@@ -230,6 +316,142 @@ async function getP1PickList(baseUrl, woNumber) {
     : controlledError(502, "P1_INVALID_RESPONSE", "Upstream returned an invalid response.");
 }
 
+async function runMondayGraphql(query, variables = {}) {
+  const result = await fetchUpstreamJson("MONDAY", MONDAY_GRAPHQL_URL, {
+    method: "POST",
+    headers: {
+      Authorization: MONDAY_API_KEY,
+      "API-Version": "2024-01",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ query, variables }),
+  });
+  if (result.error) return result.error;
+  if (
+    !result.data ||
+    typeof result.data !== "object" ||
+    !result.data.data ||
+    typeof result.data.data !== "object" ||
+    (Array.isArray(result.data.errors) && result.data.errors.length)
+  ) {
+    return controlledError(502, "MONDAY_INVALID_RESPONSE", "Upstream returned an invalid response.");
+  }
+  return { status: 200, data: result.data };
+}
+
+function mondayInvalidResponse(code = "MONDAY_INVALID_RESPONSE") {
+  return controlledError(502, code, "Upstream returned an invalid response.");
+}
+
+function requireMondayBoard(data) {
+  const boards = data?.data?.boards;
+  const board = Array.isArray(boards) && boards.length === 1 ? boards[0] : null;
+  if (!board || normalizeMondayId(board.id) !== PRODUCTION_BOARD_ID) return null;
+  return board;
+}
+
+function isValidItemsPage(itemsPage) {
+  return !!(
+    itemsPage &&
+    typeof itemsPage === "object" &&
+    !Array.isArray(itemsPage) &&
+    Object.prototype.hasOwnProperty.call(itemsPage, "cursor") &&
+    (itemsPage.cursor === null || typeof itemsPage.cursor === "string") &&
+    Array.isArray(itemsPage.items)
+  );
+}
+
+function sanitizeProductionBoard(data) {
+  const board = requireMondayBoard(data);
+  if (
+    !board ||
+    !Array.isArray(board.columns) ||
+    !Array.isArray(board.subscribers) ||
+    !isValidItemsPage(board.items_page)
+  ) {
+    return null;
+  }
+  const { id, ...safeBoard } = board;
+  return safeBoard;
+}
+
+function sanitizeAdminBoard(data) {
+  const board = requireMondayBoard(data);
+  if (
+    !board ||
+    !Array.isArray(board.columns) ||
+    !isValidItemsPage(board.items_page)
+  ) {
+    return null;
+  }
+  const { id, ...safeBoard } = board;
+  return safeBoard;
+}
+
+function sanitizeKitBoard(data) {
+  const board = requireMondayBoard(data);
+  if (
+    !board ||
+    !Array.isArray(board.columns) ||
+    !Array.isArray(board.groups) ||
+    !Array.isArray(board.subscribers) ||
+    !isValidItemsPage(board.items_page)
+  ) {
+    return null;
+  }
+  const { id, ...safeBoard } = board;
+  return safeBoard;
+}
+
+function sanitizeSubscribersBoard(data) {
+  const board = requireMondayBoard(data);
+  if (!board || !Array.isArray(board.subscribers)) return null;
+  const { id, ...safeBoard } = board;
+  return safeBoard;
+}
+
+function sanitizeGroupsBoard(data) {
+  const board = requireMondayBoard(data);
+  if (!board || !Array.isArray(board.groups)) return null;
+  const { id, ...safeBoard } = board;
+  return safeBoard;
+}
+
+async function getMondayBoard(query, sanitizeBoard) {
+  const result = await runMondayGraphql(query);
+  if (result.status !== 200) return result;
+  const board = sanitizeBoard(result.data);
+  if (!board) {
+    return mondayInvalidResponse();
+  }
+  if (board.items_page?.cursor) {
+    return mondayInvalidResponse("BOARD_RESULT_INCOMPLETE");
+  }
+  return { status: 200, data: { data: { boards: [board] } } };
+}
+
+async function getMondayItems(itemIds) {
+  const result = await runMondayGraphql(MONDAY_ITEMS_QUERY, { ids: itemIds });
+  if (result.status !== 200) return result;
+  const items = result.data?.data?.items;
+  if (!Array.isArray(items) || items.length !== itemIds.length) {
+    return controlledError(404, "MONDAY_RESOURCE_NOT_FOUND", "Requested item was not found.");
+  }
+
+  const requestedIds = new Set(itemIds);
+  const safeItems = [];
+  for (const item of items) {
+    const itemId = normalizeMondayId(item?.id);
+    const boardId = normalizeMondayId(item?.board?.id);
+    if (!itemId || !requestedIds.has(itemId) || boardId !== PRODUCTION_BOARD_ID) {
+      return controlledError(404, "MONDAY_RESOURCE_NOT_FOUND", "Requested item was not found.");
+    }
+    const { board, ...safeItem } = item;
+    safeItems.push(safeItem);
+  }
+  return { status: 200, data: { data: { items: safeItems } } };
+}
+
 function requireMondayFileParams(res, params = {}) {
   const file = validateBase64(params.fileBase64);
   if (file.error === "too_large") {
@@ -311,6 +533,38 @@ async function handleOperation(operation, params, user, res) {
         ...upload,
         query: `mutation ($file: File!) { add_file_to_update(update_id:${updateId}, file:$file) { id } }`,
       });
+    }
+
+    case "monday.board.production.get":
+    case "monday.board.admin.get":
+    case "monday.board.kit.get":
+    case "monday.board.subscribers.get":
+    case "monday.board.groups.get": {
+      if (!hasOnlyParamKeys(params, [])) {
+        return controlledError(400, "INVALID_PARAMETERS", "Invalid operation parameters.");
+      }
+      if (!requireMondayConfiguration(res)) return null;
+      const boardOperations = {
+        "monday.board.production.get": [MONDAY_PRODUCTION_BOARD_QUERY, sanitizeProductionBoard],
+        "monday.board.admin.get": [MONDAY_ADMIN_BOARD_QUERY, sanitizeAdminBoard],
+        "monday.board.kit.get": [MONDAY_KIT_BOARD_QUERY, sanitizeKitBoard],
+        "monday.board.subscribers.get": [MONDAY_SUBSCRIBERS_QUERY, sanitizeSubscribersBoard],
+        "monday.board.groups.get": [MONDAY_GROUPS_QUERY, sanitizeGroupsBoard],
+      };
+      const [query, sanitizeBoard] = boardOperations[operation];
+      return getMondayBoard(query, sanitizeBoard);
+    }
+
+    case "monday.items.get": {
+      if (!hasOnlyParamKeys(params, ["itemIds"])) {
+        return controlledError(400, "INVALID_PARAMETERS", "Invalid operation parameters.");
+      }
+      if (!requireMondayConfiguration(res)) return null;
+      const itemIds = normalizeMondayItemIds(params.itemIds);
+      if (!itemIds) {
+        return controlledError(400, "INVALID_ITEM_IDS", "Invalid Monday item identifiers.");
+      }
+      return getMondayItems(itemIds);
     }
 
     default:
