@@ -2351,9 +2351,6 @@ const API_KEY  = "eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjY3NDQwMzIwMCwiYWFpIjoxMSwidWlkI
 const BOARD_ID = "7847112819";
 const WEEKLY_GOAL = 5;
 
-/* ── Podium 1 Backend API ── */
-const P1_API_URL = "https://submission-api-331638234113.us-central1.run.app";
-const P1_API_KEY = "p1r-0ed3fa51376c78f8ad9df9b43728e46d59f6ca7f447d8645";
 const SUPABASE_URL = "https://paufeygvqwyidyasuubr.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBhdWZleWd2cXd5aWR5YXN1dWJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzOTEzNTMsImV4cCI6MjA5Nzk2NzM1M30._LRmmxQdzqUJaFdCa_w6P82rtcQVUJgwec79COxKxGE";
 
@@ -2893,99 +2890,94 @@ function sbUnsubscribeAdminRealtime() {
   if (_sbRealtimeWs) { _sbRealtimeWs.close(); _sbRealtimeWs = null; }
 }
 
-async function p1Api(path, options = {}) {
-  /* Route through Netlify proxy to avoid CORS */
-  const method = String(options.method || "GET").toUpperCase();
-  const requestStartedAt = pickListMetricNow();
+const PROTECTED_INTEGRATION_OPERATIONS = Object.freeze({
+  pickListGet: "p1.picklist.get",
+  attachFileToUpdate: "monday.file.attachToUpdate",
+});
+const PROTECTED_INTEGRATION_TIMEOUT_MS = 15_000;
+const MONDAY_UPDATE_UPLOAD_MAX_BYTES = 3 * 1024 * 1024;
+
+async function callProtectedIntegration(operation, params = {}) {
+  if (!Object.values(PROTECTED_INTEGRATION_OPERATIONS).includes(operation)) {
+    const error = new Error("Integration operation is not available.");
+    error.code = "OPERATION_NOT_ALLOWED";
+    throw error;
+  }
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), PROTECTED_INTEGRATION_TIMEOUT_MS);
   try {
-    if (options.method && options.method !== "GET") {
-      const r = await fetch("/.netlify/functions/p1proxy", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ path, method: options.method, body: options.body ? JSON.parse(options.body) : undefined })
-      });
-      if (!r.ok) {
-        const endedAt = pickListMetricNow();
-        recordPickListRequestMetric({
-          source: "p1",
-          method,
-          path,
-          ok: false,
-          status: r.status,
-          startedAt: requestStartedAt,
-          endedAt,
-          ms: endedAt - requestStartedAt,
-          error: `P1 proxy returned ${r.status}`,
-        });
-        throw new Error(`P1 proxy returned ${r.status}`);
-      }
-      const data = await r.json();
-      const endedAt = pickListMetricNow();
-      recordPickListRequestMetric({
-        source: "p1",
-        method,
-        path,
-        ok: true,
-        status: r.status,
-        rowCount: countPickListResponseRows(data),
-        startedAt: requestStartedAt,
-        endedAt,
-        ms: endedAt - requestStartedAt,
-      });
-      return data;
-    } else {
-      const r = await fetch(`/.netlify/functions/p1proxy?path=${encodeURIComponent(path)}`);
-      if (!r.ok) {
-        const endedAt = pickListMetricNow();
-        recordPickListRequestMetric({
-          source: "p1",
-          method,
-          path,
-          ok: false,
-          status: r.status,
-          startedAt: requestStartedAt,
-          endedAt,
-          ms: endedAt - requestStartedAt,
-          error: `P1 proxy returned ${r.status}`,
-        });
-        throw new Error(`P1 proxy returned ${r.status}`);
-      }
-      const data = await r.json();
-      const endedAt = pickListMetricNow();
-      recordPickListRequestMetric({
-        source: "p1",
-        method,
-        path,
-        ok: true,
-        status: r.status,
-        rowCount: countPickListResponseRows(data),
-        startedAt: requestStartedAt,
-        endedAt,
-        ms: endedAt - requestStartedAt,
-      });
-      return data;
+    const response = await fetch("/api/p1proxy", {
+      method: "POST",
+      credentials: "same-origin",
+      cache: "no-store",
+      headers: { "Content-Type": "application/json" },
+      signal: controller.signal,
+      body: JSON.stringify({ operation, params }),
+    });
+    const data = await response.json().catch(() => null);
+    if (!response.ok || !data || typeof data !== "object") {
+      const error = new Error(data?.error || "Integration request failed.");
+      error.code = data?.code || (response.ok ? "INVALID_RESPONSE" : "REQUEST_FAILED");
+      error.status = response.status;
+      throw error;
     }
+    return data;
   } catch (err) {
-    const roundedStart = Math.round(requestStartedAt * 10) / 10;
-    const alreadyRecorded = PICKLIST_REQUEST_METRICS.some(req =>
-      req.source === "p1" &&
-      req.startedAt === roundedStart
-    );
-    if (!alreadyRecorded) {
-      const endedAt = pickListMetricNow();
-      recordPickListRequestMetric({
-        source: "p1",
-        method,
-        path,
-        ok: false,
-        startedAt: requestStartedAt,
-        endedAt,
-        ms: endedAt - requestStartedAt,
-        error: err?.message || err,
-      });
+    if (err?.name === "AbortError") {
+      const timeoutError = new Error("Integration request timed out.");
+      timeoutError.code = "REQUEST_TIMEOUT";
+      throw timeoutError;
     }
     throw err;
+  } finally {
+    clearTimeout(timeoutId);
   }
+}
+
+async function fetchP1PickListFromProxy(woNumber) {
+  const path = `/picklist?wo=${encodeURIComponent(woNumber)}`;
+  const requestStartedAt = pickListMetricNow();
+  try {
+    const data = await callProtectedIntegration(PROTECTED_INTEGRATION_OPERATIONS.pickListGet, { wo: woNumber });
+    const endedAt = pickListMetricNow();
+    recordPickListRequestMetric({
+      source: "p1",
+      method: "POST",
+      path,
+      ok: true,
+      status: 200,
+      rowCount: countPickListResponseRows(data),
+      startedAt: requestStartedAt,
+      endedAt,
+      ms: endedAt - requestStartedAt,
+    });
+    return data;
+  } catch (err) {
+    const endedAt = pickListMetricNow();
+    recordPickListRequestMetric({
+      source: "p1",
+      method: "POST",
+      path,
+      ok: false,
+      status: err?.status,
+      startedAt: requestStartedAt,
+      endedAt,
+      ms: endedAt - requestStartedAt,
+      error: err?.message || err,
+    });
+    throw err;
+  }
+}
+
+function attachFileToMondayUpdate(params) {
+  return callProtectedIntegration(PROTECTED_INTEGRATION_OPERATIONS.attachFileToUpdate, params);
+}
+
+function disabledP1Mutation(operation) {
+  const error = new Error("This P1 integration is temporarily unavailable.");
+  error.code = "OPERATION_DISABLED";
+  console.warn(`P1 operation disabled: ${operation}`);
+  return Promise.reject(error);
 }
 
 const ACTIVE_GROUPS = ["Building Queue - In Progress", "Stand By - Pending MS or Chassis"];
@@ -3723,7 +3715,7 @@ function swStart(itemId, colType) {
   const item = boardItems.find(i => i.id === itemId);
   const woRaw = COL.work_order_num ? (cvText(item, COL.work_order_num) || "") : "";
   const woNum = getWoFromText(woRaw) || null;
-  if (woNum) p1Api("/time/event", { method:"POST", body: JSON.stringify({ wo_number: woNum, technician_name: currentUser.name, event_type: isResuming ? "resume" : "start" }) }).catch(()=>{});
+  if (woNum) disabledP1Mutation("p1.time.event").catch(()=>{});
   /* Update main button → Pause */
   const btnEl = document.getElementById("sw-main-btn-" + itemId + "-" + colType);
   if (btnEl) {
@@ -3754,7 +3746,7 @@ function swPause(itemId, colType) {
   const item = boardItems.find(i => i.id === itemId);
   const woRaw = COL.work_order_num ? (cvText(item, COL.work_order_num) || "") : "";
   const woNum = getWoFromText(woRaw) || null;
-  if (woNum) p1Api("/time/event", { method:"POST", body: JSON.stringify({ wo_number: woNum, technician_name: currentUser.name, event_type: "pause" }) }).catch(()=>{});
+  if (woNum) disabledP1Mutation("p1.time.event").catch(()=>{});
   const k = swKey(itemId, colType);
   if (SW_INTERVALS[k]) { clearInterval(SW_INTERVALS[k]); delete SW_INTERVALS[k]; }
   const dispEl = document.getElementById("sw-time-" + itemId + "-" + colType);
@@ -3823,11 +3815,8 @@ async function swEnd(itemId, colType, itemName, opts = {}) {
   const woRaw2   = COL.work_order_num ? (cvText(boardItems.find(i=>i.id===itemId), COL.work_order_num) || "") : "";
   const woNum2   = getWoFromText(woRaw2) || null;
   if (woNum2) {
-    const itemObj    = boardItems.find(i => i.id === itemId);
-    const custName   = cvText(itemObj, COL.project) || itemObj?.name || "";
-    const prodName   = parseDropdown(itemObj, COL.turnkey) || "";
-    p1Api("/time/event",    { method:"POST", body: JSON.stringify({ wo_number: woNum2, technician_name: currentUser.name, event_type: "stop" }) }).catch(()=>{});
-    p1Api("/time/complete", { method:"POST", body: JSON.stringify({ wo_number: woNum2, technician_name: currentUser.name, customer_name: custName, product_name: prodName }) }).catch(()=>{});
+    disabledP1Mutation("p1.time.event").catch(()=>{});
+    disabledP1Mutation("p1.time.complete").catch(()=>{});
   }
 
   /* Update display */
@@ -7445,23 +7434,31 @@ async function uploadPhotosToMondayUpdate(updateId, photos = [], prefix = "photo
   if (!updateId || !entries.length) return;
   for (let i = 0; i < entries.length; i++) {
     const photo = entries[i];
-    try {
-      const ext = (photo.file.name.split(".").pop() || "jpg").toLowerCase();
-      const filename = `${prefix}_${i + 1}.${ext}`;
-      const mimeType = photo.file.type || "image/jpeg";
-      const arrayBuf = await photo.file.arrayBuffer();
-      const fileBase64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuf)));
-      const query = `mutation ($file: File!) { add_file_to_update(update_id:${updateId}, file:$file) { id } }`;
-      const res = await fetch("/.netlify/functions/p1proxy?action=monday-upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query, fileBase64, filename, mimeType })
-      });
-      const json = await res.json().catch(() => ({}));
-      if (json?.errors?.length) console.warn("Monday photo attach error:", json.errors[0].message);
-    } catch (err) {
-      console.warn("Monday photo upload failed:", err?.message || err);
+    if (Number.isFinite(photo.file.size) && photo.file.size > MONDAY_UPDATE_UPLOAD_MAX_BYTES) {
+      const error = new Error("Photo exceeds the 3 MB upload limit.");
+      error.code = "UPLOAD_TOO_LARGE";
+      throw error;
     }
+    const ext = (photo.file.name.split(".").pop() || "jpg").toLowerCase();
+    const filename = `${prefix}_${i + 1}.${ext}`;
+    const mimeType = photo.file.type || "image/jpeg";
+    const arrayBuf = await photo.file.arrayBuffer();
+    if (arrayBuf.byteLength > MONDAY_UPDATE_UPLOAD_MAX_BYTES) {
+      const error = new Error("Photo exceeds the 3 MB upload limit.");
+      error.code = "UPLOAD_TOO_LARGE";
+      throw error;
+    }
+    const bytes = new Uint8Array(arrayBuf);
+    let binary = "";
+    for (let offset = 0; offset < bytes.length; offset += 0x8000) {
+      binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+    }
+    await attachFileToMondayUpdate({
+      updateId,
+      fileBase64: btoa(binary),
+      filename,
+      mimeType,
+    });
   }
 }
 
@@ -7861,27 +7858,6 @@ function buildLeadPickListVerificationSummary(verification, typedNote = "", curr
     `Resolved:\n${resolvedLine}`,
     `Newly missing:\n${newLine}`,
   ].filter(Boolean).join("\n\n");
-}
-
-/* Upload photo to Monday as a file attachment */
-async function uploadPhotoToMonday(itemId, file, label) {
-  const ext      = (file.name.split(".").pop() || "jpg").toLowerCase();
-  const filename = `${label.replace(/[^a-z0-9]/gi,"_")}_${todayStr()}.${ext}`;
-  const mimeType = file.type || "image/jpeg";
-  const query    = `mutation ($file: File!) { add_file_to_column(item_id:${itemId}, column_id:"files", file:$file) { id } }`;
-
-  /* Convert file to base64 to send through Netlify proxy (avoids CORS on direct multipart) */
-  const arrayBuf  = await file.arrayBuffer();
-  const fileBase64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuf)));
-
-  const r = await fetch("/.netlify/functions/p1proxy?action=monday-upload", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query, fileBase64, filename, mimeType })
-  });
-  const json = await r.json();
-  if (json.errors?.length) throw new Error(json.errors[0].message);
-  return json;
 }
 
 /* ── UPDATE % BOTTOM SHEET ── */
@@ -8601,7 +8577,9 @@ async function saveUpdate(itemId,e,forceEndDay=false) {
       }
     } catch(photoErr) {
       console.warn("Photo upload failed:", photoErr.message);
-      showToast("% saved. Photo upload failed — stored locally.", "");
+      showToast(photoErr?.code === "UPLOAD_TOO_LARGE"
+        ? "% saved. Photo must be 3 MB or smaller."
+        : "% saved. Photo upload failed — stored locally.", "");
     }
 
     /* Clear pending photo and reset UI */
@@ -14593,15 +14571,21 @@ function getWorkOrderQueryVariants(woNums = []) {
 async function fetchP1PickListForWorkOrder(woNum) {
   const candidates = getWorkOrderLookupCandidates(woNum);
   let lastData = null;
+  let lastError = null;
+  let receivedResponse = false;
   for (const candidate of candidates) {
     try {
-      const data = await p1Api(`/picklist?wo=${encodeURIComponent(candidate)}`);
+      const data = await fetchP1PickListFromProxy(candidate);
+      receivedResponse = true;
       if (Array.isArray(data?.items) && data.items.length) {
         return { data, matchedWo: candidate };
       }
       if (!lastData) lastData = data || null;
-    } catch (_) {}
+    } catch (error) {
+      lastError = error;
+    }
   }
+  if (!receivedResponse && lastError) throw lastError;
   return { data: lastData, matchedWo: candidates[0] || String(woNum || "").trim().toUpperCase() };
 }
 
@@ -15568,17 +15552,7 @@ async function kitDoneConfirmed(itemId, e) {
     if (woNum) {
       btn.textContent = "Submitting…";
       try {
-        await p1Api("/picklist/submit", {
-          method: "POST",
-          body: JSON.stringify({
-            wo_number:    woNum,
-            picked_by:    currentUser.name,
-            total_items:  kitLines.length,
-            picked_items: kitLines.length - missing.length,
-            missing_items: missing.map(l => l.replace(/ \(×\d+\)$/, "")),
-            kit_type:     isPartialKit ? `partial-${needKittedSide}` : "full"
-          })
-        });
+        await disabledP1Mutation("p1.picklist.submit");
       } catch(e) {
         /* Non-fatal — item already moved to Parts Pulled */
       }
@@ -18338,17 +18312,7 @@ async function confirmSubmitKitFromPickList(plId, woNum, mondayItemId, e) {
     const woNum2 = woNum;
     if (woNum2) {
       try {
-        await p1Api("/picklist/submit", {
-          method: "POST",
-          body: JSON.stringify({
-            wo_number:     woNum2,
-            picked_by:     currentUser?.name || "Pete",
-            total_items:   items.length,
-            picked_items:  items.filter(i => i.allocated).length,
-            missing_items: missing.map(i => (i.label || i.item_name).replace(/ \(×\d+\)$/, "")),
-            note,
-          }),
-        });
+        await disabledP1Mutation("p1.picklist.submit");
       } catch(p1Err) {
         console.warn("P1 API submit failed (non-fatal):", p1Err.message);
       }
