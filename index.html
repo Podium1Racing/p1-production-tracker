@@ -2899,6 +2899,7 @@ const PROTECTED_INTEGRATION_OPERATIONS = Object.freeze({
   mondaySubscribersGet: "monday.board.subscribers.get",
   mondayGroupsGet: "monday.board.groups.get",
   mondayItemsGet: "monday.items.get",
+  mondayPickListAssetGet: "monday.asset.picklist.get",
 });
 const PROTECTED_INTEGRATION_TIMEOUT_MS = 15_000;
 const MONDAY_UPDATE_UPLOAD_MAX_BYTES = 3 * 1024 * 1024;
@@ -3001,6 +3002,17 @@ function fetchMondayBoardGroups() {
 
 function fetchMondayItems(itemIds) {
   return callProtectedIntegration(PROTECTED_INTEGRATION_OPERATIONS.mondayItemsGet, { itemIds });
+}
+
+function fetchMondayPickListAsset(params) {
+  return callProtectedIntegration(PROTECTED_INTEGRATION_OPERATIONS.mondayPickListAssetGet, params);
+}
+
+function base64ToArrayBuffer(base64) {
+  const raw = atob(String(base64 || ""));
+  const bytes = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+  return bytes.buffer;
 }
 
 function requireProtectedMondayBoard(response, label = "Monday board") {
@@ -15104,18 +15116,20 @@ async function fetchPickListLines(driveUrl, item) {
     (a.name || "").toLowerCase().includes("pick") ||
     (a.name || "").toLowerCase().includes("work")
   );
-  if (pdfAsset) {
+  if (pdfAsset && (pdfAsset.id || pdfAsset.url || pdfAsset.public_url)) {
     try {
-      const r = await fetch(pdfAsset.url, { headers: { "Authorization": API_KEY } });
-      if (r.ok) {
-        const buf   = await r.arrayBuffer();
-        const text  = await extractPdfText(buf);
-        const lines = parsePickListText(text);
-        if (lines.length > 0) {
- return lines; }
-      }
+      const assetRes = await fetchMondayPickListAsset({
+        itemId: item?.id,
+        assetId: pdfAsset.id || "",
+        assetUrl: pdfAsset.id ? "" : (pdfAsset.url || pdfAsset.public_url || ""),
+      });
+      const buf   = base64ToArrayBuffer(assetRes.contentBase64);
+      const text  = await extractPdfText(buf);
+      const lines = parsePickListText(text);
+      if (lines.length > 0) return lines;
     } catch(e) {
- }
+      if (e?.code !== "ASSET_NOT_FOUND") throw e;
+    }
   }
 
   /* ── Strategy 2: Fetch PDF from Google Drive via CORS proxy ── */
@@ -16919,7 +16933,7 @@ async function fetchMondayPickListItemsForWorkOrder(woNum) {
   }
   if (!mondayItem) return [];
   const pickLink = parseLink(mondayItem, COL.pick_list);
-  const lines = await fetchPickListLines(pickLink?.url || "", mondayItem).catch(() => []);
+  const lines = await fetchPickListLines(pickLink?.url || "", mondayItem);
   return (lines || [])
     .map(pickListLabelToSourceItem)
     .filter(Boolean);

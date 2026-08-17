@@ -29,6 +29,8 @@ const MAX_UPLOAD_BYTES = 3 * 1024 * 1024;
 const MAX_BASE64_CHARS = 4 * Math.ceil(MAX_UPLOAD_BYTES / 3);
 const MAX_PICKLIST_ITEMS = 2_000;
 const MAX_MONDAY_ITEM_IDS = 100;
+const MAX_MONDAY_PICKLIST_ASSET_BYTES = 3 * 1024 * 1024;
+const APPROVED_MONDAY_ASSET_HOSTNAMES = new Set(["files.monday.com", "files-us.monday.com"]);
 
 const MONDAY_PRODUCTION_BOARD_QUERY = `query ProductionBoard {
   boards(ids: [${PRODUCTION_BOARD_ID}]) {
@@ -95,6 +97,14 @@ const MONDAY_ITEMS_QUERY = `query ProductionItems($ids: [ID!]!) {
   }
 }`;
 
+const MONDAY_ITEM_ASSETS_QUERY = `query ProductionItemAssets($ids: [ID!]!) {
+  items(ids: $ids) {
+    id
+    board { id }
+    assets { id name url public_url file_extension }
+  }
+}`;
+
 const OPERATION_POLICIES = Object.freeze({
   "p1.time.event": Object.freeze({ enabled: false, roles: [ROLE_ADMIN, ROLE_CHASSIS, ROLE_MS] }),
   "p1.time.complete": Object.freeze({ enabled: false, roles: [ROLE_ADMIN, ROLE_CHASSIS, ROLE_MS] }),
@@ -107,6 +117,7 @@ const OPERATION_POLICIES = Object.freeze({
   "monday.board.subscribers.get": Object.freeze({ enabled: true, roles: [ROLE_ADMIN, ROLE_CHASSIS, ROLE_MS] }),
   "monday.board.groups.get": Object.freeze({ enabled: true, roles: ALL_APP_ROLES }),
   "monday.items.get": Object.freeze({ enabled: true, roles: ALL_APP_ROLES }),
+  "monday.asset.picklist.get": Object.freeze({ enabled: true, roles: ALL_APP_ROLES }),
 });
 
 function cleanString(value, maxLength = 500) {
@@ -157,8 +168,33 @@ function normalizeMondayItemIds(value) {
   return [...new Set(ids)];
 }
 
+function normalizeOptionalMondayId(value) {
+  if (value === undefined || value === null || value === "") return "";
+  return normalizeMondayId(value);
+}
+
 function hasOnlyParamKeys(params, allowedKeys) {
   return Object.keys(params || {}).every(key => allowedKeys.includes(key));
+}
+
+function normalizeMondayAssetUrl(value) {
+  if (value === undefined || value === null || value === "") return "";
+  if (typeof value !== "string" || value.length > 2_000) return null;
+  try {
+    const url = new URL(value);
+    if (
+      url.protocol !== "https:" ||
+      !APPROVED_MONDAY_ASSET_HOSTNAMES.has(url.hostname) ||
+      url.port ||
+      url.username ||
+      url.password
+    ) {
+      return null;
+    }
+    return url.toString();
+  } catch {
+    return null;
+  }
 }
 
 function normalizeMimeType(value) {
@@ -452,6 +488,149 @@ async function getMondayItems(itemIds) {
   return { status: 200, data: { data: { items: safeItems } } };
 }
 
+function findPickListAsset(assets, { assetId, assetUrl }) {
+  const candidates = assets.filter(asset => {
+    const extension = String(asset?.file_extension || "").trim().toLowerCase();
+    const name = String(asset?.name || "").trim().toLowerCase();
+    return extension === "pdf" || name.includes("pick") || name.includes("work");
+  });
+  return candidates.find(asset => {
+    const idMatches = assetId && normalizeMondayId(asset?.id) === assetId;
+    const urls = [asset?.url, asset?.public_url].map(normalizeMondayAssetUrl).filter(Boolean);
+    const urlMatches = assetUrl && urls.includes(assetUrl);
+    return assetId || assetUrl ? idMatches || urlMatches : false;
+  }) || null;
+}
+
+function getAssetFetchUrl(asset) {
+  const primary = normalizeMondayAssetUrl(asset?.url);
+  const fallback = normalizeMondayAssetUrl(asset?.public_url);
+  return primary || fallback || "";
+}
+
+function isAllowedPdfContentType(value) {
+  const type = String(value || "").split(";")[0].trim().toLowerCase();
+  return ["application/pdf", "application/octet-stream", "application/x-pdf", "binary/octet-stream"].includes(type);
+}
+
+async function readBoundedResponseBytes(response, maxBytes) {
+  const declaredLength = Number(response.headers?.get?.("content-length") || 0);
+  if (declaredLength && declaredLength > maxBytes) {
+    return { error: controlledError(413, "ASSET_TOO_LARGE", "Asset exceeds the size limit.") };
+  }
+
+  if (!response.body?.getReader) {
+    const buffer = Buffer.from(await response.arrayBuffer());
+    if (buffer.length > maxBytes) {
+      return { error: controlledError(413, "ASSET_TOO_LARGE", "Asset exceeds the size limit.") };
+    }
+    return { buffer };
+  }
+
+  const reader = response.body.getReader();
+  const chunks = [];
+  let total = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    const chunk = Buffer.from(value);
+    total += chunk.length;
+    if (total > maxBytes) {
+      try { await reader.cancel(); } catch {}
+      return { error: controlledError(413, "ASSET_TOO_LARGE", "Asset exceeds the size limit.") };
+    }
+    chunks.push(chunk);
+  }
+  return { buffer: Buffer.concat(chunks, total) };
+}
+
+function upstreamAssetFailure(upstreamStatus = 0) {
+  if (upstreamStatus === 429) {
+    return controlledError(429, "MONDAY_RATE_LIMITED", "Upstream service is temporarily rate limited.");
+  }
+  if (upstreamStatus === 404) {
+    return controlledError(404, "ASSET_NOT_FOUND", "Requested asset was not found.");
+  }
+  if (upstreamStatus >= 300 && upstreamStatus < 400) {
+    return controlledError(502, "MONDAY_INVALID_REDIRECT", "Upstream returned an invalid redirect.");
+  }
+  return controlledError(502, "MONDAY_UPSTREAM_ERROR", "Upstream request failed.");
+}
+
+async function fetchMondayAssetBytes(assetUrl, includeAuthorization = true, redirectCount = 0) {
+  const controller = new AbortController();
+  let timedOut = false;
+  const timeoutId = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, UPSTREAM_TIMEOUT_MS);
+
+  try {
+    const headers = includeAuthorization ? { Authorization: MONDAY_API_KEY } : {};
+    const response = await fetch(assetUrl, { method: "GET", headers, redirect: "manual", signal: controller.signal });
+    if (response.status >= 300 && response.status < 400) {
+      if (redirectCount >= 1) return controlledError(502, "MONDAY_INVALID_REDIRECT", "Upstream returned an invalid redirect.");
+      const location = response.headers?.get?.("location") || "";
+      const redirectUrl = normalizeMondayAssetUrl(location);
+      if (!redirectUrl) return controlledError(502, "MONDAY_INVALID_REDIRECT", "Upstream returned an invalid redirect.");
+      const original = new URL(assetUrl);
+      const redirected = new URL(redirectUrl);
+      const sameOrigin = original.origin === redirected.origin;
+      return fetchMondayAssetBytes(redirectUrl, sameOrigin, redirectCount + 1);
+    }
+    if (!response.ok) return upstreamAssetFailure(response.status);
+    if (!isAllowedPdfContentType(response.headers?.get?.("content-type"))) {
+      return controlledError(502, "UNEXPECTED_ASSET_TYPE", "Upstream returned an unexpected asset type.");
+    }
+
+    const body = await readBoundedResponseBytes(response, MAX_MONDAY_PICKLIST_ASSET_BYTES);
+    if (body.error) return body.error;
+    if (!body.buffer.subarray(0, 5).toString("utf8").startsWith("%PDF")) {
+      return controlledError(502, "UNEXPECTED_ASSET_TYPE", "Upstream returned an unexpected asset type.");
+    }
+    return {
+      status: 200,
+      data: {
+        mimeType: "application/pdf",
+        contentBase64: body.buffer.toString("base64"),
+      },
+    };
+  } catch (error) {
+    if (timedOut || error?.name === "AbortError") {
+      return controlledError(504, "MONDAY_TIMEOUT", "Upstream request timed out.");
+    }
+    return controlledError(502, "MONDAY_CONNECTION_ERROR", "Upstream request failed.");
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+async function getMondayPickListAsset(params = {}) {
+  if (!hasOnlyParamKeys(params, ["itemId", "assetId", "assetUrl"])) {
+    return controlledError(400, "INVALID_PARAMETERS", "Invalid operation parameters.");
+  }
+  const itemId = normalizeMondayId(params.itemId);
+  const assetId = normalizeOptionalMondayId(params.assetId);
+  const assetUrl = normalizeMondayAssetUrl(params.assetUrl);
+  if (!itemId || assetId === null || assetUrl === null || (!assetId && !assetUrl)) {
+    return controlledError(400, "INVALID_ASSET_REFERENCE", "Invalid Monday asset reference.");
+  }
+
+  const result = await runMondayGraphql(MONDAY_ITEM_ASSETS_QUERY, { ids: [itemId] });
+  if (result.status !== 200) return result;
+  const item = Array.isArray(result.data?.data?.items) ? result.data.data.items[0] : null;
+  if (!item || normalizeMondayId(item.id) !== itemId || normalizeMondayId(item.board?.id) !== PRODUCTION_BOARD_ID) {
+    return controlledError(404, "ASSET_NOT_FOUND", "Requested asset was not found.");
+  }
+  const assets = Array.isArray(item.assets) ? item.assets : null;
+  if (!assets) return mondayInvalidResponse();
+  const asset = findPickListAsset(assets, { assetId, assetUrl });
+  if (!asset) return controlledError(404, "ASSET_NOT_FOUND", "Requested asset was not found.");
+  const fetchUrl = getAssetFetchUrl(asset);
+  if (!fetchUrl) return controlledError(404, "ASSET_NOT_FOUND", "Requested asset was not found.");
+  return fetchMondayAssetBytes(fetchUrl);
+}
+
 function requireMondayFileParams(res, params = {}) {
   const file = validateBase64(params.fileBase64);
   if (file.error === "too_large") {
@@ -565,6 +744,11 @@ async function handleOperation(operation, params, user, res) {
         return controlledError(400, "INVALID_ITEM_IDS", "Invalid Monday item identifiers.");
       }
       return getMondayItems(itemIds);
+    }
+
+    case "monday.asset.picklist.get": {
+      if (!requireMondayConfiguration(res)) return null;
+      return getMondayPickListAsset(params);
     }
 
     default:
